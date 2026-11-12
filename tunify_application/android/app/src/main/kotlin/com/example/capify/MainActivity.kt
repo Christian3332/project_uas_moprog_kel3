@@ -1,4 +1,4 @@
-package com.example.tunify_application
+package com.example.capify
 
 import io.flutter.embedding.android.FlutterActivity
 

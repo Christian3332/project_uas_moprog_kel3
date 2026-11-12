@@ -1,4 +1,4 @@
-# tunify_application
+# capify
 
 A new Flutter project.
 

@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "tunify_application" "\0"
+            VALUE "FileDescription", "capify" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "tunify_application" "\0"
+            VALUE "InternalName", "capify" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "tunify_application.exe" "\0"
-            VALUE "ProductName", "tunify_application" "\0"
+            VALUE "OriginalFilename", "capify.exe" "\0"
+            VALUE "ProductName", "Capify" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

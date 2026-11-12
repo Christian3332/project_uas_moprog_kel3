@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:tunify_application/screens/player_screen.dart';
+import 'package:capify/screens/player_screen.dart';
 
 void main() {
   testWidgets('Player menampilkan pesan saat antrian kosong', (tester) async {
