@@ -1,6 +1,6 @@
 {
-    "name": "tunify_application",
-    "short_name": "tunify_application",
+    "name": "Capify",
+    "short_name": "Capify",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
