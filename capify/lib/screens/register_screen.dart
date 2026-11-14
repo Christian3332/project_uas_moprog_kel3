@@ -20,15 +20,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool isPasswordTersembunyi = true;
   bool isSedangMendaftar = false;
+  bool isSetujuSyarat = false;
+  bool isSyaratBelumDicentang = false;
+  int levelPassword = 0;
   AutovalidateMode modeValidasi = AutovalidateMode.disabled;
 
   @override
+  void initState() {
+    super.initState();
+    passwordController.addListener(pantauKolomPassword);
+  }
+
+  @override
   void dispose() {
+    passwordController.removeListener(pantauKolomPassword);
     namaController.dispose();
     emailController.dispose();
     passwordController.dispose();
     ulangPasswordController.dispose();
     super.dispose();
+  }
+
+  void pantauKolomPassword() {
+    int levelBaru = hitungLevelPassword(passwordController.text);
+    if (levelBaru != levelPassword) {
+      setState(() => levelPassword = levelBaru);
+    }
+  }
+
+  void ubahPersetujuanSyarat() {
+    if (isSedangMendaftar) return;
+    setState(() {
+      isSetujuSyarat = !isSetujuSyarat;
+      if (isSetujuSyarat) isSyaratBelumDicentang = false;
+    });
+  }
+
+  void tampilkanPesan(String pesan) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
   String? cekUlangPassword(String? isian) {
@@ -42,8 +73,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     FocusScope.of(context).unfocus();
 
     bool isFormValid = formDaftarKey.currentState?.validate() ?? false;
-    if (!isFormValid) {
-      setState(() => modeValidasi = AutovalidateMode.onUserInteraction);
+    if (!isFormValid || !isSetujuSyarat) {
+      setState(() {
+        modeValidasi = AutovalidateMode.onUserInteraction;
+        isSyaratBelumDicentang = !isSetujuSyarat;
+      });
       return;
     }
 
@@ -53,6 +87,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => isSedangMendaftar = false);
 
     Navigator.pop(context, emailController.text.trim());
+  }
+
+  Widget buatBarisPersetujuan() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Checkbox(
+              value: isSetujuSyarat,
+              onChanged: isSedangMendaftar
+                  ? null
+                  : (_) => ubahPersetujuanSyarat(),
+              activeColor: WarnaCapify.krem,
+              checkColor: WarnaCapify.coklatGelap,
+              side: BorderSide(
+                color: isSyaratBelumDicentang
+                    ? const Color(0xFFFF8A80)
+                    : WarnaCapify.krem,
+                width: 1.5,
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: ubahPersetujuanSyarat,
+                child: const Text.rich(
+                  TextSpan(
+                    text: 'Saya setuju dengan ',
+                    style: TextStyle(
+                      color: WarnaCapify.putih,
+                      fontWeight: FontWeight.w300,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Syarat & Ketentuan',
+                        style: TextStyle(
+                          color: WarnaCapify.krem,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextSpan(text: ' Capify'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (isSyaratBelumDicentang)
+          const Padding(
+            padding: EdgeInsets.only(left: 12),
+            child: Text(
+              'Centang dulu persetujuannya ya',
+              style: TextStyle(color: Color(0xFFFF8A80), fontSize: 12),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -86,63 +179,110 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         subjudul: 'Gabung Capify dan mulai bikin playlist-mu',
                       ),
                       const SizedBox(height: 32),
-                      KolomInputAuth(
-                        controller: namaController,
-                        petunjukIsian: 'Nama lengkap',
-                        ikonDepan: Icons.person_outline,
-                        jenisKeyboard: TextInputType.name,
-                        cekIsian: cekNama,
-                        isBisaDiketik: !isSedangMendaftar,
-                      ),
-                      const SizedBox(height: 16),
-                      KolomInputAuth(
-                        controller: emailController,
-                        petunjukIsian: 'Email',
-                        ikonDepan: Icons.email_outlined,
-                        jenisKeyboard: TextInputType.emailAddress,
-                        cekIsian: cekEmail,
-                        isBisaDiketik: !isSedangMendaftar,
-                      ),
-                      const SizedBox(height: 16),
-                      KolomInputAuth(
-                        controller: passwordController,
-                        petunjukIsian: 'Password',
-                        ikonDepan: Icons.lock_outline,
-                        isTeksDisembunyikan: isPasswordTersembunyi,
-                        cekIsian: cekPassword,
-                        isBisaDiketik: !isSedangMendaftar,
-                        tombolBelakang: IconButton(
-                          icon: Icon(
-                            isPasswordTersembunyi
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: WarnaCapify.coklatTua,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              isPasswordTersembunyi = !isPasswordTersembunyi;
-                            });
-                          },
+                      AutofillGroup(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            KolomInputAuth(
+                              controller: namaController,
+                              petunjukIsian: 'Nama lengkap',
+                              ikonDepan: Icons.person_outline,
+                              jenisKeyboard: TextInputType.name,
+                              jenisAutofill: const [AutofillHints.name],
+                              cekIsian: cekNama,
+                              isBisaDiketik: !isSedangMendaftar,
+                            ),
+                            const SizedBox(height: 16),
+                            KolomInputAuth(
+                              controller: emailController,
+                              petunjukIsian: 'Email',
+                              ikonDepan: Icons.email_outlined,
+                              jenisKeyboard: TextInputType.emailAddress,
+                              jenisAutofill: const [AutofillHints.email],
+                              cekIsian: cekEmail,
+                              isBisaDiketik: !isSedangMendaftar,
+                            ),
+                            const SizedBox(height: 16),
+                            KolomInputAuth(
+                              controller: passwordController,
+                              petunjukIsian: 'Password',
+                              ikonDepan: Icons.lock_outline,
+                              isTeksDisembunyikan: isPasswordTersembunyi,
+                              jenisAutofill: const [AutofillHints.newPassword],
+                              cekIsian: cekPassword,
+                              isBisaDiketik: !isSedangMendaftar,
+                              tombolBelakang: IconButton(
+                                icon: Icon(
+                                  isPasswordTersembunyi
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: WarnaCapify.coklatTua,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    isPasswordTersembunyi =
+                                        !isPasswordTersembunyi;
+                                  });
+                                },
+                              ),
+                            ),
+                            IndikatorKekuatanPassword(
+                              levelPassword: levelPassword,
+                            ),
+                            const SizedBox(height: 16),
+                            KolomInputAuth(
+                              controller: ulangPasswordController,
+                              petunjukIsian: 'Ulangi password',
+                              ikonDepan: Icons.lock_reset_outlined,
+                              isTeksDisembunyikan: isPasswordTersembunyi,
+                              aksiKeyboard: TextInputAction.done,
+                              jenisAutofill: const [AutofillHints.newPassword],
+                              cekIsian: cekUlangPassword,
+                              saatSelesaiKetik: (_) => prosesDaftar(),
+                              isBisaDiketik: !isSedangMendaftar,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      KolomInputAuth(
-                        controller: ulangPasswordController,
-                        petunjukIsian: 'Ulangi password',
-                        ikonDepan: Icons.lock_reset_outlined,
-                        isTeksDisembunyikan: isPasswordTersembunyi,
-                        aksiKeyboard: TextInputAction.done,
-                        cekIsian: cekUlangPassword,
-                        saatSelesaiKetik: (_) => prosesDaftar(),
-                        isBisaDiketik: !isSedangMendaftar,
-                      ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 12),
+                      buatBarisPersetujuan(),
+                      const SizedBox(height: 24),
                       TombolAuth(
                         teksTombol: 'Daftar',
                         isSedangLoading: isSedangMendaftar,
                         onTekan: prosesDaftar,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 28),
+                      const PemisahAtau(teksTengah: 'atau daftar dengan'),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TombolSosialAuth(
+                              ikonLayanan: Icons.g_mobiledata_rounded,
+                              namaLayanan: 'Google',
+                              onTekan: isSedangMendaftar
+                                  ? null
+                                  : () => tampilkanPesan(
+                                      'Daftar lewat Google segera hadir',
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TombolSosialAuth(
+                              ikonLayanan: Icons.facebook_rounded,
+                              namaLayanan: 'Facebook',
+                              onTekan: isSedangMendaftar
+                                  ? null
+                                  : () => tampilkanPesan(
+                                      'Daftar lewat Facebook segera hadir',
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

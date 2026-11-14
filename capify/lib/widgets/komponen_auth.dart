@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../utils/warna_capify.dart';
@@ -102,7 +103,7 @@ class KolomInputAuth extends StatelessWidget {
       validator: cekIsian,
       onFieldSubmitted: saatSelesaiKetik,
       readOnly: !isBisaDiketik,
-      autofillHints: jenisAutofill,
+      autofillHints: kIsWeb ? null : jenisAutofill,
       cursorColor: WarnaCapify.coklatTua,
       style: const TextStyle(
         color: WarnaCapify.coklatGelap,
@@ -203,6 +204,61 @@ class PemisahAtau extends StatelessWidget {
         ),
         Expanded(child: Divider(color: warnaGaris)),
       ],
+    );
+  }
+}
+
+class IndikatorKekuatanPassword extends StatelessWidget {
+  final int levelPassword;
+
+  const IndikatorKekuatanPassword({super.key, required this.levelPassword});
+
+  @override
+  Widget build(BuildContext context) {
+    int levelAman = levelPassword.clamp(0, 3);
+    if (levelAman == 0) return const SizedBox.shrink();
+
+    const List<String> namaLevel = ['', 'Lemah', 'Sedang', 'Kuat'];
+    const List<Color> warnaLevel = [
+      Colors.transparent,
+      Color(0xFFFF8A80),
+      Color(0xFFFFD180),
+      Color(0xFFB9F6CA),
+    ];
+    Color warnaSekarang = warnaLevel[levelAman];
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, left: 4, right: 4),
+      child: Row(
+        children: [
+          for (int urutanBalok = 1; urutanBalok <= 3; urutanBalok++)
+            Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                height: 4,
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(
+                  color: urutanBalok <= levelAman
+                      ? warnaSekarang
+                      : WarnaCapify.krem.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          SizedBox(
+            width: 56,
+            child: Text(
+              namaLevel[levelAman],
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: warnaSekarang,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
