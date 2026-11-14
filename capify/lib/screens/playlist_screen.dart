@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/album_dummy.dart';
+import '../models/album.dart';
 import '../utils/warna_capify.dart';
+import '../widgets/cover_album.dart';
 
 class PlaylistScreen extends StatefulWidget {
   const PlaylistScreen({super.key});
@@ -13,7 +16,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   bool isKoleksiSedangDimuat = true;
   String kategoriTerpilih = 'Playlist';
 
-  final List<String> pilihanKategori = ['Playlist', 'Lagu Disukai'];
+  List<Album> daftarAlbumTersimpan = [];
+
+  final List<String> pilihanKategori = ['Playlist', 'Album', 'Lagu Disukai'];
 
   @override
   void initState() {
@@ -25,7 +30,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     setState(() => isKoleksiSedangDimuat = true);
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
-    setState(() => isKoleksiSedangDimuat = false);
+    setState(() {
+      daftarAlbumTersimpan = List.of(daftarAlbumTersimpanDummy);
+      isKoleksiSedangDimuat = false;
+    });
   }
 
   void tampilkanInfoSegeraHadir(String namaFitur) {
@@ -36,10 +44,64 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       );
   }
 
+  Widget bangunIsiKoleksi() {
+    if (kategoriTerpilih == 'Album' && daftarAlbumTersimpan.isNotEmpty) {
+      return GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        itemCount: daftarAlbumTersimpan.length,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 200,
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 16,
+          childAspectRatio: 0.72,
+        ),
+        itemBuilder: (context, urutan) {
+          Album albumIni = daftarAlbumTersimpan[urutan];
+          return KartuAlbumTersimpan(
+            album: albumIni,
+            onDitekan: () => tampilkanInfoSegeraHadir(
+              'Detail album ${albumIni.judul}',
+            ),
+          );
+        },
+      );
+    }
+
+    bool isTabPlaylist = kategoriTerpilih == 'Playlist';
+    bool isTabAlbum = kategoriTerpilih == 'Album';
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      children: [
+        KoleksiMasihKosong(
+          ikon: isTabPlaylist
+              ? Icons.queue_music
+              : isTabAlbum
+                  ? Icons.album_outlined
+                  : Icons.favorite_border,
+          judul: isTabPlaylist
+              ? 'Belum ada playlist'
+              : isTabAlbum
+                  ? 'Belum ada album yang disimpan'
+                  : 'Belum ada lagu yang disukai',
+          keterangan: isTabPlaylist
+              ? 'Buat playlist pertamamu dan kumpulkan lagu favoritmu di sini'
+              : isTabAlbum
+                  ? 'Simpan album yang kamu suka supaya gampang diputar lagi'
+                  : 'Tekan ikon hati pada lagu supaya tersimpan di sini',
+          teksTombol: isTabPlaylist ? 'Buat Playlist' : 'Cari Lagu',
+          onTombolDitekan: () => tampilkanInfoSegeraHadir(
+            isTabPlaylist ? 'Fitur buat playlist' : 'Fitur cari lagu',
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool isTabPlaylist = kategoriTerpilih == 'Playlist';
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: WarnaCapify.coklatGelap,
@@ -102,30 +164,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                       color: WarnaCapify.coklatGelap,
                       backgroundColor: WarnaCapify.krem,
                       onRefresh: muatKoleksiPengguna,
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                        children: [
-                          KoleksiMasihKosong(
-                            ikon: isTabPlaylist
-                                ? Icons.queue_music
-                                : Icons.favorite_border,
-                            judul: isTabPlaylist
-                                ? 'Belum ada playlist'
-                                : 'Belum ada lagu yang disukai',
-                            keterangan: isTabPlaylist
-                                ? 'Buat playlist pertamamu dan kumpulkan lagu favoritmu di sini'
-                                : 'Tekan ikon hati pada lagu supaya tersimpan di sini',
-                            teksTombol:
-                                isTabPlaylist ? 'Buat Playlist' : 'Cari Lagu',
-                            onTombolDitekan: () => tampilkanInfoSegeraHadir(
-                              isTabPlaylist
-                                  ? 'Fitur buat playlist'
-                                  : 'Fitur cari lagu',
-                            ),
-                          ),
-                        ],
-                      ),
+                      child: bangunIsiKoleksi(),
                     ),
             ),
           ],
@@ -194,6 +233,57 @@ class KoleksiMasihKosong extends StatelessWidget {
             child: Text(
               teksTombol,
               style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class KartuAlbumTersimpan extends StatelessWidget {
+  final Album album;
+  final VoidCallback onDitekan;
+
+  const KartuAlbumTersimpan({
+    super.key,
+    required this.album,
+    required this.onDitekan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onDitekan,
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: SizedBox(
+              width: double.infinity,
+              child: CoverAlbum(urlCover: album.urlCover, lengkungSudut: 12),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            album.judul,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: WarnaCapify.putih,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${album.penyanyi} • ${album.jumlahLagu} lagu',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              color: WarnaCapify.krem,
+              fontWeight: FontWeight.w300,
             ),
           ),
         ],
