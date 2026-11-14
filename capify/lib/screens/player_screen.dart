@@ -5,17 +5,20 @@ import 'package:flutter/material.dart';
 
 import '../models/lagu.dart';
 import '../utils/warna_capify.dart';
+import '../widgets/cover_album.dart';
 
 enum ModeUlang { mati, semua, satu }
 
 class PlayerScreen extends StatefulWidget {
   final List<Lagu> antrianLagu;
   final int indexMulai;
+  final String namaAntrian;
 
   const PlayerScreen({
     super.key,
     required this.antrianLagu,
     this.indexMulai = 0,
+    this.namaAntrian = 'Lagu Pilihanmu',
   });
 
   @override
@@ -57,10 +60,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(pesan),
-          duration: const Duration(seconds: 2),
-        ),
+        SnackBar(content: Text(pesan), duration: const Duration(seconds: 2)),
       );
   }
 
@@ -187,62 +187,73 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget build(BuildContext context) {
     Lagu? lagu = laguSekarang;
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [WarnaCapify.coklatTua, WarnaCapify.hitam],
-          ),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [WarnaCapify.coklatTua, WarnaCapify.hitam],
         ),
-        child: SafeArea(
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: buildAppBarPlayer(),
+        body: SafeArea(
+          top: false,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                buildBarAtas(),
-                Expanded(
-                  child: lagu == null
-                      ? buildAntrianKosong()
-                      : buildIsiPlayer(lagu),
-                ),
-              ],
-            ),
+            child: lagu == null ? buildAntrianKosong() : buildIsiPlayer(lagu),
           ),
         ),
       ),
     );
   }
 
-  Widget buildBarAtas() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+  PreferredSizeWidget buildAppBarPlayer() {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: true,
+      leading: IconButton(
+        onPressed: () => Navigator.maybePop(context),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          size: 32,
+          color: WarnaCapify.putih,
+        ),
+      ),
+      title: Column(
         children: [
-          IconButton(
-            onPressed: () => Navigator.maybePop(context),
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 32),
-            color: WarnaCapify.putih,
-          ),
-          const Expanded(
-            child: Text(
-              'Sedang Diputar',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: WarnaCapify.putih,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+          const Text(
+            'SEDANG DIPUTAR DARI',
+            style: TextStyle(
+              color: WarnaCapify.krem,
+              fontSize: 11,
+              fontWeight: FontWeight.w300,
+              letterSpacing: 1.5,
             ),
           ),
-          IconButton(
-            onPressed: () => tampilkanPesan('Menu lainnya belum tersedia'),
-            icon: const Icon(Icons.more_vert),
-            color: WarnaCapify.putih,
+          const SizedBox(height: 2),
+          Text(
+            widget.namaAntrian,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: WarnaCapify.putih,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
+      actions: [
+        IconButton(
+          onPressed: () => tampilkanPesan('Menu lainnya belum tersedia'),
+          icon: const Icon(Icons.more_vert, color: WarnaCapify.putih),
+        ),
+        const SizedBox(width: 4),
+      ],
     );
   }
 
@@ -274,17 +285,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget buildIsiPlayer(Lagu lagu) {
     double durasiDalamDetik = lagu.durasi.inSeconds.toDouble();
     double maksSlider = durasiDalamDetik > 0 ? durasiDalamDetik : 1;
-    double posisiSlider =
-        posisiSekarang.inSeconds.toDouble().clamp(0, maksSlider);
+    double posisiSlider = posisiSekarang.inSeconds.toDouble().clamp(
+      0,
+      maksSlider,
+    );
     bool isDisukai = indexLaguDisukai.contains(indexLaguSekarang);
 
     return Column(
       children: [
         Expanded(
           child: Center(
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: buildCoverLagu(lagu.urlCover),
+            child: AnimatedScale(
+              scale: isLaguSedangDiputar ? 1 : 0.88,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOut,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: CoverAlbum(urlCover: lagu.urlCover),
+              ),
             ),
           ),
         ),
@@ -369,41 +387,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  Widget buildCoverLagu(String urlCover) {
-    Widget coverCadangan = Container(
-      color: WarnaCapify.coklatGelap,
-      child: const Icon(
-        Icons.music_note_rounded,
-        size: 96,
-        color: WarnaCapify.krem,
-      ),
-    );
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: urlCover.isEmpty
-          ? coverCadangan
-          : Image.network(
-              urlCover,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, gambar, progresLoading) {
-                if (progresLoading == null) return gambar;
-                return Container(
-                  color: WarnaCapify.coklatGelap,
-                  child: const Center(
-                    child: CircularProgressIndicator(color: WarnaCapify.krem),
-                  ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) => coverCadangan,
-            ),
-    );
-  }
-
   Widget buildTombolKontrol() {
     Color warnaAcak = isAcak ? WarnaCapify.krem : Colors.white54;
-    Color warnaUlang =
-        modeUlang == ModeUlang.mati ? Colors.white54 : WarnaCapify.krem;
+    Color warnaUlang = modeUlang == ModeUlang.mati
+        ? Colors.white54
+        : WarnaCapify.krem;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
