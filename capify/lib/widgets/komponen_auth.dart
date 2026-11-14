@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../utils/warna_capify.dart';
@@ -70,6 +71,7 @@ class KolomInputAuth extends StatelessWidget {
   final String? Function(String?)? cekIsian;
   final ValueChanged<String>? saatSelesaiKetik;
   final bool isBisaDiketik;
+  final Iterable<String>? jenisAutofill;
 
   const KolomInputAuth({
     super.key,
@@ -83,6 +85,7 @@ class KolomInputAuth extends StatelessWidget {
     this.cekIsian,
     this.saatSelesaiKetik,
     this.isBisaDiketik = true,
+    this.jenisAutofill,
   });
 
   @override
@@ -100,6 +103,7 @@ class KolomInputAuth extends StatelessWidget {
       validator: cekIsian,
       onFieldSubmitted: saatSelesaiKetik,
       readOnly: !isBisaDiketik,
+      autofillHints: kIsWeb ? null : jenisAutofill,
       cursorColor: WarnaCapify.coklatTua,
       style: const TextStyle(
         color: WarnaCapify.coklatGelap,
@@ -170,6 +174,124 @@ class TombolAuth extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+      ),
+    );
+  }
+}
+
+class PemisahAtau extends StatelessWidget {
+  final String teksTengah;
+
+  const PemisahAtau({super.key, required this.teksTengah});
+
+  @override
+  Widget build(BuildContext context) {
+    Color warnaGaris = WarnaCapify.krem.withValues(alpha: 0.3);
+
+    return Row(
+      children: [
+        Expanded(child: Divider(color: warnaGaris)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            teksTengah,
+            style: TextStyle(
+              color: WarnaCapify.krem.withValues(alpha: 0.7),
+              fontSize: 13,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: warnaGaris)),
+      ],
+    );
+  }
+}
+
+class IndikatorKekuatanPassword extends StatelessWidget {
+  final int levelPassword;
+
+  const IndikatorKekuatanPassword({super.key, required this.levelPassword});
+
+  @override
+  Widget build(BuildContext context) {
+    int levelAman = levelPassword.clamp(0, 3);
+    if (levelAman == 0) return const SizedBox.shrink();
+
+    const List<String> namaLevel = ['', 'Lemah', 'Sedang', 'Kuat'];
+    const List<Color> warnaLevel = [
+      Colors.transparent,
+      Color(0xFFFF8A80),
+      Color(0xFFFFD180),
+      Color(0xFFB9F6CA),
+    ];
+    Color warnaSekarang = warnaLevel[levelAman];
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, left: 4, right: 4),
+      child: Row(
+        children: [
+          for (int urutanBalok = 1; urutanBalok <= 3; urutanBalok++)
+            Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                height: 4,
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(
+                  color: urutanBalok <= levelAman
+                      ? warnaSekarang
+                      : WarnaCapify.krem.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          SizedBox(
+            width: 56,
+            child: Text(
+              namaLevel[levelAman],
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: warnaSekarang,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TombolSosialAuth extends StatelessWidget {
+  final IconData ikonLayanan;
+  final String namaLayanan;
+  final VoidCallback? onTekan;
+
+  const TombolSosialAuth({
+    super.key,
+    required this.ikonLayanan,
+    required this.namaLayanan,
+    required this.onTekan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTekan,
+      icon: Icon(ikonLayanan, size: 26),
+      label: Text(
+        namaLayanan,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: WarnaCapify.putih,
+        backgroundColor: WarnaCapify.hitam.withValues(alpha: 0.25),
+        side: BorderSide(color: WarnaCapify.krem.withValues(alpha: 0.5)),
+        minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
       ),
     );
   }
