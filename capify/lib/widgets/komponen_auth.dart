@@ -70,6 +70,7 @@ class KolomInputAuth extends StatelessWidget {
   final String? Function(String?)? cekIsian;
   final ValueChanged<String>? saatSelesaiKetik;
   final bool isBisaDiketik;
+  final Iterable<String>? jenisAutofill;
 
   const KolomInputAuth({
     super.key,
@@ -83,6 +84,7 @@ class KolomInputAuth extends StatelessWidget {
     this.cekIsian,
     this.saatSelesaiKetik,
     this.isBisaDiketik = true,
+    this.jenisAutofill,
   });
 
   @override
@@ -100,6 +102,7 @@ class KolomInputAuth extends StatelessWidget {
       validator: cekIsian,
       onFieldSubmitted: saatSelesaiKetik,
       readOnly: !isBisaDiketik,
+      autofillHints: jenisAutofill,
       cursorColor: WarnaCapify.coklatTua,
       style: const TextStyle(
         color: WarnaCapify.coklatGelap,
@@ -170,6 +173,69 @@ class TombolAuth extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+      ),
+    );
+  }
+}
+
+class PemisahAtau extends StatelessWidget {
+  final String teksTengah;
+
+  const PemisahAtau({super.key, required this.teksTengah});
+
+  @override
+  Widget build(BuildContext context) {
+    Color warnaGaris = WarnaCapify.krem.withValues(alpha: 0.3);
+
+    return Row(
+      children: [
+        Expanded(child: Divider(color: warnaGaris)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            teksTengah,
+            style: TextStyle(
+              color: WarnaCapify.krem.withValues(alpha: 0.7),
+              fontSize: 13,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: warnaGaris)),
+      ],
+    );
+  }
+}
+
+class TombolSosialAuth extends StatelessWidget {
+  final IconData ikonLayanan;
+  final String namaLayanan;
+  final VoidCallback? onTekan;
+
+  const TombolSosialAuth({
+    super.key,
+    required this.ikonLayanan,
+    required this.namaLayanan,
+    required this.onTekan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTekan,
+      icon: Icon(ikonLayanan, size: 26),
+      label: Text(
+        namaLayanan,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: WarnaCapify.putih,
+        backgroundColor: WarnaCapify.hitam.withValues(alpha: 0.25),
+        side: BorderSide(color: WarnaCapify.krem.withValues(alpha: 0.5)),
+        minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
       ),
     );
   }

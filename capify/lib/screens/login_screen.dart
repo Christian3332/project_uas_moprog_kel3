@@ -19,13 +19,34 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool isPasswordTersembunyi = true;
   bool isSedangMasuk = false;
+  bool isIngatSaya = false;
+  bool isEmailSudahDiisi = false;
   AutovalidateMode modeValidasi = AutovalidateMode.disabled;
 
   @override
+  void initState() {
+    super.initState();
+    emailController.addListener(pantauKolomEmail);
+  }
+
+  @override
   void dispose() {
+    emailController.removeListener(pantauKolomEmail);
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  void pantauKolomEmail() {
+    bool adaIsinya = emailController.text.isNotEmpty;
+    if (adaIsinya != isEmailSudahDiisi) {
+      setState(() => isEmailSudahDiisi = adaIsinya);
+    }
+  }
+
+  void ubahIngatSaya() {
+    if (isSedangMasuk) return;
+    setState(() => isIngatSaya = !isIngatSaya);
   }
 
   void tampilkanPesan(String pesan) {
@@ -49,7 +70,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => isSedangMasuk = false);
 
-    tampilkanPesan('Berhasil masuk sebagai ${emailController.text.trim()}');
+    String emailPengguna = emailController.text.trim();
+    tampilkanPesan(
+      isIngatSaya
+          ? 'Berhasil masuk, $emailPengguna akan diingat di perangkat ini'
+          : 'Berhasil masuk sebagai $emailPengguna',
+    );
   }
 
   Future<void> bukaHalamanDaftar() async {
@@ -85,57 +111,131 @@ class _LoginScreenState extends State<LoginScreen> {
                       subjudul: 'Dengerin lagu favoritmu bareng si Capy',
                     ),
                     const SizedBox(height: 40),
-                    KolomInputAuth(
-                      controller: emailController,
-                      petunjukIsian: 'Email',
-                      ikonDepan: Icons.email_outlined,
-                      jenisKeyboard: TextInputType.emailAddress,
-                      cekIsian: cekEmail,
-                      isBisaDiketik: !isSedangMasuk,
-                    ),
-                    const SizedBox(height: 16),
-                    KolomInputAuth(
-                      controller: passwordController,
-                      petunjukIsian: 'Password',
-                      ikonDepan: Icons.lock_outline,
-                      isTeksDisembunyikan: isPasswordTersembunyi,
-                      aksiKeyboard: TextInputAction.done,
-                      cekIsian: cekPassword,
-                      saatSelesaiKetik: (_) => prosesMasuk(),
-                      isBisaDiketik: !isSedangMasuk,
-                      tombolBelakang: IconButton(
-                        icon: Icon(
-                          isPasswordTersembunyi
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: WarnaCapify.coklatTua,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            isPasswordTersembunyi = !isPasswordTersembunyi;
-                          });
-                        },
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: isSedangMasuk
-                            ? null
-                            : () => tampilkanPesan(
-                                'Fitur lupa password segera hadir',
+                    AutofillGroup(
+                      child: Column(
+                        children: [
+                          KolomInputAuth(
+                            controller: emailController,
+                            petunjukIsian: 'Email',
+                            ikonDepan: Icons.email_outlined,
+                            jenisKeyboard: TextInputType.emailAddress,
+                            jenisAutofill: const [AutofillHints.email],
+                            cekIsian: cekEmail,
+                            isBisaDiketik: !isSedangMasuk,
+                            tombolBelakang: isEmailSudahDiisi && !isSedangMasuk
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.close_rounded,
+                                      color: WarnaCapify.coklatTua,
+                                    ),
+                                    onPressed: emailController.clear,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                          KolomInputAuth(
+                            controller: passwordController,
+                            petunjukIsian: 'Password',
+                            ikonDepan: Icons.lock_outline,
+                            isTeksDisembunyikan: isPasswordTersembunyi,
+                            aksiKeyboard: TextInputAction.done,
+                            jenisAutofill: const [AutofillHints.password],
+                            cekIsian: cekPassword,
+                            saatSelesaiKetik: (_) => prosesMasuk(),
+                            isBisaDiketik: !isSedangMasuk,
+                            tombolBelakang: IconButton(
+                              icon: Icon(
+                                isPasswordTersembunyi
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: WarnaCapify.coklatTua,
                               ),
-                        child: const Text(
-                          'Lupa password?',
-                          style: TextStyle(color: WarnaCapify.krem),
-                        ),
+                              onPressed: () {
+                                setState(() {
+                                  isPasswordTersembunyi =
+                                      !isPasswordTersembunyi;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: isIngatSaya,
+                          onChanged: isSedangMasuk
+                              ? null
+                              : (_) => ubahIngatSaya(),
+                          activeColor: WarnaCapify.krem,
+                          checkColor: WarnaCapify.coklatGelap,
+                          side: const BorderSide(
+                            color: WarnaCapify.krem,
+                            width: 1.5,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        GestureDetector(
+                          onTap: ubahIngatSaya,
+                          child: const Text(
+                            'Ingat saya',
+                            style: TextStyle(
+                              color: WarnaCapify.putih,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: isSedangMasuk
+                              ? null
+                              : () => tampilkanPesan(
+                                  'Fitur lupa password segera hadir',
+                                ),
+                          child: const Text(
+                            'Lupa password?',
+                            style: TextStyle(color: WarnaCapify.krem),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     TombolAuth(
                       teksTombol: 'Masuk',
                       isSedangLoading: isSedangMasuk,
                       onTekan: prosesMasuk,
+                    ),
+                    const SizedBox(height: 28),
+                    const PemisahAtau(teksTengah: 'atau masuk dengan'),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TombolSosialAuth(
+                            ikonLayanan: Icons.g_mobiledata_rounded,
+                            namaLayanan: 'Google',
+                            onTekan: isSedangMasuk
+                                ? null
+                                : () => tampilkanPesan(
+                                    'Masuk lewat Google segera hadir',
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TombolSosialAuth(
+                            ikonLayanan: Icons.facebook_rounded,
+                            namaLayanan: 'Facebook',
+                            onTekan: isSedangMasuk
+                                ? null
+                                : () => tampilkanPesan(
+                                    'Masuk lewat Facebook segera hadir',
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
                     Row(
