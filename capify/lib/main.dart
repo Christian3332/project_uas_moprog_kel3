@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'data/lagu_dummy.dart';
-import 'screens/player_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'utils/warna_capify.dart';
 
 void main() {
@@ -28,7 +27,7 @@ class CapifyApp extends StatelessWidget {
           contentTextStyle: TextStyle(color: WarnaCapify.coklatGelap),
         ),
       ),
-      home: const PlayerScreen(antrianLagu: daftarLaguDummy),
+      home: const OnboardingScreen(),
     );
   }
 }
