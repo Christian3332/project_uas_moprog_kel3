@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:capify/models/lagu.dart';
+import 'package:capify/screens/halaman_utama_screen.dart';
 import 'package:capify/screens/player_screen.dart';
 import 'package:capify/widgets/cover_album.dart';
+import 'package:capify/widgets/mini_player.dart';
 
 void main() {
   testWidgets('Player menampilkan pesan saat antrian kosong', (tester) async {
@@ -39,5 +41,33 @@ void main() {
     expect(find.text('Lagu Tes'), findsOneWidget);
     expect(find.byType(PlaceholderCover), findsOneWidget);
     expect(find.byIcon(Icons.music_note_rounded), findsOneWidget);
+  });
+
+  testWidgets('Mini player tetap tampil saat pindah tab', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: HalamanUtamaScreen()));
+
+    Finder teksDiMiniPlayer(String teks) {
+      return find.descendant(
+        of: find.byType(MiniPlayer),
+        matching: find.text(teks),
+      );
+    }
+
+    expect(teksDiMiniPlayer('One Call Away'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Putar'));
+    await tester.pump();
+    expect(find.byTooltip('Jeda'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Lagu berikutnya'));
+    await tester.pump();
+    expect(teksDiMiniPlayer('Starboy'), findsOneWidget);
+
+    await tester.tap(find.text('Koleksi'));
+    await tester.pump();
+    expect(find.byType(MiniPlayer), findsOneWidget);
+    expect(teksDiMiniPlayer('Starboy'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
   });
 }

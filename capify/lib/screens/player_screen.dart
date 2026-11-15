@@ -13,12 +13,16 @@ class PlayerScreen extends StatefulWidget {
   final List<Lagu> antrianLagu;
   final int indexMulai;
   final String namaAntrian;
+  final bool isMulaiDiputar;
+  final void Function(int indexLagu, bool isDiputar)? onStatusPemutaranBerubah;
 
   const PlayerScreen({
     super.key,
     required this.antrianLagu,
     this.indexMulai = 0,
     this.namaAntrian = 'Lagu Pilihanmu',
+    this.isMulaiDiputar = false,
+    this.onStatusPemutaranBerubah,
   });
 
   @override
@@ -43,6 +47,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (indexMulaiValid) {
       indexLaguSekarang = widget.indexMulai;
     }
+    if (widget.isMulaiDiputar && widget.antrianLagu.isNotEmpty) {
+      isLaguSedangDiputar = true;
+      mulaiHitungWaktu();
+    }
+  }
+
+  void kabariStatusPemutaran() {
+    widget.onStatusPemutaranBerubah?.call(
+      indexLaguSekarang,
+      isLaguSedangDiputar,
+    );
   }
 
   @override
@@ -70,6 +85,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (isLaguSedangDiputar) {
       timerPemutar?.cancel();
       setState(() => isLaguSedangDiputar = false);
+      kabariStatusPemutaran();
       return;
     }
 
@@ -82,6 +98,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       isLaguSedangDiputar = true;
     });
     mulaiHitungWaktu();
+    kabariStatusPemutaran();
   }
 
   void mulaiHitungWaktu() {
@@ -134,6 +151,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         isLaguSedangDiputar = false;
         posisiSekarang = Duration.zero;
       });
+      kabariStatusPemutaran();
       tampilkanPesan('Ini sudah lagu terakhir di antrian');
       return;
     }
@@ -156,6 +174,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       indexLaguSekarang = indexBaru;
       posisiSekarang = Duration.zero;
     });
+    kabariStatusPemutaran();
   }
 
   void geserSeekbar(double detikTujuan) {
