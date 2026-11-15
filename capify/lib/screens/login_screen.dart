@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../utils/validasi_auth.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/komponen_auth.dart';
+import 'halaman_utama_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -21,6 +22,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isSedangMasuk = false;
   bool isIngatSaya = false;
   bool isEmailSudahDiisi = false;
+  String? emailAkunBaru;
+  String? namaAkunBaru;
   AutovalidateMode modeValidasi = AutovalidateMode.disabled;
 
   @override
@@ -68,25 +71,70 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isSedangMasuk = true);
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    setState(() => isSedangMasuk = false);
 
     String emailPengguna = emailController.text.trim();
-    tampilkanPesan(
-      isIngatSaya
-          ? 'Berhasil masuk, $emailPengguna akan diingat di perangkat ini'
-          : 'Berhasil masuk sebagai $emailPengguna',
+    bool isEmailDariPendaftaran =
+        emailAkunBaru != null &&
+        emailAkunBaru!.toLowerCase() == emailPengguna.toLowerCase();
+    String namaPengguna = isEmailDariPendaftaran && namaAkunBaru != null
+        ? namaAkunBaru!
+        : ambilNamaDariEmail(emailPengguna);
+
+    bukaHalamanUtama(namaPengguna);
+  }
+
+  String ambilNamaDariEmail(String email) {
+    String bagianSebelumAt = email.split('@').first;
+    List<String> potonganKata = bagianSebelumAt
+        .split(RegExp(r'[._\-+0-9]+'))
+        .where((kata) => kata.isNotEmpty)
+        .toList();
+
+    if (potonganKata.isEmpty) return 'Capy Lovers';
+
+    return potonganKata
+        .map((kata) => kata[0].toUpperCase() + kata.substring(1).toLowerCase())
+        .join(' ');
+  }
+
+  void bukaHalamanUtama(String namaPengguna) {
+    ScaffoldMessengerState pengirimPesan = ScaffoldMessenger.of(context);
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HalamanUtamaScreen(namaPengguna: namaPengguna),
+      ),
+      (halamanSebelumnya) => false,
     );
+
+    pengirimPesan
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            isIngatSaya
+                ? 'Selamat datang, $namaPengguna! Akunmu akan diingat'
+                : 'Selamat datang, $namaPengguna!',
+          ),
+        ),
+      );
   }
 
   Future<void> bukaHalamanDaftar() async {
-    String? emailAkunBaru = await Navigator.push<String>(
+    Map<String, String>? dataAkunBaru = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+      MaterialPageRoute<Map<String, String>>(
+        builder: (context) => const RegisterScreen(),
+      ),
     );
 
-    if (!mounted || emailAkunBaru == null) return;
+    if (!mounted || dataAkunBaru == null) return;
 
-    emailController.text = emailAkunBaru;
+    emailAkunBaru = dataAkunBaru['email'];
+    namaAkunBaru = dataAkunBaru['nama'];
+
+    emailController.text = emailAkunBaru ?? '';
     passwordController.clear();
     tampilkanPesan('Akun berhasil dibuat, silakan masuk');
   }
