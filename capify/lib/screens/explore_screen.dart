@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/kategori_dummy.dart';
 import '../models/kategori_musik.dart';
 import '../utils/warna_capify.dart';
+import 'detail_kategori_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -32,13 +33,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   void bukaKategori(KategoriMusik kategoriDipilih) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Daftar lagu ${kategoriDipilih.nama} segera hadir'),
-        ),
-      );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailKategoriScreen(kategori: kategoriDipilih),
+      ),
+    );
   }
 
   Widget bangunIsiHalaman() {

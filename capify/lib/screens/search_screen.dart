@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/lagu_dummy.dart';
 import '../models/lagu.dart';
 import '../utils/warna_capify.dart';
+import 'detail_album_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -105,11 +106,12 @@ class _SearchScreenState extends State<SearchScreen> {
   void pilihLaguDariHasil(Lagu lagu) {
     fokusKolomCari.unfocus();
     simpanKeRiwayat(kataKunciController.text);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text('Kamu memilih "${lagu.judul}"')),
-      );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailAlbumScreen(laguDipilih: lagu),
+      ),
+    );
   }
 
   @override
