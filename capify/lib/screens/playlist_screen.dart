@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../data/album_dummy.dart';
+import '../data/playlist_dummy.dart';
 import '../models/album.dart';
+import '../models/playlist.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
+import 'detail_playlist_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
   const PlaylistScreen({super.key});
@@ -17,6 +20,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   String kategoriTerpilih = 'Playlist';
 
   List<Album> daftarAlbumTersimpan = [];
+  List<Playlist> daftarPlaylistSaya = [];
 
   final List<String> pilihanKategori = ['Playlist', 'Album', 'Lagu Disukai'];
 
@@ -32,8 +36,18 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (!mounted) return;
     setState(() {
       daftarAlbumTersimpan = List.of(daftarAlbumTersimpanDummy);
+      daftarPlaylistSaya = List.of(daftarPlaylistDummy);
       isKoleksiSedangDimuat = false;
     });
+  }
+
+  void bukaDetailPlaylist(Playlist playlistDipilih) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailPlaylistScreen(playlist: playlistDipilih),
+      ),
+    );
   }
 
   void tampilkanInfoSegeraHadir(String namaFitur) {
@@ -45,6 +59,21 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Widget bangunIsiKoleksi() {
+    if (kategoriTerpilih == 'Playlist' && daftarPlaylistSaya.isNotEmpty) {
+      return ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 32),
+        itemCount: daftarPlaylistSaya.length,
+        itemBuilder: (context, urutan) {
+          Playlist playlistIni = daftarPlaylistSaya[urutan];
+          return BarisPlaylistSaya(
+            playlist: playlistIni,
+            onDitekan: () => bukaDetailPlaylist(playlistIni),
+          );
+        },
+      );
+    }
+
     if (kategoriTerpilih == 'Album' && daftarAlbumTersimpan.isNotEmpty) {
       return GridView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -287,6 +316,57 @@ class KartuAlbumTersimpan extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class BarisPlaylistSaya extends StatelessWidget {
+  final Playlist playlist;
+  final VoidCallback onDitekan;
+
+  const BarisPlaylistSaya({
+    super.key,
+    required this.playlist,
+    required this.onDitekan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onDitekan,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      leading: SizedBox(
+        width: 56,
+        height: 56,
+        child: CoverAlbum(
+          urlCover: playlist.urlCoverPlaylist,
+          lengkungSudut: 8,
+          isPakaiBayangan: false,
+        ),
+      ),
+      title: Text(
+        playlist.nama,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: WarnaCapify.putih,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        'Playlist • ${playlist.daftarLagu.length} lagu',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: WarnaCapify.krem,
+          fontWeight: FontWeight.w300,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.chevron_right_rounded,
+        color: WarnaCapify.krem,
       ),
     );
   }
