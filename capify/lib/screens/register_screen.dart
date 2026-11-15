@@ -86,7 +86,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
     setState(() => isSedangMendaftar = false);
 
-    Navigator.pop(context, emailController.text.trim());
+    Navigator.pop(context, {
+      'email': emailController.text.trim(),
+      'nama': namaController.text.trim(),
+    });
   }
 
   Widget buatBarisPersetujuan() {
