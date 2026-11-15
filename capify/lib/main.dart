@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/onboarding_screen.dart';
+import 'screens/halaman_utama_screen.dart';
 import 'utils/warna_capify.dart';
 
 void main() {
@@ -27,7 +27,7 @@ class CapifyApp extends StatelessWidget {
           contentTextStyle: TextStyle(color: WarnaCapify.coklatGelap),
         ),
       ),
-      home: const OnboardingScreen(),
+      home: const HalamanUtamaScreen(),
     );
   }
 }

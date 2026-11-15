@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../data/riwayat_putar_dummy.dart';
+import '../models/riwayat_putar.dart';
 import '../utils/warna_capify.dart';
+import '../widgets/cover_album.dart';
+import 'player_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String namaPengguna;
@@ -13,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool isHalamanSedangDimuat = true;
+  List<RiwayatPutar> riwayatTerakhirDiputar = [];
 
   @override
   void initState() {
@@ -21,10 +26,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> muatIsiBeranda() async {
-    setState(() => isHalamanSedangDimuat = true);
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
-    setState(() => isHalamanSedangDimuat = false);
+
+    List<RiwayatPutar> riwayatDariYangTerbaru = List.of(daftarRiwayatPutarDummy)
+      ..sort((a, b) => a.jarakSejakDiputar.compareTo(b.jarakSejakDiputar));
+
+    setState(() {
+      riwayatTerakhirDiputar = riwayatDariYangTerbaru;
+      isHalamanSedangDimuat = false;
+    });
   }
 
   String sapaanSesuaiJam() {
@@ -35,12 +46,40 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Selamat malam';
   }
 
+  void tampilkanPesan(String pesan) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(pesan)));
+  }
+
+  void putarDariRiwayat(int indexRiwayat) {
+    if (indexRiwayat < 0 || indexRiwayat >= riwayatTerakhirDiputar.length) {
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => PlayerScreen(
+          antrianLagu: riwayatTerakhirDiputar
+              .map((riwayat) => riwayat.lagu)
+              .toList(),
+          indexMulai: indexRiwayat,
+          namaAntrian: 'Terakhir Diputar',
+          isMulaiDiputar: true,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: WarnaCapify.coklatGelap,
         elevation: 0,
+        scrolledUnderElevation: 0,
         titleSpacing: 20,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,44 +106,245 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: WarnaCapify.krem),
-            onPressed: () {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(content: Text('Fitur notifikasi segera hadir')),
-                );
-            },
+            onPressed: () => tampilkanPesan('Fitur notifikasi segera hadir'),
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: isHalamanSedangDimuat
-            ? const Center(
-                child: CircularProgressIndicator(color: WarnaCapify.krem),
-              )
-            : RefreshIndicator(
-                color: WarnaCapify.coklatGelap,
-                backgroundColor: WarnaCapify.krem,
-                onRefresh: muatIsiBeranda,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-                  children: const [
-                    JudulBagianBeranda(judul: 'Terakhir diputar'),
-                    KotakBelumAdaIsi(
-                      ikon: Icons.history,
-                      pesan: 'Belum ada lagu yang kamu putar',
-                    ),
-                    SizedBox(height: 28),
-                    JudulBagianBeranda(judul: 'Rekomendasi untukmu'),
-                    KotakBelumAdaIsi(
+      body: isHalamanSedangDimuat
+          ? const Center(
+              child: CircularProgressIndicator(color: WarnaCapify.krem),
+            )
+          : RefreshIndicator(
+              color: WarnaCapify.coklatGelap,
+              backgroundColor: WarnaCapify.krem,
+              onRefresh: muatIsiBeranda,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: 12, bottom: 32),
+                children: [
+                  ...buildBagianTerakhirDiputar(),
+                  const SizedBox(height: 28),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: JudulBagianBeranda(judul: 'Rekomendasi untukmu'),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: KotakBelumAdaIsi(
                       ikon: Icons.library_music_outlined,
                       pesan: 'Rekomendasi lagu akan muncul di sini',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  List<Widget> buildBagianTerakhirDiputar() {
+    if (riwayatTerakhirDiputar.isEmpty) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: JudulBagianBeranda(judul: 'Terakhir diputar'),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: KotakBelumAdaIsi(
+            ikon: Icons.history,
+            pesan: 'Belum ada lagu yang kamu putar',
+          ),
+        ),
+      ];
+    }
+
+    int jumlahSisaRiwayat = riwayatTerakhirDiputar.length - 1;
+
+    return [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: KartuLanjutDengerin(
+          riwayat: riwayatTerakhirDiputar.first,
+          onTekan: () => putarDariRiwayat(0),
+        ),
+      ),
+      if (jumlahSisaRiwayat > 0) ...[
+        const SizedBox(height: 28),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: JudulBagianBeranda(judul: 'Terakhir diputar'),
+        ),
+        SizedBox(
+          height: 222,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: jumlahSisaRiwayat,
+            separatorBuilder: (context, index) => const SizedBox(width: 14),
+            itemBuilder: (context, index) {
+              int indexAsli = index + 1;
+              return KartuLaguTerakhirDiputar(
+                riwayat: riwayatTerakhirDiputar[indexAsli],
+                onTekan: () => putarDariRiwayat(indexAsli),
+              );
+            },
+          ),
+        ),
+      ],
+    ];
+  }
+}
+
+class KartuLanjutDengerin extends StatelessWidget {
+  final RiwayatPutar riwayat;
+  final VoidCallback onTekan;
+
+  const KartuLanjutDengerin({
+    super.key,
+    required this.riwayat,
+    required this.onTekan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: WarnaCapify.coklatTua,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTekan,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 76,
+                height: 76,
+                child: CoverAlbum(
+                  urlCover: riwayat.lagu.urlCover,
+                  lengkungSudut: 10,
+                  isPakaiBayangan: false,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Lanjut dengerin',
+                      style: TextStyle(
+                        color: WarnaCapify.krem,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      riwayat.lagu.judul,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: WarnaCapify.putih,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${riwayat.lagu.penyanyi} • ${riwayat.teksWaktuDiputar}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  color: WarnaCapify.krem,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  size: 28,
+                  color: WarnaCapify.coklatGelap,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class KartuLaguTerakhirDiputar extends StatelessWidget {
+  final RiwayatPutar riwayat;
+  final VoidCallback onTekan;
+
+  const KartuLaguTerakhirDiputar({
+    super.key,
+    required this.riwayat,
+    required this.onTekan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 140,
+      child: InkWell(
+        onTap: onTekan,
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 140,
+              height: 140,
+              child: CoverAlbum(
+                urlCover: riwayat.lagu.urlCover,
+                lengkungSudut: 12,
+                isPakaiBayangan: false,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              riwayat.lagu.judul,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: WarnaCapify.putih,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              riwayat.lagu.penyanyi,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              riwayat.teksWaktuDiputar,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: WarnaCapify.krem.withValues(alpha: 0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
