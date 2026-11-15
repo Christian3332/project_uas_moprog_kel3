@@ -5,11 +5,13 @@ import '../utils/warna_capify.dart';
 class CoverAlbum extends StatelessWidget {
   final String urlCover;
   final double lengkungSudut;
+  final bool isPakaiBayangan;
 
   const CoverAlbum({
     super.key,
     required this.urlCover,
     this.lengkungSudut = 16,
+    this.isPakaiBayangan = true,
   });
 
   @override
@@ -19,13 +21,15 @@ class CoverAlbum extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(lengkungSudut),
-        boxShadow: [
-          BoxShadow(
-            color: WarnaCapify.hitam.withValues(alpha: 0.5),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        boxShadow: isPakaiBayangan
+            ? [
+                BoxShadow(
+                  color: WarnaCapify.hitam.withValues(alpha: 0.5),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ]
+            : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(lengkungSudut),
