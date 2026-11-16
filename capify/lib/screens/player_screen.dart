@@ -4,10 +4,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../models/lagu.dart';
+import '../models/mode_ulang.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
-
-enum ModeUlang { mati, semua, satu }
+import '../widgets/kontrol_player.dart';
 
 class PlayerScreen extends StatefulWidget {
   final List<Lagu> antrianLagu;
@@ -186,6 +186,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     setState(() => modeUlang = ModeUlang.values[indexModeBaru]);
   }
 
+  void toggleAcak() {
+    setState(() => isAcak = !isAcak);
+  }
+
   void toggleSukai() {
     setState(() {
       if (indexLaguDisukai.contains(indexLaguSekarang)) {
@@ -194,12 +198,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
         indexLaguDisukai.add(indexLaguSekarang);
       }
     });
-  }
-
-  String formatWaktu(Duration waktu) {
-    int menit = waktu.inMinutes;
-    int detik = waktu.inSeconds % 60;
-    return '$menit:${detik.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -302,12 +300,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Widget buildIsiPlayer(Lagu lagu) {
-    double durasiDalamDetik = lagu.durasi.inSeconds.toDouble();
-    double maksSlider = durasiDalamDetik > 0 ? durasiDalamDetik : 1;
-    double posisiSlider = posisiSekarang.inSeconds.toDouble().clamp(
-      0,
-      maksSlider,
-    );
     bool isDisukai = indexLaguDisukai.contains(indexLaguSekarang);
 
     return Column(
@@ -367,106 +359,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 3,
-            activeTrackColor: WarnaCapify.krem,
-            inactiveTrackColor: Colors.white24,
-            thumbColor: WarnaCapify.krem,
-            overlayColor: WarnaCapify.krem.withValues(alpha: 0.2),
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-          ),
-          child: Slider(
-            value: posisiSlider,
-            min: 0,
-            max: maksSlider,
-            onChanged: geserSeekbar,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                formatWaktu(posisiSekarang),
-                style: const TextStyle(color: Colors.white60, fontSize: 12),
-              ),
-              Text(
-                formatWaktu(lagu.durasi),
-                style: const TextStyle(color: Colors.white60, fontSize: 12),
-              ),
-            ],
-          ),
+        SeekbarPlayer(
+          posisiSekarang: posisiSekarang,
+          durasiLagu: lagu.durasi,
+          onGeser: geserSeekbar,
         ),
         const SizedBox(height: 12),
-        buildTombolKontrol(),
+        TombolKontrolPlayer(
+          isLaguSedangDiputar: isLaguSedangDiputar,
+          isSedangMemuat: isSedangMemuat,
+          isAcak: isAcak,
+          modeUlang: modeUlang,
+          onTekanPlay: tekanTombolPlay,
+          onTekanPrevious: tekanTombolPrevious,
+          onTekanNext: pindahKeLaguBerikutnya,
+          onTekanAcak: toggleAcak,
+          onTekanUlang: gantiModeUlang,
+        ),
         const SizedBox(height: 32),
-      ],
-    );
-  }
-
-  Widget buildTombolKontrol() {
-    Color warnaAcak = isAcak ? WarnaCapify.krem : Colors.white54;
-    Color warnaUlang = modeUlang == ModeUlang.mati
-        ? Colors.white54
-        : WarnaCapify.krem;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          onPressed: () => setState(() => isAcak = !isAcak),
-          icon: Icon(Icons.shuffle_rounded, color: warnaAcak),
-        ),
-        IconButton(
-          onPressed: tekanTombolPrevious,
-          iconSize: 40,
-          icon: const Icon(
-            Icons.skip_previous_rounded,
-            color: WarnaCapify.putih,
-          ),
-        ),
-        GestureDetector(
-          onTap: tekanTombolPlay,
-          child: Container(
-            width: 72,
-            height: 72,
-            decoration: const BoxDecoration(
-              color: WarnaCapify.krem,
-              shape: BoxShape.circle,
-            ),
-            child: isSedangMemuat
-                ? const Padding(
-                    padding: EdgeInsets.all(22),
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      color: WarnaCapify.coklatGelap,
-                    ),
-                  )
-                : Icon(
-                    isLaguSedangDiputar
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    size: 40,
-                    color: WarnaCapify.coklatGelap,
-                  ),
-          ),
-        ),
-        IconButton(
-          onPressed: pindahKeLaguBerikutnya,
-          iconSize: 40,
-          icon: const Icon(Icons.skip_next_rounded, color: WarnaCapify.putih),
-        ),
-        IconButton(
-          onPressed: gantiModeUlang,
-          icon: Icon(
-            modeUlang == ModeUlang.satu
-                ? Icons.repeat_one_rounded
-                : Icons.repeat_rounded,
-            color: warnaUlang,
-          ),
-        ),
       ],
     );
   }
