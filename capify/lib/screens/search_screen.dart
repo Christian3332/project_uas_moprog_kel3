@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/lagu_dummy.dart';
 import '../models/lagu.dart';
 import '../utils/warna_capify.dart';
+import '../widgets/cover_album.dart';
 import 'detail_album_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -203,11 +204,25 @@ class _SearchScreenState extends State<SearchScreen> {
     return ListView.builder(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      itemCount: hasilPencarian.length,
+      itemCount: hasilPencarian.length + 1,
       itemBuilder: (context, index) {
-        Lagu laguIni = hasilPencarian[index];
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              '${hasilPencarian.length} lagu ditemukan',
+              style: TextStyle(
+                color: WarnaCapify.krem.withValues(alpha: 0.8),
+                fontSize: 13,
+              ),
+            ),
+          );
+        }
+
+        Lagu laguIni = hasilPencarian[index - 1];
         return BarisHasilLagu(
           lagu: laguIni,
+          kataKunci: kataKunciSekarang,
           onDipilih: () => pilihLaguDariHasil(laguIni),
         );
       },
@@ -301,48 +316,183 @@ class _SearchScreenState extends State<SearchScreen> {
 
 class BarisHasilLagu extends StatelessWidget {
   final Lagu lagu;
+  final String kataKunci;
   final VoidCallback onDipilih;
 
   const BarisHasilLagu({
     super.key,
     required this.lagu,
+    required this.kataKunci,
     required this.onDipilih,
   });
 
+  String formatDurasi(Duration durasi) {
+    String menit = durasi.inMinutes.toString();
+    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
+    return '$menit:$detik';
+  }
+
+  List<TextSpan> sorotiKataYangCocok(
+    String teksAsli,
+    TextStyle gayaBiasa,
+    TextStyle gayaSorotan,
+  ) {
+    String kataDicari = kataKunci.trim().toLowerCase();
+    String teksHurufKecil = teksAsli.toLowerCase();
+
+    bool panjangnyaBerubah = teksHurufKecil.length != teksAsli.length;
+    if (kataDicari.isEmpty || panjangnyaBerubah) {
+      return [TextSpan(text: teksAsli, style: gayaBiasa)];
+    }
+
+    List<TextSpan> potonganTeks = [];
+    int posisiTerakhir = 0;
+    int posisiKetemu = teksHurufKecil.indexOf(kataDicari);
+
+    while (posisiKetemu != -1) {
+      if (posisiKetemu > posisiTerakhir) {
+        potonganTeks.add(
+          TextSpan(
+            text: teksAsli.substring(posisiTerakhir, posisiKetemu),
+            style: gayaBiasa,
+          ),
+        );
+      }
+
+      int ujungKataCocok = posisiKetemu + kataDicari.length;
+      potonganTeks.add(
+        TextSpan(
+          text: teksAsli.substring(posisiKetemu, ujungKataCocok),
+          style: gayaSorotan,
+        ),
+      );
+
+      posisiTerakhir = ujungKataCocok;
+      posisiKetemu = teksHurufKecil.indexOf(kataDicari, posisiTerakhir);
+    }
+
+    if (posisiTerakhir < teksAsli.length) {
+      potonganTeks.add(
+        TextSpan(text: teksAsli.substring(posisiTerakhir), style: gayaBiasa),
+      );
+    }
+
+    return potonganTeks;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(vertical: 4),
-      onTap: onDipilih,
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          lagu.urlCover,
-          width: 52,
-          height: 52,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            width: 52,
-            height: 52,
-            color: WarnaCapify.coklatTua,
-            child: const Icon(Icons.music_note, color: WarnaCapify.krem),
+    const gayaJudul = TextStyle(
+      color: WarnaCapify.putih,
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+    );
+    const gayaPenyanyi = TextStyle(color: WarnaCapify.krem, fontSize: 13);
+    Color warnaStabilo = WarnaCapify.krem.withValues(alpha: 0.22);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: WarnaCapify.coklatTua.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onDipilih,
+          splashColor: WarnaCapify.krem.withValues(alpha: 0.12),
+          highlightColor: WarnaCapify.krem.withValues(alpha: 0.06),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: CoverAlbum(
+                    urlCover: lagu.urlCover,
+                    lengkungSudut: 10,
+                    isPakaiBayangan: false,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                          children: sorotiKataYangCocok(
+                            lagu.judul,
+                            gayaJudul,
+                            gayaJudul.copyWith(
+                              fontWeight: FontWeight.w800,
+                              backgroundColor: warnaStabilo,
+                            ),
+                          ),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: WarnaCapify.krem,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'Lagu',
+                              style: TextStyle(
+                                color: WarnaCapify.coklatGelap,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text.rich(
+                              TextSpan(
+                                children: sorotiKataYangCocok(
+                                  lagu.penyanyi,
+                                  gayaPenyanyi,
+                                  gayaPenyanyi.copyWith(
+                                    color: WarnaCapify.putih,
+                                    fontWeight: FontWeight.w700,
+                                    backgroundColor: warnaStabilo,
+                                  ),
+                                ),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  formatDurasi(lagu.durasi),
+                  style: TextStyle(
+                    color: WarnaCapify.krem.withValues(alpha: 0.7),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: WarnaCapify.krem.withValues(alpha: 0.7),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      title: Text(
-        lagu.judul,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: WarnaCapify.putih,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        lagu.penyanyi,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: WarnaCapify.krem),
       ),
     );
   }
