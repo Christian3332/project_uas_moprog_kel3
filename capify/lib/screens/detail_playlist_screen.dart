@@ -5,23 +5,24 @@ import '../models/playlist.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 
-class DetailPlaylistScreen extends StatelessWidget {
+class DetailPlaylistScreen extends StatefulWidget {
   final Playlist playlist;
 
   const DetailPlaylistScreen({super.key, required this.playlist});
 
-  String formatDurasiLagu(Duration durasi) {
-    String menit = durasi.inMinutes.toString();
-    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
-    return '$menit:$detik';
-  }
+  @override
+  State<DetailPlaylistScreen> createState() => _DetailPlaylistScreenState();
+}
+
+class _DetailPlaylistScreenState extends State<DetailPlaylistScreen> {
+  int? urutanLaguDipilih;
 
   String ringkasanIsiPlaylist() {
-    int jumlahLagu = playlist.daftarLagu.length;
+    int jumlahLagu = widget.playlist.daftarLagu.length;
     if (jumlahLagu == 0) return 'Playlist • 0 lagu';
 
     Duration totalDurasi = Duration.zero;
-    for (Lagu lagu in playlist.daftarLagu) {
+    for (Lagu lagu in widget.playlist.daftarLagu) {
       totalDurasi += lagu.durasi;
     }
 
@@ -30,14 +31,25 @@ class DetailPlaylistScreen extends StatelessWidget {
     return 'Playlist • $jumlahLagu lagu • $totalMenit mnt $sisaDetik dtk';
   }
 
-  void tampilkanPesanSingkat(BuildContext context, String pesan) {
+  void tampilkanPesanSingkat(String pesan) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
+  void pilihLaguDiTracklist(int urutan) {
+    setState(() {
+      if (urutanLaguDipilih == urutan) {
+        urutanLaguDipilih = null;
+      } else {
+        urutanLaguDipilih = urutan;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    Playlist playlist = widget.playlist;
     bool isPlaylistKosong = playlist.daftarLagu.isEmpty;
 
     return Scaffold(
@@ -93,9 +105,8 @@ class DetailPlaylistScreen extends StatelessWidget {
                 onPressed: isPlaylistKosong
                     ? null
                     : () => tampilkanPesanSingkat(
-                          context,
-                          'Pemutaran playlist segera hadir',
-                        ),
+                        'Pemutaran playlist segera hadir',
+                      ),
                 style: FilledButton.styleFrom(
                   backgroundColor: WarnaCapify.krem,
                   foregroundColor: WarnaCapify.coklatGelap,
@@ -114,50 +125,52 @@ class DetailPlaylistScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 28),
+            judulBagianTracklist(playlist.daftarLagu.length),
+            const SizedBox(height: 8),
             if (isPlaylistKosong)
               kotakPlaylistMasihKosong()
             else
-              ...playlist.daftarLagu.map((lagu) => barisLaguPlaylist(lagu)),
+              for (
+                int urutan = 0;
+                urutan < playlist.daftarLagu.length;
+                urutan++
+              )
+                BarisLaguTracklist(
+                  nomorUrut: urutan + 1,
+                  lagu: playlist.daftarLagu[urutan],
+                  isSedangDipilih: urutanLaguDipilih == urutan,
+                  onDitekan: () => pilihLaguDiTracklist(urutan),
+                  onTekanPilihanLain: () => tampilkanPesanSingkat(
+                    'Pilihan untuk ${playlist.daftarLagu[urutan].judul} segera hadir',
+                  ),
+                ),
           ],
         ),
       ),
     );
   }
 
-  Widget barisLaguPlaylist(Lagu lagu) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: SizedBox(
-          width: 48,
-          height: 48,
-          child: CoverAlbum(
-            urlCover: lagu.urlCover,
-            lengkungSudut: 8,
-            isPakaiBayangan: false,
+  Widget judulBagianTracklist(int jumlahLagu) {
+    return Row(
+      children: [
+        const Expanded(
+          child: Text(
+            'Daftar Lagu',
+            style: TextStyle(
+              fontSize: 18,
+              color: WarnaCapify.putih,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-        title: Text(
-          lagu.judul,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        Text(
+          '$jumlahLagu lagu',
           style: const TextStyle(
-            color: WarnaCapify.putih,
-            fontWeight: FontWeight.w600,
+            color: WarnaCapify.krem,
+            fontWeight: FontWeight.w300,
           ),
         ),
-        subtitle: Text(
-          lagu.penyanyi,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: WarnaCapify.krem),
-        ),
-        trailing: Text(
-          formatDurasiLagu(lagu.durasi),
-          style: const TextStyle(color: WarnaCapify.krem),
-        ),
-      ),
+      ],
     );
   }
 
@@ -170,11 +183,7 @@ class DetailPlaylistScreen extends StatelessWidget {
       ),
       child: const Column(
         children: [
-          Icon(
-            Icons.playlist_add_rounded,
-            size: 36,
-            color: WarnaCapify.krem,
-          ),
+          Icon(Icons.playlist_add_rounded, size: 36, color: WarnaCapify.krem),
           SizedBox(height: 8),
           Text(
             'Playlist ini masih kosong, belum ada lagu yang ditambahkan',
@@ -185,6 +194,124 @@ class DetailPlaylistScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class BarisLaguTracklist extends StatelessWidget {
+  final int nomorUrut;
+  final Lagu lagu;
+  final bool isSedangDipilih;
+  final VoidCallback onDitekan;
+  final VoidCallback onTekanPilihanLain;
+
+  const BarisLaguTracklist({
+    super.key,
+    required this.nomorUrut,
+    required this.lagu,
+    required this.isSedangDipilih,
+    required this.onDitekan,
+    required this.onTekanPilihanLain,
+  });
+
+  String formatDurasiLagu(Duration durasi) {
+    String menit = durasi.inMinutes.toString();
+    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
+    return '$menit:$detik';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color warnaJudul = isSedangDipilih ? WarnaCapify.krem : WarnaCapify.putih;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: isSedangDipilih
+            ? WarnaCapify.coklatTua.withValues(alpha: 0.6)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onDitekan,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 0, 8),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 28,
+                  child: Center(
+                    child: isSedangDipilih
+                        ? const Icon(
+                            Icons.graphic_eq_rounded,
+                            size: 18,
+                            color: WarnaCapify.krem,
+                          )
+                        : Text(
+                            '$nomorUrut',
+                            style: const TextStyle(
+                              color: WarnaCapify.krem,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: CoverAlbum(
+                    urlCover: lagu.urlCover,
+                    lengkungSudut: 6,
+                    isPakaiBayangan: false,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lagu.judul,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: warnaJudul,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        lagu.penyanyi,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: WarnaCapify.krem,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  formatDurasiLagu(lagu.durasi),
+                  style: const TextStyle(fontSize: 12, color: WarnaCapify.krem),
+                ),
+                IconButton(
+                  tooltip: 'Pilihan lain',
+                  onPressed: onTekanPilihanLain,
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: WarnaCapify.krem,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
