@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../utils/warna_capify.dart';
+import 'halaman_utama_screen.dart';
 import 'login_screen.dart';
 
 class IsiSlideOnboarding {
@@ -44,7 +45,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController pengaturSlide = PageController();
   int indexSlideAktif = 0;
-  bool isOnboardingSudahSelesai = false;
+  bool isSedangPindahHalaman = false;
 
   bool get isDiSlideTerakhir =>
       indexSlideAktif == daftarSlideOnboarding.length - 1;
@@ -73,8 +74,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void selesaikanOnboarding() {
-    if (isOnboardingSudahSelesai) return;
-    isOnboardingSudahSelesai = true;
+    if (isSedangPindahHalaman) return;
+    isSedangPindahHalaman = true;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 500),
+        pageBuilder: (context, animasiMasuk, animasiKeluar) {
+          return const HalamanUtamaScreen();
+        },
+        transitionsBuilder:
+            (context, animasiMasuk, animasiKeluar, halamanTujuan) {
+              return FadeTransition(
+                opacity: animasiMasuk,
+                child: halamanTujuan,
+              );
+            },
+      ),
+      (ruteSebelumnya) => false,
+    );
+  }
+
+  void bukaHalamanMasuk() {
+    if (isSedangPindahHalaman) return;
+    isSedangPindahHalaman = true;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -182,6 +207,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Visibility(
+                      visible: isDiSlideTerakhir,
+                      maintainSize: true,
+                      maintainAnimation: true,
+                      maintainState: true,
+                      child: TextButton(
+                        onPressed: bukaHalamanMasuk,
+                        child: const Text.rich(
+                          TextSpan(
+                            text: 'Sudah punya akun? ',
+                            style: TextStyle(
+                              color: WarnaCapify.putih,
+                              fontWeight: FontWeight.w300,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Masuk',
+                                style: TextStyle(
+                                  color: WarnaCapify.krem,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
