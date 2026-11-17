@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../data/lagu_dummy.dart';
 import '../models/lagu.dart';
+import '../providers/audio_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/mini_player.dart';
 import 'explore_screen.dart';
@@ -21,69 +22,27 @@ class HalamanUtamaScreen extends StatefulWidget {
 
 class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
   int indexTabAktif = 0;
-  int? indexLaguDiMiniPlayer;
-  bool isLaguSedangDiputar = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (daftarLaguDummy.isNotEmpty) {
-      indexLaguDiMiniPlayer = 0;
-    }
-  }
-
-  Lagu? get laguDiMiniPlayer {
-    int? index = indexLaguDiMiniPlayer;
-    if (index == null || index >= daftarLaguDummy.length) return null;
-    return daftarLaguDummy[index];
-  }
 
   void pilihTab(int indexTab) {
     if (indexTab == indexTabAktif) return;
     setState(() => indexTabAktif = indexTab);
   }
 
-  void toggleMainDariMiniPlayer() {
-    setState(() => isLaguSedangDiputar = !isLaguSedangDiputar);
-  }
+  void laguBerikutnyaDariMiniPlayer(AudioProvider audio) {
+    bool isBerhasilPindah = audio.laguBerikutnya();
+    if (isBerhasilPindah) return;
 
-  void laguBerikutnyaDariMiniPlayer() {
-    int? index = indexLaguDiMiniPlayer;
-    if (index == null) return;
-    setState(() {
-      indexLaguDiMiniPlayer = (index + 1) % daftarLaguDummy.length;
-    });
-  }
-
-  void terimaStatusDariPlayer(int indexLagu, bool isDiputar) {
-    if (!mounted) return;
-    setState(() {
-      indexLaguDiMiniPlayer = indexLagu;
-      isLaguSedangDiputar = isDiputar;
-    });
-  }
-
-  void bukaPlayerLayarPenuh() {
-    int? index = indexLaguDiMiniPlayer;
-    if (index == null) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => PlayerScreen(
-          antrianLagu: daftarLaguDummy,
-          indexMulai: index,
-          isMulaiDiputar: isLaguSedangDiputar,
-          onStatusPemutaranBerubah: terimaStatusDariPlayer,
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text('Ini sudah lagu terakhir di antrian')),
+      );
   }
 
   @override
   Widget build(BuildContext context) {
-    Lagu? lagu = laguDiMiniPlayer;
+    AudioProvider audio = context.watch<AudioProvider>();
+    Lagu? lagu = audio.laguSekarang;
 
     return Scaffold(
       body: IndexedStack(
@@ -104,10 +63,11 @@ class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
               child: MiniPlayer(
                 lagu: lagu,
-                isLaguSedangDiputar: isLaguSedangDiputar,
-                onTekanMiniPlayer: bukaPlayerLayarPenuh,
-                onTekanPlay: toggleMainDariMiniPlayer,
-                onTekanNext: laguBerikutnyaDariMiniPlayer,
+                isLaguSedangDiputar: audio.isLaguSedangDiputar,
+                isSedangMemuat: audio.isSedangMemuat,
+                onTekanMiniPlayer: () => PlayerScreen.bukaLayarPenuh(context),
+                onTekanPlay: audio.togglePutarJeda,
+                onTekanNext: () => laguBerikutnyaDariMiniPlayer(audio),
               ),
             ),
           buildNavigasiBawah(),

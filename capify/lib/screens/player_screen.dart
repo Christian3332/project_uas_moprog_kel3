@@ -1,77 +1,26 @@
-import 'dart:async';
-import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/lagu.dart';
-import '../models/mode_ulang.dart';
+import '../providers/audio_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import '../widgets/kontrol_player.dart';
 
-class PlayerScreen extends StatefulWidget {
-  final List<Lagu> antrianLagu;
-  final int indexMulai;
-  final String namaAntrian;
-  final bool isMulaiDiputar;
-  final void Function(int indexLagu, bool isDiputar)? onStatusPemutaranBerubah;
+class PlayerScreen extends StatelessWidget {
+  const PlayerScreen({super.key});
 
-  const PlayerScreen({
-    super.key,
-    required this.antrianLagu,
-    this.indexMulai = 0,
-    this.namaAntrian = 'Lagu Pilihanmu',
-    this.isMulaiDiputar = false,
-    this.onStatusPemutaranBerubah,
-  });
-
-  @override
-  State<PlayerScreen> createState() => _PlayerScreenState();
-}
-
-class _PlayerScreenState extends State<PlayerScreen> {
-  int indexLaguSekarang = 0;
-  bool isLaguSedangDiputar = false;
-  bool isSedangMemuat = false;
-  bool isAcak = false;
-  ModeUlang modeUlang = ModeUlang.mati;
-  Duration posisiSekarang = Duration.zero;
-  Timer? timerPemutar;
-  final Set<int> indexLaguDisukai = {};
-
-  @override
-  void initState() {
-    super.initState();
-    bool indexMulaiValid =
-        widget.indexMulai >= 0 && widget.indexMulai < widget.antrianLagu.length;
-    if (indexMulaiValid) {
-      indexLaguSekarang = widget.indexMulai;
-    }
-    if (widget.isMulaiDiputar && widget.antrianLagu.isNotEmpty) {
-      isLaguSedangDiputar = true;
-      mulaiHitungWaktu();
-    }
-  }
-
-  void kabariStatusPemutaran() {
-    widget.onStatusPemutaranBerubah?.call(
-      indexLaguSekarang,
-      isLaguSedangDiputar,
+  static void bukaLayarPenuh(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => const PlayerScreen(),
+      ),
     );
   }
 
-  @override
-  void dispose() {
-    timerPemutar?.cancel();
-    super.dispose();
-  }
-
-  Lagu? get laguSekarang {
-    if (widget.antrianLagu.isEmpty) return null;
-    return widget.antrianLagu[indexLaguSekarang];
-  }
-
-  void tampilkanPesan(String pesan) {
+  void tampilkanPesan(BuildContext context, String pesan) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -79,130 +28,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
       );
   }
 
-  Future<void> tekanTombolPlay() async {
-    if (laguSekarang == null || isSedangMemuat) return;
-
-    if (isLaguSedangDiputar) {
-      timerPemutar?.cancel();
-      setState(() => isLaguSedangDiputar = false);
-      kabariStatusPemutaran();
-      return;
+  void tekanTombolNext(BuildContext context, AudioProvider audio) {
+    bool isBerhasilPindah = audio.laguBerikutnya();
+    if (!isBerhasilPindah) {
+      tampilkanPesan(context, 'Ini sudah lagu terakhir di antrian');
     }
-
-    setState(() => isSedangMemuat = true);
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-
-    setState(() {
-      isSedangMemuat = false;
-      isLaguSedangDiputar = true;
-    });
-    mulaiHitungWaktu();
-    kabariStatusPemutaran();
-  }
-
-  void mulaiHitungWaktu() {
-    timerPemutar?.cancel();
-    timerPemutar = Timer.periodic(const Duration(seconds: 1), (_) {
-      Lagu? lagu = laguSekarang;
-      if (lagu == null) return;
-
-      Duration posisiBerikutnya = posisiSekarang + const Duration(seconds: 1);
-      if (posisiBerikutnya >= lagu.durasi) {
-        laguSudahHabis();
-        return;
-      }
-      setState(() => posisiSekarang = posisiBerikutnya);
-    });
-  }
-
-  void laguSudahHabis() {
-    if (modeUlang == ModeUlang.satu) {
-      setState(() => posisiSekarang = Duration.zero);
-      return;
-    }
-    pindahKeLaguBerikutnya();
-  }
-
-  int? cariIndexBerikutnya() {
-    int jumlahLagu = widget.antrianLagu.length;
-    if (jumlahLagu == 0) return null;
-
-    if (isAcak && jumlahLagu > 1) {
-      int indexAcak = indexLaguSekarang;
-      while (indexAcak == indexLaguSekarang) {
-        indexAcak = Random().nextInt(jumlahLagu);
-      }
-      return indexAcak;
-    }
-
-    if (indexLaguSekarang + 1 < jumlahLagu) return indexLaguSekarang + 1;
-    if (modeUlang == ModeUlang.semua) return 0;
-    return null;
-  }
-
-  void pindahKeLaguBerikutnya() {
-    if (laguSekarang == null) return;
-
-    int? indexBerikutnya = cariIndexBerikutnya();
-    if (indexBerikutnya == null) {
-      timerPemutar?.cancel();
-      setState(() {
-        isLaguSedangDiputar = false;
-        posisiSekarang = Duration.zero;
-      });
-      kabariStatusPemutaran();
-      tampilkanPesan('Ini sudah lagu terakhir di antrian');
-      return;
-    }
-    gantiLagu(indexBerikutnya);
-  }
-
-  void tekanTombolPrevious() {
-    if (laguSekarang == null) return;
-
-    bool sudahLewatTigaDetik = posisiSekarang.inSeconds > 3;
-    if (sudahLewatTigaDetik || indexLaguSekarang == 0) {
-      setState(() => posisiSekarang = Duration.zero);
-      return;
-    }
-    gantiLagu(indexLaguSekarang - 1);
-  }
-
-  void gantiLagu(int indexBaru) {
-    setState(() {
-      indexLaguSekarang = indexBaru;
-      posisiSekarang = Duration.zero;
-    });
-    kabariStatusPemutaran();
-  }
-
-  void geserSeekbar(double detikTujuan) {
-    setState(() => posisiSekarang = Duration(seconds: detikTujuan.round()));
-  }
-
-  void gantiModeUlang() {
-    int indexModeBaru = (modeUlang.index + 1) % ModeUlang.values.length;
-    setState(() => modeUlang = ModeUlang.values[indexModeBaru]);
-  }
-
-  void toggleAcak() {
-    setState(() => isAcak = !isAcak);
-  }
-
-  void toggleSukai() {
-    setState(() {
-      if (indexLaguDisukai.contains(indexLaguSekarang)) {
-        indexLaguDisukai.remove(indexLaguSekarang);
-      } else {
-        indexLaguDisukai.add(indexLaguSekarang);
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    Lagu? lagu = laguSekarang;
+    AudioProvider audio = context.watch<AudioProvider>();
+    Lagu? lagu = audio.laguSekarang;
 
     return Container(
       decoration: const BoxDecoration(
@@ -214,19 +50,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: buildAppBarPlayer(),
+        appBar: buildAppBarPlayer(context, audio.namaAntrian),
         body: SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: lagu == null ? buildAntrianKosong() : buildIsiPlayer(lagu),
+            child: lagu == null
+                ? buildAntrianKosong()
+                : buildIsiPlayer(context, audio, lagu),
           ),
         ),
       ),
     );
   }
 
-  PreferredSizeWidget buildAppBarPlayer() {
+  PreferredSizeWidget buildAppBarPlayer(
+    BuildContext context,
+    String namaAntrian,
+  ) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -253,7 +94,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ),
           const SizedBox(height: 2),
           Text(
-            widget.namaAntrian,
+            namaAntrian,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -266,7 +107,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
       actions: [
         IconButton(
-          onPressed: () => tampilkanPesan('Menu lainnya belum tersedia'),
+          onPressed: () =>
+              tampilkanPesan(context, 'Menu lainnya belum tersedia'),
           icon: const Icon(Icons.more_vert, color: WarnaCapify.putih),
         ),
         const SizedBox(width: 4),
@@ -299,15 +141,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  Widget buildIsiPlayer(Lagu lagu) {
-    bool isDisukai = indexLaguDisukai.contains(indexLaguSekarang);
+  Widget buildIsiPlayer(BuildContext context, AudioProvider audio, Lagu lagu) {
+    bool isDisukai = audio.isLaguSekarangDisukai;
 
     return Column(
       children: [
         Expanded(
           child: Center(
             child: AnimatedScale(
-              scale: isLaguSedangDiputar ? 1 : 0.88,
+              scale: audio.isLaguSedangDiputar ? 1 : 0.88,
               duration: const Duration(milliseconds: 350),
               curve: Curves.easeOut,
               child: AspectRatio(
@@ -349,7 +191,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ),
             ),
             IconButton(
-              onPressed: toggleSukai,
+              onPressed: audio.toggleSukaiLaguSekarang,
+              tooltip: isDisukai ? 'Hapus dari disukai' : 'Sukai lagu ini',
               icon: Icon(
                 isDisukai ? Icons.favorite : Icons.favorite_border,
                 color: isDisukai ? WarnaCapify.krem : WarnaCapify.putih,
@@ -360,21 +203,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
         ),
         const SizedBox(height: 16),
         SeekbarPlayer(
-          posisiSekarang: posisiSekarang,
+          posisiSekarang: audio.posisiSekarang,
           durasiLagu: lagu.durasi,
-          onGeser: geserSeekbar,
+          onGeser: (detikTujuan) =>
+              audio.geserKe(Duration(seconds: detikTujuan.round())),
         ),
         const SizedBox(height: 12),
         TombolKontrolPlayer(
-          isLaguSedangDiputar: isLaguSedangDiputar,
-          isSedangMemuat: isSedangMemuat,
-          isAcak: isAcak,
-          modeUlang: modeUlang,
-          onTekanPlay: tekanTombolPlay,
-          onTekanPrevious: tekanTombolPrevious,
-          onTekanNext: pindahKeLaguBerikutnya,
-          onTekanAcak: toggleAcak,
-          onTekanUlang: gantiModeUlang,
+          isLaguSedangDiputar: audio.isLaguSedangDiputar,
+          isSedangMemuat: audio.isSedangMemuat,
+          isAcak: audio.isAcak,
+          modeUlang: audio.modeUlang,
+          onTekanPlay: audio.togglePutarJeda,
+          onTekanPrevious: audio.laguSebelumnya,
+          onTekanNext: () => tekanTombolNext(context, audio),
+          onTekanAcak: audio.toggleAcak,
+          onTekanUlang: audio.gantiModeUlang,
         ),
         const SizedBox(height: 32),
       ],

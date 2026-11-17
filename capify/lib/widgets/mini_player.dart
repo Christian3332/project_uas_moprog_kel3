@@ -7,6 +7,7 @@ import 'cover_album.dart';
 class MiniPlayer extends StatelessWidget {
   final Lagu lagu;
   final bool isLaguSedangDiputar;
+  final bool isSedangMemuat;
   final VoidCallback onTekanMiniPlayer;
   final VoidCallback onTekanPlay;
   final VoidCallback onTekanNext;
@@ -15,6 +16,7 @@ class MiniPlayer extends StatelessWidget {
     super.key,
     required this.lagu,
     required this.isLaguSedangDiputar,
+    this.isSedangMemuat = false,
     required this.onTekanMiniPlayer,
     required this.onTekanPlay,
     required this.onTekanNext,
@@ -71,17 +73,30 @@ class MiniPlayer extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: onTekanPlay,
-                tooltip: isLaguSedangDiputar ? 'Jeda' : 'Putar',
-                icon: Icon(
-                  isLaguSedangDiputar
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded,
-                  size: 30,
-                  color: WarnaCapify.putih,
+              if (isSedangMemuat)
+                const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: WarnaCapify.krem,
+                    ),
+                  ),
+                )
+              else
+                IconButton(
+                  onPressed: onTekanPlay,
+                  tooltip: isLaguSedangDiputar ? 'Jeda' : 'Putar',
+                  icon: Icon(
+                    isLaguSedangDiputar
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
+                    size: 30,
+                    color: WarnaCapify.putih,
+                  ),
                 ),
-              ),
               IconButton(
                 onPressed: onTekanNext,
                 tooltip: 'Lagu berikutnya',
