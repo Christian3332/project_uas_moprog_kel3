@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/auth_provider.dart';
 import '../utils/validasi_auth.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/komponen_auth.dart';
@@ -82,14 +84,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     setState(() => isSedangMendaftar = true);
-    await Future.delayed(const Duration(seconds: 2));
+    String? pesanGagal = await context.read<AuthProvider>().daftar(
+      nama: namaController.text,
+      email: emailController.text,
+      password: passwordController.text,
+    );
     if (!mounted) return;
     setState(() => isSedangMendaftar = false);
 
-    Navigator.pop(context, {
-      'email': emailController.text.trim(),
-      'nama': namaController.text.trim(),
-    });
+    if (pesanGagal != null) {
+      tampilkanPesan(pesanGagal);
+      return;
+    }
+
+    Navigator.pop(context, emailController.text.trim().toLowerCase());
   }
 
   Widget buatBarisPersetujuan() {

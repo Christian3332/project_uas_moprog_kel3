@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/auth_provider.dart';
 import '../utils/validasi_auth.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/komponen_auth.dart';
@@ -22,8 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isSedangMasuk = false;
   bool isIngatSaya = false;
   bool isEmailSudahDiisi = false;
-  String? emailAkunBaru;
-  String? namaAkunBaru;
   AutovalidateMode modeValidasi = AutovalidateMode.disabled;
 
   @override
@@ -68,33 +68,23 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    AuthProvider authProvider = context.read<AuthProvider>();
+
     setState(() => isSedangMasuk = true);
-    await Future.delayed(const Duration(seconds: 2));
+    String? pesanGagal = await authProvider.masuk(
+      email: emailController.text,
+      password: passwordController.text,
+      isIngatSaya: isIngatSaya,
+    );
     if (!mounted) return;
+    setState(() => isSedangMasuk = false);
 
-    String emailPengguna = emailController.text.trim();
-    bool isEmailDariPendaftaran =
-        emailAkunBaru != null &&
-        emailAkunBaru!.toLowerCase() == emailPengguna.toLowerCase();
-    String namaPengguna = isEmailDariPendaftaran && namaAkunBaru != null
-        ? namaAkunBaru!
-        : ambilNamaDariEmail(emailPengguna);
+    if (pesanGagal != null) {
+      tampilkanPesan(pesanGagal);
+      return;
+    }
 
-    bukaHalamanUtama(namaPengguna);
-  }
-
-  String ambilNamaDariEmail(String email) {
-    String bagianSebelumAt = email.split('@').first;
-    List<String> potonganKata = bagianSebelumAt
-        .split(RegExp(r'[._\-+0-9]+'))
-        .where((kata) => kata.isNotEmpty)
-        .toList();
-
-    if (potonganKata.isEmpty) return 'Capy Lovers';
-
-    return potonganKata
-        .map((kata) => kata[0].toUpperCase() + kata.substring(1).toLowerCase())
-        .join(' ');
+    bukaHalamanUtama(authProvider.namaTampilan);
   }
 
   void bukaHalamanUtama(String namaPengguna) {
@@ -122,19 +112,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> bukaHalamanDaftar() async {
-    Map<String, String>? dataAkunBaru = await Navigator.push(
+    String? emailAkunBaru = await Navigator.push(
       context,
-      MaterialPageRoute<Map<String, String>>(
-        builder: (context) => const RegisterScreen(),
-      ),
+      MaterialPageRoute<String>(builder: (context) => const RegisterScreen()),
     );
 
-    if (!mounted || dataAkunBaru == null) return;
+    if (!mounted || emailAkunBaru == null) return;
 
-    emailAkunBaru = dataAkunBaru['email'];
-    namaAkunBaru = dataAkunBaru['nama'];
-
-    emailController.text = emailAkunBaru ?? '';
+    emailController.text = emailAkunBaru;
     passwordController.clear();
     tampilkanPesan('Akun berhasil dibuat, silakan masuk');
   }

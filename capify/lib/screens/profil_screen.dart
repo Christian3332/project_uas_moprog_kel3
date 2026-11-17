@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/playlist_dummy.dart';
 import '../data/riwayat_putar_dummy.dart';
+import '../providers/audio_provider.dart';
+import '../providers/auth_provider.dart';
 import '../utils/warna_capify.dart';
 import 'login_screen.dart';
 
@@ -14,14 +17,7 @@ const Map<String, String> keteranganKualitas = {
 };
 
 class ProfilScreen extends StatefulWidget {
-  final String namaPengguna;
-  final String emailPengguna;
-
-  const ProfilScreen({
-    super.key,
-    this.namaPengguna = 'Capy Lovers',
-    this.emailPengguna = 'Email belum tersedia',
-  });
+  const ProfilScreen({super.key});
 
   @override
   State<ProfilScreen> createState() => _ProfilScreenState();
@@ -33,8 +29,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
   bool isHematData = false;
   String kualitasStreaming = 'Normal';
 
-  String get inisialNama {
-    List<String> daftarKata = widget.namaPengguna
+  String ambilInisial(String namaLengkap) {
+    List<String> daftarKata = namaLengkap
         .trim()
         .split(RegExp(r'\s+'))
         .where((kata) => kata.isNotEmpty)
@@ -166,6 +162,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
     if (!mounted || isYakinKeluar != true) return;
 
+    context.read<AudioProvider>().jeda();
+    context.read<AuthProvider>().keluar();
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -190,6 +189,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AuthProvider authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: WarnaCapify.coklatGelap,
@@ -204,7 +205,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          buildKartuProfil(),
+          buildKartuProfil(
+            authProvider.namaTampilan,
+            authProvider.emailTampilan,
+          ),
           const SizedBox(height: 28),
           const JudulBagianPengaturan(judul: 'Pemutaran'),
           KartuGrupPengaturan(
@@ -310,7 +314,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
-  Widget buildKartuProfil() {
+  Widget buildKartuProfil(String namaPengguna, String emailPengguna) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -330,7 +334,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 radius: 34,
                 backgroundColor: WarnaCapify.krem,
                 child: Text(
-                  inisialNama,
+                  ambilInisial(namaPengguna),
                   style: const TextStyle(
                     color: WarnaCapify.coklatGelap,
                     fontSize: 24,
@@ -344,7 +348,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.namaPengguna,
+                      namaPengguna,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -355,7 +359,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      widget.emailPengguna,
+                      emailPengguna,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
