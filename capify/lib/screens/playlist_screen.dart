@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../data/album_dummy.dart';
-import '../data/playlist_dummy.dart';
 import '../models/album.dart';
 import '../models/playlist.dart';
+import '../providers/playlist_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import 'detail_playlist_screen.dart';
@@ -16,29 +16,12 @@ class PlaylistScreen extends StatefulWidget {
 }
 
 class _PlaylistScreenState extends State<PlaylistScreen> {
-  bool isKoleksiSedangDimuat = true;
   String kategoriTerpilih = 'Playlist';
-
-  List<Album> daftarAlbumTersimpan = [];
-  List<Playlist> daftarPlaylistSaya = [];
 
   final List<String> pilihanKategori = ['Playlist', 'Album', 'Lagu Disukai'];
 
-  @override
-  void initState() {
-    super.initState();
-    muatKoleksiPengguna();
-  }
-
-  Future<void> muatKoleksiPengguna() async {
-    setState(() => isKoleksiSedangDimuat = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-    setState(() {
-      daftarAlbumTersimpan = List.of(daftarAlbumTersimpanDummy);
-      daftarPlaylistSaya = List.of(daftarPlaylistDummy);
-      isKoleksiSedangDimuat = false;
-    });
+  Future<void> muatUlangKoleksi() {
+    return context.read<PlaylistProvider>().muatKoleksi();
   }
 
   void bukaDetailPlaylist(Playlist playlistDipilih) {
@@ -53,12 +36,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   void tampilkanInfoSegeraHadir(String namaFitur) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text('$namaFitur segera hadir')),
-      );
+      ..showSnackBar(SnackBar(content: Text('$namaFitur segera hadir')));
   }
 
-  Widget bangunIsiKoleksi() {
+  Widget bangunIsiKoleksi(PlaylistProvider koleksi) {
+    List<Playlist> daftarPlaylistSaya = koleksi.daftarPlaylistSaya;
+    List<Album> daftarAlbumTersimpan = koleksi.daftarAlbumTersimpan;
+
     if (kategoriTerpilih == 'Playlist' && daftarPlaylistSaya.isNotEmpty) {
       return ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -89,9 +73,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           Album albumIni = daftarAlbumTersimpan[urutan];
           return KartuAlbumTersimpan(
             album: albumIni,
-            onDitekan: () => tampilkanInfoSegeraHadir(
-              'Detail album ${albumIni.judul}',
-            ),
+            onDitekan: () =>
+                tampilkanInfoSegeraHadir('Detail album ${albumIni.judul}'),
           );
         },
       );
@@ -108,18 +91,18 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           ikon: isTabPlaylist
               ? Icons.queue_music
               : isTabAlbum
-                  ? Icons.album_outlined
-                  : Icons.favorite_border,
+              ? Icons.album_outlined
+              : Icons.favorite_border,
           judul: isTabPlaylist
               ? 'Belum ada playlist'
               : isTabAlbum
-                  ? 'Belum ada album yang disimpan'
-                  : 'Belum ada lagu yang disukai',
+              ? 'Belum ada album yang disimpan'
+              : 'Belum ada lagu yang disukai',
           keterangan: isTabPlaylist
               ? 'Buat playlist pertamamu dan kumpulkan lagu favoritmu di sini'
               : isTabAlbum
-                  ? 'Simpan album yang kamu suka supaya gampang diputar lagi'
-                  : 'Tekan ikon hati pada lagu supaya tersimpan di sini',
+              ? 'Simpan album yang kamu suka supaya gampang diputar lagi'
+              : 'Tekan ikon hati pada lagu supaya tersimpan di sini',
           teksTombol: isTabPlaylist ? 'Buat Playlist' : 'Cari Lagu',
           onTombolDitekan: () => tampilkanInfoSegeraHadir(
             isTabPlaylist ? 'Fitur buat playlist' : 'Fitur cari lagu',
@@ -131,6 +114,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   @override
   Widget build(BuildContext context) {
+    PlaylistProvider koleksi = context.watch<PlaylistProvider>();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: WarnaCapify.coklatGelap,
@@ -185,15 +170,15 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               ),
             ),
             Expanded(
-              child: isKoleksiSedangDimuat
+              child: koleksi.isMasihMuatPertamaKali
                   ? const Center(
                       child: CircularProgressIndicator(color: WarnaCapify.krem),
                     )
                   : RefreshIndicator(
                       color: WarnaCapify.coklatGelap,
                       backgroundColor: WarnaCapify.krem,
-                      onRefresh: muatKoleksiPengguna,
-                      child: bangunIsiKoleksi(),
+                      onRefresh: muatUlangKoleksi,
+                      child: bangunIsiKoleksi(koleksi),
                     ),
             ),
           ],
