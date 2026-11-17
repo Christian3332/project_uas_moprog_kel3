@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/riwayat_putar_dummy.dart';
 import '../models/riwayat_putar.dart';
+import '../providers/audio_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import 'player_screen.dart';
@@ -57,20 +59,12 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => PlayerScreen(
-          antrianLagu: riwayatTerakhirDiputar
-              .map((riwayat) => riwayat.lagu)
-              .toList(),
-          indexMulai: indexRiwayat,
-          namaAntrian: 'Terakhir Diputar',
-          isMulaiDiputar: true,
-        ),
-      ),
+    context.read<AudioProvider>().mulaiAntrian(
+      riwayatTerakhirDiputar.map((riwayat) => riwayat.lagu).toList(),
+      indexMulai: indexRiwayat,
+      namaAntrian: 'Terakhir Diputar',
     );
+    PlayerScreen.bukaLayarPenuh(context);
   }
 
   @override

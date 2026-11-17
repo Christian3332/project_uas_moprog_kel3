@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'data/lagu_dummy.dart';
+import 'providers/audio_provider.dart';
 import 'screens/halaman_utama_screen.dart';
 import 'utils/warna_capify.dart';
 
 void main() {
-  runApp(const CapifyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) =>
+          AudioProvider()
+            ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false),
+      child: const CapifyApp(),
+    ),
+  );
 }
 
 class CapifyApp extends StatelessWidget {
