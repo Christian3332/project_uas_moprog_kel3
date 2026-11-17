@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../data/lagu_dummy.dart';
 import '../models/lagu.dart';
+import '../providers/search_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import 'detail_album_screen.dart';
@@ -14,18 +15,14 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final kataKunciController = TextEditingController();
+  late final TextEditingController kataKunciController;
   final fokusKolomCari = FocusNode();
 
-  List<Lagu> hasilPencarian = [];
-  List<String> riwayatPencarian = [];
-  bool isSedangMencari = false;
-  int urutanKetikan = 0;
-
-  final int batasRiwayat = 5;
-
-  List<String> get saranPencarian {
-    return daftarLaguDummy.map((lagu) => lagu.penyanyi).toSet().toList();
+  @override
+  void initState() {
+    super.initState();
+    String kataKunciTersimpan = context.read<SearchProvider>().kataKunci;
+    kataKunciController = TextEditingController(text: kataKunciTersimpan);
   }
 
   @override
@@ -35,78 +32,26 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  Future<void> cariLagu(String ketikanUser) async {
-    String kataKunci = ketikanUser.trim().toLowerCase();
-    urutanKetikan++;
-    int ketikanIniKe = urutanKetikan;
-
-    if (kataKunci.isEmpty) {
-      setState(() {
-        hasilPencarian = [];
-        isSedangMencari = false;
-      });
-      return;
-    }
-
-    setState(() => isSedangMencari = true);
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (!mounted || ketikanIniKe != urutanKetikan) return;
-
-    List<Lagu> laguYangCocok = daftarLaguDummy.where((lagu) {
-      bool judulCocok = lagu.judul.toLowerCase().contains(kataKunci);
-      bool penyanyiCocok = lagu.penyanyi.toLowerCase().contains(kataKunci);
-      return judulCocok || penyanyiCocok;
-    }).toList();
-
-    setState(() {
-      hasilPencarian = laguYangCocok;
-      isSedangMencari = false;
-    });
-  }
-
-  void simpanKeRiwayat(String kataKunci) {
-    String kataBersih = kataKunci.trim();
-    if (kataBersih.isEmpty) return;
-
-    setState(() {
-      riwayatPencarian.removeWhere(
-        (kataLama) => kataLama.toLowerCase() == kataBersih.toLowerCase(),
-      );
-      riwayatPencarian.insert(0, kataBersih);
-      if (riwayatPencarian.length > batasRiwayat) {
-        riwayatPencarian = riwayatPencarian.sublist(0, batasRiwayat);
-      }
-    });
-  }
-
   void pakaiKataKunci(String kataKunci) {
+    SearchProvider pencarian = context.read<SearchProvider>();
     kataKunciController.text = kataKunci;
     kataKunciController.selection = TextSelection.collapsed(
       offset: kataKunci.length,
     );
     fokusKolomCari.unfocus();
-    simpanKeRiwayat(kataKunci);
-    cariLagu(kataKunci);
+    pencarian.simpanKeRiwayat(kataKunci);
+    pencarian.cariLagu(kataKunci);
   }
 
   void hapusKataKunci() {
     kataKunciController.clear();
     fokusKolomCari.requestFocus();
-    cariLagu('');
-  }
-
-  void hapusSatuRiwayat(String kataKunci) {
-    setState(() => riwayatPencarian.remove(kataKunci));
-  }
-
-  void hapusSemuaRiwayat() {
-    setState(() => riwayatPencarian = []);
+    context.read<SearchProvider>().kosongkanPencarian();
   }
 
   void pilihLaguDariHasil(Lagu lagu) {
     fokusKolomCari.unfocus();
-    simpanKeRiwayat(kataKunciController.text);
+    context.read<SearchProvider>().simpanKeRiwayat(kataKunciController.text);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -117,6 +62,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    SearchProvider pencarian = context.watch<SearchProvider>();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: WarnaCapify.coklatGelap,
@@ -136,21 +83,21 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: kolomPencarian(),
+              child: kolomPencarian(pencarian),
             ),
-            Expanded(child: tampilanIsiPencarian()),
+            Expanded(child: tampilanIsiPencarian(pencarian)),
           ],
         ),
       ),
     );
   }
 
-  Widget kolomPencarian() {
+  Widget kolomPencarian(SearchProvider pencarian) {
     return TextField(
       controller: kataKunciController,
       focusNode: fokusKolomCari,
-      onChanged: cariLagu,
-      onSubmitted: simpanKeRiwayat,
+      onChanged: pencarian.cariLagu,
+      onSubmitted: pencarian.simpanKeRiwayat,
       onTapOutside: (event) => fokusKolomCari.unfocus(),
       textInputAction: TextInputAction.search,
       style: const TextStyle(color: WarnaCapify.coklatGelap),
@@ -161,7 +108,7 @@ class _SearchScreenState extends State<SearchScreen> {
           color: WarnaCapify.coklatGelap.withValues(alpha: 0.6),
         ),
         prefixIcon: const Icon(Icons.search, color: WarnaCapify.coklatGelap),
-        suffixIcon: kataKunciController.text.isEmpty
+        suffixIcon: pencarian.kataKunci.isEmpty
             ? null
             : IconButton(
                 icon: const Icon(Icons.close, color: WarnaCapify.coklatGelap),
@@ -178,20 +125,21 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget tampilanIsiPencarian() {
-    String kataKunciSekarang = kataKunciController.text.trim();
+  Widget tampilanIsiPencarian(SearchProvider pencarian) {
+    String kataKunciSekarang = pencarian.kataKunciBersih;
+    List<Lagu> hasilPencarian = pencarian.hasilPencarian;
 
-    if (isSedangMencari) {
+    if (pencarian.isSedangMencari) {
       return const Center(
         child: CircularProgressIndicator(color: WarnaCapify.krem),
       );
     }
 
-    if (kataKunciSekarang.isEmpty) {
-      return tampilanSebelumMencari();
+    if (pencarian.isKolomCariKosong) {
+      return tampilanSebelumMencari(pencarian);
     }
 
-    if (hasilPencarian.isEmpty) {
+    if (pencarian.isHasilKosong) {
       return PesanPencarianKosong(
         ikon: Icons.music_off_outlined,
         pesan: 'Tidak ada hasil untuk "$kataKunciSekarang"',
@@ -229,7 +177,9 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget tampilanSebelumMencari() {
+  Widget tampilanSebelumMencari(SearchProvider pencarian) {
+    List<String> riwayatPencarian = pencarian.riwayatPencarian;
+
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -256,7 +206,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
               TextButton(
-                onPressed: hapusSemuaRiwayat,
+                onPressed: pencarian.hapusSemuaRiwayat,
                 child: const Text(
                   'Hapus semua',
                   style: TextStyle(color: WarnaCapify.krem),
@@ -280,7 +230,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   size: 20,
                   color: WarnaCapify.krem,
                 ),
-                onPressed: () => hapusSatuRiwayat(kataLama),
+                onPressed: () => pencarian.hapusSatuRiwayat(kataLama),
               ),
               onTap: () => pakaiKataKunci(kataLama),
             ),
@@ -298,7 +248,7 @@ class _SearchScreenState extends State<SearchScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: saranPencarian.map((saran) {
+          children: pencarian.saranPencarian.map((saran) {
             return ActionChip(
               label: Text(saran),
               labelStyle: const TextStyle(color: WarnaCapify.krem),
