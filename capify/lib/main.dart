@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'data/lagu_dummy.dart';
 import 'providers/audio_provider.dart';
-import 'screens/halaman_utama_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'utils/warna_capify.dart';
 
 void main() {
@@ -37,7 +37,7 @@ class CapifyApp extends StatelessWidget {
           contentTextStyle: TextStyle(color: WarnaCapify.coklatGelap),
         ),
       ),
-      home: const HalamanUtamaScreen(),
+      home: const OnboardingScreen(),
     );
   }
 }
