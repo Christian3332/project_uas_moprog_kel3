@@ -3,15 +3,21 @@ import 'package:provider/provider.dart';
 
 import 'data/lagu_dummy.dart';
 import 'providers/audio_provider.dart';
+import 'providers/auth_provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'utils/warna_capify.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (context) =>
-          AudioProvider()
-            ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => AuthProvider()),
+        ChangeNotifierProvider(
+          create: (context) =>
+              AudioProvider()
+                ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false),
+        ),
+      ],
       child: const CapifyApp(),
     ),
   );
