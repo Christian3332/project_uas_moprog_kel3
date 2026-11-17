@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/kategori_dummy.dart';
+import '../data/lagu_per_kategori_dummy.dart';
 import '../data/riwayat_putar_dummy.dart';
+import '../models/kategori_musik.dart';
+import '../models/lagu.dart';
+import '../models/playlist.dart';
+import '../models/racikan_untukmu.dart';
 import '../models/riwayat_putar.dart';
 import '../providers/audio_provider.dart';
 import '../utils/warna_capify.dart';
-import '../widgets/cover_album.dart';
+import '../widgets/komponen_beranda.dart';
+import 'detail_playlist_screen.dart';
 import 'player_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,6 +27,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool isHalamanSedangDimuat = true;
   List<RiwayatPutar> riwayatTerakhirDiputar = [];
+  List<RacikanUntukmu> daftarRacikanUntukmu = [];
+  List<Lagu> laguBelumPernahDidengar = [];
 
   @override
   void initState() {
@@ -34,10 +43,105 @@ class _HomeScreenState extends State<HomeScreen> {
     List<RiwayatPutar> riwayatDariYangTerbaru = List.of(daftarRiwayatPutarDummy)
       ..sort((a, b) => a.jarakSejakDiputar.compareTo(b.jarakSejakDiputar));
 
+    Set<String> laguYangPernahDiputar = riwayatDariYangTerbaru
+        .map((riwayat) => kunciLagu(riwayat.lagu))
+        .toSet();
+
     setState(() {
       riwayatTerakhirDiputar = riwayatDariYangTerbaru;
+      daftarRacikanUntukmu = racikPlaylistDariKategori(laguYangPernahDiputar);
+      laguBelumPernahDidengar = cariLaguYangBelumDidengar(
+        laguYangPernahDiputar,
+      );
       isHalamanSedangDimuat = false;
     });
+  }
+
+  String kunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
+
+  List<RacikanUntukmu> racikPlaylistDariKategori(
+    Set<String> laguYangPernahDiputar,
+  ) {
+    List<RacikanUntukmu> hasilRacikan = [];
+
+    laguPerKategoriDummy.forEach((namaKategori, isiLagu) {
+      if (isiLagu.isEmpty) return;
+
+      int jumlahFamiliar = isiLagu
+          .where((lagu) => laguYangPernahDiputar.contains(kunciLagu(lagu)))
+          .length;
+
+      hasilRacikan.add(
+        RacikanUntukmu(
+          playlist: Playlist(
+            nama: 'Racikan $namaKategori',
+            deskripsi: rangkumPenyanyi(isiLagu),
+            daftarLagu: isiLagu,
+          ),
+          warnaAksen: cariWarnaKategori(namaKategori),
+          jumlahLaguFamiliar: jumlahFamiliar,
+        ),
+      );
+    });
+
+    List<RacikanUntukmu> urutanAwal = List.of(hasilRacikan);
+    hasilRacikan.sort((a, b) {
+      int selisihFamiliar = b.jumlahLaguFamiliar - a.jumlahLaguFamiliar;
+      if (selisihFamiliar != 0) return selisihFamiliar;
+      return urutanAwal.indexOf(a) - urutanAwal.indexOf(b);
+    });
+
+    return hasilRacikan;
+  }
+
+  String rangkumPenyanyi(List<Lagu> isiLagu) {
+    List<String> penyanyiTanpaDobel = [];
+    for (Lagu lagu in isiLagu) {
+      if (!penyanyiTanpaDobel.contains(lagu.penyanyi)) {
+        penyanyiTanpaDobel.add(lagu.penyanyi);
+      }
+    }
+
+    if (penyanyiTanpaDobel.length == 1) {
+      return 'Spesial dari ${penyanyiTanpaDobel.first}';
+    }
+    if (penyanyiTanpaDobel.length == 2) {
+      return '${penyanyiTanpaDobel[0]} dan ${penyanyiTanpaDobel[1]}';
+    }
+    return '${penyanyiTanpaDobel[0]}, ${penyanyiTanpaDobel[1]}, dan lainnya';
+  }
+
+  Color cariWarnaKategori(String namaKategori) {
+    for (KategoriMusik kategori in daftarKategoriDummy) {
+      if (kategori.nama == namaKategori) return kategori.warnaKartu;
+    }
+    return WarnaCapify.coklatTua;
+  }
+
+  List<Lagu> cariLaguYangBelumDidengar(Set<String> laguYangPernahDiputar) {
+    List<Lagu> hasilTemuan = [];
+    Set<String> laguYangSudahMasuk = {};
+
+    for (List<Lagu> isiLagu in laguPerKategoriDummy.values) {
+      for (Lagu lagu in isiLagu) {
+        String kunci = kunciLagu(lagu);
+        bool isPernahDiputar = laguYangPernahDiputar.contains(kunci);
+        bool isSudahMasukDaftar = laguYangSudahMasuk.contains(kunci);
+
+        if (!isPernahDiputar && !isSudahMasukDaftar) {
+          hasilTemuan.add(lagu);
+          laguYangSudahMasuk.add(kunci);
+        }
+      }
+    }
+
+    return hasilTemuan;
+  }
+
+  String teksDurasi(Duration durasi) {
+    int menit = durasi.inMinutes;
+    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
+    return '$menit:$detik';
   }
 
   String sapaanSesuaiJam() {
@@ -65,6 +169,26 @@ class _HomeScreenState extends State<HomeScreen> {
       namaAntrian: 'Terakhir Diputar',
     );
     PlayerScreen.bukaLayarPenuh(context);
+  }
+
+  void putarLaguTemuan(int indexLagu) {
+    if (indexLagu < 0 || indexLagu >= laguBelumPernahDidengar.length) return;
+
+    context.read<AudioProvider>().mulaiAntrian(
+      laguBelumPernahDidengar,
+      indexMulai: indexLagu,
+      namaAntrian: 'Temuan Baru dari Capy',
+    );
+    PlayerScreen.bukaLayarPenuh(context);
+  }
+
+  void bukaRacikan(RacikanUntukmu racikan) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailPlaylistScreen(playlist: racikan.playlist),
+      ),
+    );
   }
 
   @override
@@ -119,17 +243,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   ...buildBagianTerakhirDiputar(),
                   const SizedBox(height: 28),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: JudulBagianBeranda(judul: 'Rekomendasi untukmu'),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: KotakBelumAdaIsi(
-                      ikon: Icons.library_music_outlined,
-                      pesan: 'Rekomendasi lagu akan muncul di sini',
-                    ),
-                  ),
+                  ...buildBagianRacikanUntukmu(),
+                  const SizedBox(height: 28),
+                  ...buildBagianLaguTemuan(),
                 ],
               ),
             ),
@@ -139,16 +255,10 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Widget> buildBagianTerakhirDiputar() {
     if (riwayatTerakhirDiputar.isEmpty) {
       return const [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: JudulBagianBeranda(judul: 'Terakhir diputar'),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: KotakBelumAdaIsi(
-            ikon: Icons.history,
-            pesan: 'Belum ada lagu yang kamu putar',
-          ),
+        JudulBagianBeranda(judul: 'Terakhir diputar'),
+        KotakBelumAdaIsi(
+          ikon: Icons.history,
+          pesan: 'Belum ada lagu yang kamu putar',
         ),
       ];
     }
@@ -156,245 +266,80 @@ class _HomeScreenState extends State<HomeScreen> {
     int jumlahSisaRiwayat = riwayatTerakhirDiputar.length - 1;
 
     return [
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: KartuLanjutDengerin(
-          riwayat: riwayatTerakhirDiputar.first,
-          onTekan: () => putarDariRiwayat(0),
-        ),
+      KartuLanjutDengerin(
+        riwayat: riwayatTerakhirDiputar.first,
+        onTekan: () => putarDariRiwayat(0),
       ),
       if (jumlahSisaRiwayat > 0) ...[
         const SizedBox(height: 28),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: JudulBagianBeranda(judul: 'Terakhir diputar'),
-        ),
-        SizedBox(
-          height: 222,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: jumlahSisaRiwayat,
-            separatorBuilder: (context, index) => const SizedBox(width: 14),
-            itemBuilder: (context, index) {
-              int indexAsli = index + 1;
-              return KartuLaguTerakhirDiputar(
-                riwayat: riwayatTerakhirDiputar[indexAsli],
-                onTekan: () => putarDariRiwayat(indexAsli),
-              );
-            },
-          ),
+        const JudulBagianBeranda(judul: 'Terakhir diputar'),
+        RakGeserHorizontal(
+          tinggiRak: 222,
+          jumlahItem: jumlahSisaRiwayat,
+          pembuatItem: (context, index) {
+            int indexAsli = index + 1;
+            RiwayatPutar riwayat = riwayatTerakhirDiputar[indexAsli];
+            return KartuLaguKecil(
+              lagu: riwayat.lagu,
+              keterangan: riwayat.teksWaktuDiputar,
+              onTekan: () => putarDariRiwayat(indexAsli),
+            );
+          },
         ),
       ],
     ];
   }
-}
 
-class KartuLanjutDengerin extends StatelessWidget {
-  final RiwayatPutar riwayat;
-  final VoidCallback onTekan;
-
-  const KartuLanjutDengerin({
-    super.key,
-    required this.riwayat,
-    required this.onTekan,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: WarnaCapify.coklatTua,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTekan,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 76,
-                height: 76,
-                child: CoverAlbum(
-                  urlCover: riwayat.lagu.urlCover,
-                  lengkungSudut: 10,
-                  isPakaiBayangan: false,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Lanjut dengerin',
-                      style: TextStyle(
-                        color: WarnaCapify.krem,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      riwayat.lagu.judul,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: WarnaCapify.putih,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${riwayat.lagu.penyanyi} • ${riwayat.teksWaktuDiputar}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: WarnaCapify.krem,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  size: 28,
-                  color: WarnaCapify.coklatGelap,
-                ),
-              ),
-            ],
-          ),
+  List<Widget> buildBagianRacikanUntukmu() {
+    return [
+      const JudulBagianBeranda(
+        judul: 'Racikan untukmu',
+        keterangan: 'Diurutkan dari genre yang paling sering kamu putar',
+      ),
+      if (daftarRacikanUntukmu.isEmpty)
+        const KotakBelumAdaIsi(
+          ikon: Icons.auto_awesome_outlined,
+          pesan: 'Capy belum punya racikan buat kamu',
+        )
+      else
+        RakGeserHorizontal(
+          tinggiRak: 210,
+          jumlahItem: daftarRacikanUntukmu.length,
+          pembuatItem: (context, index) {
+            RacikanUntukmu racikan = daftarRacikanUntukmu[index];
+            return KartuRacikanUntukmu(
+              racikan: racikan,
+              onTekan: () => bukaRacikan(racikan),
+            );
+          },
         ),
-      ),
-    );
+    ];
   }
-}
 
-class KartuLaguTerakhirDiputar extends StatelessWidget {
-  final RiwayatPutar riwayat;
-  final VoidCallback onTekan;
-
-  const KartuLaguTerakhirDiputar({
-    super.key,
-    required this.riwayat,
-    required this.onTekan,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 140,
-      child: InkWell(
-        onTap: onTekan,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 140,
-              height: 140,
-              child: CoverAlbum(
-                urlCover: riwayat.lagu.urlCover,
-                lengkungSudut: 12,
-                isPakaiBayangan: false,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              riwayat.lagu.judul,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: WarnaCapify.putih,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              riwayat.lagu.penyanyi,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              riwayat.teksWaktuDiputar,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: WarnaCapify.krem.withValues(alpha: 0.7),
-                fontSize: 11,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-          ],
+  List<Widget> buildBagianLaguTemuan() {
+    return [
+      const JudulBagianBeranda(
+        judul: 'Belum pernah kamu dengar',
+        keterangan: 'Lagu baru pilihan Capy di luar riwayatmu',
+      ),
+      if (laguBelumPernahDidengar.isEmpty)
+        const KotakBelumAdaIsi(
+          ikon: Icons.verified_outlined,
+          pesan: 'Wah, semua lagu di Capify sudah pernah kamu putar!',
+        )
+      else
+        RakGeserHorizontal(
+          tinggiRak: 222,
+          jumlahItem: laguBelumPernahDidengar.length,
+          pembuatItem: (context, index) {
+            Lagu lagu = laguBelumPernahDidengar[index];
+            return KartuLaguKecil(
+              lagu: lagu,
+              keterangan: teksDurasi(lagu.durasi),
+              onTekan: () => putarLaguTemuan(index),
+            );
+          },
         ),
-      ),
-    );
-  }
-}
-
-class JudulBagianBeranda extends StatelessWidget {
-  final String judul;
-
-  const JudulBagianBeranda({super.key, required this.judul});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        judul,
-        style: const TextStyle(
-          fontSize: 18,
-          color: WarnaCapify.putih,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-class KotakBelumAdaIsi extends StatelessWidget {
-  final IconData ikon;
-  final String pesan;
-
-  const KotakBelumAdaIsi({super.key, required this.ikon, required this.pesan});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 140,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: WarnaCapify.coklatTua.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(ikon, size: 36, color: WarnaCapify.krem),
-          const SizedBox(height: 10),
-          Text(
-            pesan,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: WarnaCapify.krem,
-              fontWeight: FontWeight.w300,
-            ),
-          ),
-        ],
-      ),
-    );
+    ];
   }
 }
