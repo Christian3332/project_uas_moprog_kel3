@@ -135,12 +135,14 @@ class TombolAuth extends StatelessWidget {
   final String teksTombol;
   final bool isSedangLoading;
   final VoidCallback onTekan;
+  final bool isNonaktif;
 
   const TombolAuth({
     super.key,
     required this.teksTombol,
     required this.isSedangLoading,
     required this.onTekan,
+    this.isNonaktif = false,
   });
 
   @override
@@ -149,11 +151,14 @@ class TombolAuth extends StatelessWidget {
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: isSedangLoading ? null : onTekan,
+        onPressed: isSedangLoading || isNonaktif ? null : onTekan,
         style: ElevatedButton.styleFrom(
           backgroundColor: WarnaCapify.krem,
           foregroundColor: WarnaCapify.coklatGelap,
           disabledBackgroundColor: WarnaCapify.krem.withValues(alpha: 0.6),
+          disabledForegroundColor: WarnaCapify.coklatGelap.withValues(
+            alpha: 0.7,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(26),
           ),
