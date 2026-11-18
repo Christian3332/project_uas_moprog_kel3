@@ -6,6 +6,7 @@ import 'package:capify/data/lagu_dummy.dart';
 import 'package:capify/models/lagu.dart';
 import 'package:capify/models/mode_ulang.dart';
 import 'package:capify/providers/audio_provider.dart';
+import 'package:capify/providers/playlist_provider.dart';
 import 'package:capify/providers/search_provider.dart';
 import 'package:capify/screens/halaman_utama_screen.dart';
 import 'package:capify/screens/player_screen.dart';
@@ -18,6 +19,7 @@ Widget bungkusDenganAudio(AudioProvider audio, Widget halaman) {
     providers: [
       ChangeNotifierProvider(create: (context) => audio),
       ChangeNotifierProvider(create: (context) => SearchProvider()),
+      ChangeNotifierProvider(create: (context) => PlaylistProvider()),
     ],
     child: MaterialApp(home: halaman),
   );
