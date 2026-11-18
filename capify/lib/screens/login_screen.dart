@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -16,6 +18,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  static const int batasPasswordSalah = 3;
+  static const int lamaPenguncianDetik = 30;
+
   final formLoginKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -26,6 +31,15 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isEmailSudahDiisi = false;
   AutovalidateMode modeValidasi = AutovalidateMode.disabled;
 
+  String? emailBelumTerdaftar;
+  String? emailDenganPasswordSalah;
+  String? passwordYangSalah;
+  int jumlahPasswordSalah = 0;
+  int sisaDetikTerkunci = 0;
+  Timer? timerPenguncian;
+
+  bool get isSedangTerkunci => sisaDetikTerkunci > 0;
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    timerPenguncian?.cancel();
     emailController.removeListener(pantauKolomEmail);
     emailController.dispose();
     passwordController.dispose();
@@ -58,8 +73,82 @@ class _LoginScreenState extends State<LoginScreen> {
       ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
+  String rapikanEmail(String? email) => (email ?? '').trim().toLowerCase();
+
+  String? validasiEmailLogin(String? isian) {
+    String? errorFormat = cekEmail(isian);
+    if (errorFormat != null) return errorFormat;
+
+    if (rapikanEmail(isian) == emailBelumTerdaftar) {
+      return 'Email belum terdaftar, daftar dulu ya';
+    }
+    return null;
+  }
+
+  String? validasiPasswordLogin(String? isian) {
+    String? errorFormat = cekPassword(isian);
+    if (errorFormat != null) return errorFormat;
+
+    bool isKombinasiYangDitolak =
+        isian == passwordYangSalah &&
+        rapikanEmail(emailController.text) == emailDenganPasswordSalah;
+    if (!isKombinasiYangDitolak) return null;
+
+    if (isSedangTerkunci) {
+      return 'Terlalu banyak percobaan, tunggu sebentar ya';
+    }
+    int sisaPercobaan = batasPasswordSalah - jumlahPasswordSalah;
+    return 'Password salah, sisa $sisaPercobaan percobaan lagi';
+  }
+
+  void mulaiPenguncian() {
+    timerPenguncian?.cancel();
+    sisaDetikTerkunci = lamaPenguncianDetik;
+
+    timerPenguncian = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (sisaDetikTerkunci <= 1) {
+        timer.cancel();
+        setState(() {
+          sisaDetikTerkunci = 0;
+          jumlahPasswordSalah = 0;
+        });
+        formLoginKey.currentState?.validate();
+        return;
+      }
+
+      setState(() => sisaDetikTerkunci--);
+    });
+  }
+
+  void catatKesalahanMasuk(KesalahanMasuk kesalahan) {
+    if (kesalahan == KesalahanMasuk.masihDiproses) {
+      tampilkanPesan('Masih diproses, tunggu sebentar ya');
+      return;
+    }
+
+    setState(() {
+      modeValidasi = AutovalidateMode.onUserInteraction;
+
+      if (kesalahan == KesalahanMasuk.emailBelumTerdaftar) {
+        emailBelumTerdaftar = rapikanEmail(emailController.text);
+      } else {
+        jumlahPasswordSalah++;
+        emailDenganPasswordSalah = rapikanEmail(emailController.text);
+        passwordYangSalah = passwordController.text;
+        if (jumlahPasswordSalah >= batasPasswordSalah) mulaiPenguncian();
+      }
+    });
+
+    formLoginKey.currentState?.validate();
+  }
+
   Future<void> prosesMasuk() async {
-    if (isSedangMasuk) return;
+    if (isSedangMasuk || isSedangTerkunci) return;
     FocusScope.of(context).unfocus();
 
     bool isFormValid = formLoginKey.currentState?.validate() ?? false;
@@ -71,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
     AuthProvider authProvider = context.read<AuthProvider>();
 
     setState(() => isSedangMasuk = true);
-    String? pesanGagal = await authProvider.masuk(
+    KesalahanMasuk? kesalahan = await authProvider.masuk(
       email: emailController.text,
       password: passwordController.text,
       isIngatSaya: isIngatSaya,
@@ -79,11 +168,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => isSedangMasuk = false);
 
-    if (pesanGagal != null) {
-      tampilkanPesan(pesanGagal);
+    if (kesalahan != null) {
+      catatKesalahanMasuk(kesalahan);
       return;
     }
 
+    timerPenguncian?.cancel();
     bukaHalamanUtama(authProvider.namaTampilan);
   }
 
@@ -153,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ikonDepan: Icons.email_outlined,
                             jenisKeyboard: TextInputType.emailAddress,
                             jenisAutofill: const [AutofillHints.email],
-                            cekIsian: cekEmail,
+                            cekIsian: validasiEmailLogin,
                             isBisaDiketik: !isSedangMasuk,
                             tombolBelakang: isEmailSudahDiisi && !isSedangMasuk
                                 ? IconButton(
@@ -173,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             isTeksDisembunyikan: isPasswordTersembunyi,
                             aksiKeyboard: TextInputAction.done,
                             jenisAutofill: const [AutofillHints.password],
-                            cekIsian: cekPassword,
+                            cekIsian: validasiPasswordLogin,
                             saatSelesaiKetik: (_) => prosesMasuk(),
                             isBisaDiketik: !isSedangMasuk,
                             tombolBelakang: IconButton(
@@ -236,8 +326,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     TombolAuth(
-                      teksTombol: 'Masuk',
+                      teksTombol: isSedangTerkunci
+                          ? 'Coba lagi dalam $sisaDetikTerkunci detik'
+                          : 'Masuk',
                       isSedangLoading: isSedangMasuk,
+                      isNonaktif: isSedangTerkunci,
                       onTekan: prosesMasuk,
                     ),
                     const SizedBox(height: 28),
