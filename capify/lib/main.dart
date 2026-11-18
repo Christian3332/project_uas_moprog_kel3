@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'data/lagu_dummy.dart';
 import 'providers/audio_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/home_provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'utils/warna_capify.dart';
 
@@ -17,6 +18,7 @@ void main() {
               AudioProvider()
                 ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false),
         ),
+        ChangeNotifierProvider(create: (context) => HomeProvider()),
       ],
       child: const CapifyApp(),
     ),
