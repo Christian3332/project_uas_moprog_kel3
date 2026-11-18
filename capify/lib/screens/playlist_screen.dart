@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/album.dart';
+import '../models/lagu.dart';
 import '../models/playlist.dart';
 import '../providers/playlist_provider.dart';
 import '../utils/warna_capify.dart';
@@ -19,6 +20,19 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   String kategoriTerpilih = 'Playlist';
 
   final List<String> pilihanKategori = ['Playlist', 'Album', 'Lagu Disukai'];
+
+  final aturanGridKoleksi = const SliverGridDelegateWithMaxCrossAxisExtent(
+    maxCrossAxisExtent: 200,
+    mainAxisSpacing: 20,
+    crossAxisSpacing: 16,
+    childAspectRatio: 0.72,
+  );
+
+  String formatDurasiLagu(Duration durasi) {
+    String menit = durasi.inMinutes.toString();
+    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
+    return '$menit:$detik';
+  }
 
   Future<void> muatUlangKoleksi() {
     return context.read<PlaylistProvider>().muatKoleksi();
@@ -42,6 +56,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   Widget bangunIsiKoleksi(PlaylistProvider koleksi) {
     List<Playlist> daftarPlaylistSaya = koleksi.daftarPlaylistSaya;
     List<Album> daftarAlbumTersimpan = koleksi.daftarAlbumTersimpan;
+    List<Lagu> daftarLaguDisukai = koleksi.daftarLaguDisukai;
 
     if (kategoriTerpilih == 'Playlist' && daftarPlaylistSaya.isNotEmpty) {
       return ListView.builder(
@@ -63,18 +78,35 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         itemCount: daftarAlbumTersimpan.length,
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 200,
-          mainAxisSpacing: 20,
-          crossAxisSpacing: 16,
-          childAspectRatio: 0.72,
-        ),
+        gridDelegate: aturanGridKoleksi,
         itemBuilder: (context, urutan) {
           Album albumIni = daftarAlbumTersimpan[urutan];
-          return KartuAlbumTersimpan(
-            album: albumIni,
+          return KartuGridKoleksi(
+            urlCover: albumIni.urlCover,
+            judul: albumIni.judul,
+            keterangan: '${albumIni.penyanyi} • ${albumIni.jumlahLagu} lagu',
             onDitekan: () =>
                 tampilkanInfoSegeraHadir('Detail album ${albumIni.judul}'),
+          );
+        },
+      );
+    }
+
+    if (kategoriTerpilih == 'Lagu Disukai' && daftarLaguDisukai.isNotEmpty) {
+      return GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        itemCount: daftarLaguDisukai.length,
+        gridDelegate: aturanGridKoleksi,
+        itemBuilder: (context, urutan) {
+          Lagu laguIni = daftarLaguDisukai[urutan];
+          return KartuGridKoleksi(
+            urlCover: laguIni.urlCover,
+            judul: laguIni.judul,
+            keterangan:
+                '${laguIni.penyanyi} • ${formatDurasiLagu(laguIni.durasi)}',
+            onDitekan: () =>
+                tampilkanInfoSegeraHadir('Memutar lagu ${laguIni.judul}'),
           );
         },
       );
@@ -255,13 +287,17 @@ class KoleksiMasihKosong extends StatelessWidget {
   }
 }
 
-class KartuAlbumTersimpan extends StatelessWidget {
-  final Album album;
+class KartuGridKoleksi extends StatelessWidget {
+  final String urlCover;
+  final String judul;
+  final String keterangan;
   final VoidCallback onDitekan;
 
-  const KartuAlbumTersimpan({
+  const KartuGridKoleksi({
     super.key,
-    required this.album,
+    required this.urlCover,
+    required this.judul,
+    required this.keterangan,
     required this.onDitekan,
   });
 
@@ -276,12 +312,12 @@ class KartuAlbumTersimpan extends StatelessWidget {
           Expanded(
             child: SizedBox(
               width: double.infinity,
-              child: CoverAlbum(urlCover: album.urlCover, lengkungSudut: 12),
+              child: CoverAlbum(urlCover: urlCover, lengkungSudut: 12),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            album.judul,
+            judul,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -291,7 +327,7 @@ class KartuAlbumTersimpan extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${album.penyanyi} • ${album.jumlahLagu} lagu',
+            keterangan,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/album_dummy.dart';
+import '../data/lagu_disukai_dummy.dart';
 import '../data/playlist_dummy.dart';
 import '../models/album.dart';
 import '../models/lagu.dart';
@@ -9,7 +10,7 @@ import '../models/playlist.dart';
 class PlaylistProvider extends ChangeNotifier {
   List<Playlist> _daftarPlaylistSaya = [];
   List<Album> _daftarAlbumTersimpan = [];
-  final List<Lagu> _daftarLaguDisukai = [];
+  List<Lagu> _daftarLaguDisukai = [];
   bool _isKoleksiSedangDimuat = false;
   bool _isKoleksiSudahPernahDimuat = false;
   bool _isProviderSudahDitutup = false;
@@ -43,6 +44,7 @@ class PlaylistProvider extends ChangeNotifier {
 
     _daftarPlaylistSaya = List.of(daftarPlaylistDummy);
     _daftarAlbumTersimpan = List.of(daftarAlbumTersimpanDummy);
+    _daftarLaguDisukai = List.of(daftarLaguDisukaiDummy);
     _isKoleksiSedangDimuat = false;
     _isKoleksiSudahPernahDimuat = true;
     _kabariLayar();
