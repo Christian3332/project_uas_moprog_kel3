@@ -82,9 +82,10 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
               child: kolomPencarian(pencarian),
             ),
+            if (!pencarian.isKolomCariKosong) barisFilter(pencarian),
             Expanded(child: tampilanIsiPencarian(pencarian)),
           ],
         ),
@@ -125,6 +126,38 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Widget barisFilter(SearchProvider pencarian) {
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        children: [
+          for (String namaFilter in SearchProvider.pilihanFilter)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(namaFilter),
+                selected: pencarian.filterAktif == namaFilter,
+                onSelected: (dipilih) => pencarian.gantiFilter(namaFilter),
+                showCheckmark: false,
+                selectedColor: WarnaCapify.krem,
+                backgroundColor: WarnaCapify.coklatTua,
+                side: BorderSide.none,
+                shape: const StadiumBorder(),
+                labelStyle: TextStyle(
+                  color: pencarian.filterAktif == namaFilter
+                      ? WarnaCapify.coklatGelap
+                      : WarnaCapify.krem,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget tampilanIsiPencarian(SearchProvider pencarian) {
     String kataKunciSekarang = pencarian.kataKunciBersih;
     List<Lagu> hasilPencarian = pencarian.hasilPencarian;
@@ -140,6 +173,18 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (pencarian.isHasilKosong) {
+      if (!pencarian.isFilterSemua) {
+        return PesanPencarianKosong(
+          ikon: Icons.filter_alt_off_outlined,
+          pesan:
+              'Tidak ada ${pencarian.filterAktif.toLowerCase()} yang cocok dengan "$kataKunciSekarang"',
+          keterangan: 'Mungkin lagunya ketemu kalau filternya dilonggarkan',
+          teksTombol: 'Cari di semua',
+          onTombolDitekan: () =>
+              pencarian.gantiFilter(SearchProvider.filterSemua),
+        );
+      }
+
       return PesanPencarianKosong(
         ikon: Icons.music_off_outlined,
         pesan: 'Tidak ada hasil untuk "$kataKunciSekarang"',
@@ -170,7 +215,8 @@ class _SearchScreenState extends State<SearchScreen> {
         Lagu laguIni = hasilPencarian[index - 1];
         return BarisHasilLagu(
           lagu: laguIni,
-          kataKunci: kataKunciSekarang,
+          kataSorotanJudul: pencarian.kataSorotanJudul,
+          kataSorotanPenyanyi: pencarian.kataSorotanPenyanyi,
           onDipilih: () => pilihLaguDariHasil(laguIni),
         );
       },
@@ -266,13 +312,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
 class BarisHasilLagu extends StatelessWidget {
   final Lagu lagu;
-  final String kataKunci;
+  final List<String> kataSorotanJudul;
+  final List<String> kataSorotanPenyanyi;
   final VoidCallback onDipilih;
 
   const BarisHasilLagu({
     super.key,
     required this.lagu,
-    required this.kataKunci,
+    required this.kataSorotanJudul,
+    required this.kataSorotanPenyanyi,
     required this.onDipilih,
   });
 
@@ -284,47 +332,41 @@ class BarisHasilLagu extends StatelessWidget {
 
   List<TextSpan> sorotiKataYangCocok(
     String teksAsli,
+    List<String> kataDicari,
     TextStyle gayaBiasa,
     TextStyle gayaSorotan,
   ) {
-    String kataDicari = kataKunci.trim().toLowerCase();
     String teksHurufKecil = teksAsli.toLowerCase();
 
     bool panjangnyaBerubah = teksHurufKecil.length != teksAsli.length;
-    if (kataDicari.isEmpty || panjangnyaBerubah) {
+    if (teksAsli.isEmpty || kataDicari.isEmpty || panjangnyaBerubah) {
       return [TextSpan(text: teksAsli, style: gayaBiasa)];
     }
 
-    List<TextSpan> potonganTeks = [];
-    int posisiTerakhir = 0;
-    int posisiKetemu = teksHurufKecil.indexOf(kataDicari);
-
-    while (posisiKetemu != -1) {
-      if (posisiKetemu > posisiTerakhir) {
-        potonganTeks.add(
-          TextSpan(
-            text: teksAsli.substring(posisiTerakhir, posisiKetemu),
-            style: gayaBiasa,
-          ),
-        );
+    List<bool> hurufDistabilo = List.filled(teksAsli.length, false);
+    for (String kata in kataDicari) {
+      int posisiKetemu = teksHurufKecil.indexOf(kata);
+      while (posisiKetemu != -1) {
+        for (int i = posisiKetemu; i < posisiKetemu + kata.length; i++) {
+          hurufDistabilo[i] = true;
+        }
+        posisiKetemu = teksHurufKecil.indexOf(kata, posisiKetemu + kata.length);
       }
-
-      int ujungKataCocok = posisiKetemu + kataDicari.length;
-      potonganTeks.add(
-        TextSpan(
-          text: teksAsli.substring(posisiKetemu, ujungKataCocok),
-          style: gayaSorotan,
-        ),
-      );
-
-      posisiTerakhir = ujungKataCocok;
-      posisiKetemu = teksHurufKecil.indexOf(kataDicari, posisiTerakhir);
     }
 
-    if (posisiTerakhir < teksAsli.length) {
-      potonganTeks.add(
-        TextSpan(text: teksAsli.substring(posisiTerakhir), style: gayaBiasa),
-      );
+    List<TextSpan> potonganTeks = [];
+    int awalPotongan = 0;
+    for (int i = 1; i <= teksAsli.length; i++) {
+      bool sudahDiUjung = i == teksAsli.length;
+      if (sudahDiUjung || hurufDistabilo[i] != hurufDistabilo[awalPotongan]) {
+        potonganTeks.add(
+          TextSpan(
+            text: teksAsli.substring(awalPotongan, i),
+            style: hurufDistabilo[awalPotongan] ? gayaSorotan : gayaBiasa,
+          ),
+        );
+        awalPotongan = i;
+      }
     }
 
     return potonganTeks;
@@ -372,6 +414,7 @@ class BarisHasilLagu extends StatelessWidget {
                         TextSpan(
                           children: sorotiKataYangCocok(
                             lagu.judul,
+                            kataSorotanJudul,
                             gayaJudul,
                             gayaJudul.copyWith(
                               fontWeight: FontWeight.w800,
@@ -409,6 +452,7 @@ class BarisHasilLagu extends StatelessWidget {
                               TextSpan(
                                 children: sorotiKataYangCocok(
                                   lagu.penyanyi,
+                                  kataSorotanPenyanyi,
                                   gayaPenyanyi,
                                   gayaPenyanyi.copyWith(
                                     color: WarnaCapify.putih,
