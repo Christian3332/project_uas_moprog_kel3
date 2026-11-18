@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../models/akun_pengguna.dart';
 
+enum KesalahanMasuk { emailBelumTerdaftar, passwordSalah, masihDiproses }
+
 class AuthProvider extends ChangeNotifier {
   final Map<String, AkunPengguna> _akunTerdaftar = {
     'capy@capify.id': const AkunPengguna(
@@ -33,12 +35,12 @@ class AuthProvider extends ChangeNotifier {
         .join(' ');
   }
 
-  Future<String?> masuk({
+  Future<KesalahanMasuk?> masuk({
     required String email,
     required String password,
     bool isIngatSaya = false,
   }) async {
-    if (_isSedangMemproses) return 'Masih diproses, tunggu sebentar ya';
+    if (_isSedangMemproses) return KesalahanMasuk.masihDiproses;
 
     _isSedangMemproses = true;
     notifyListeners();
@@ -46,12 +48,12 @@ class AuthProvider extends ChangeNotifier {
     await Future.delayed(const Duration(seconds: 2));
 
     AkunPengguna? akunDitemukan = _akunTerdaftar[_rapikanEmail(email)];
-    String? pesanGagal;
+    KesalahanMasuk? kesalahan;
 
     if (akunDitemukan == null) {
-      pesanGagal = 'Email belum terdaftar, daftar dulu ya';
+      kesalahan = KesalahanMasuk.emailBelumTerdaftar;
     } else if (akunDitemukan.password != password) {
-      pesanGagal = 'Password yang kamu masukkan salah';
+      kesalahan = KesalahanMasuk.passwordSalah;
     } else {
       _akunAktif = akunDitemukan;
       _isIngatSaya = isIngatSaya;
@@ -59,7 +61,7 @@ class AuthProvider extends ChangeNotifier {
 
     _isSedangMemproses = false;
     notifyListeners();
-    return pesanGagal;
+    return kesalahan;
   }
 
   Future<String?> daftar({
