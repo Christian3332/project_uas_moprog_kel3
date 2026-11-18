@@ -22,7 +22,9 @@ void main() {
         ),
         ChangeNotifierProvider(create: (context) => HomeProvider()),
         ChangeNotifierProvider(create: (context) => SearchProvider()),
-        ChangeNotifierProvider(create: (context) => PlaylistProvider()),
+        ChangeNotifierProvider(
+          create: (context) => PlaylistProvider()..muatKoleksi(),
+        ),
       ],
       child: const CapifyApp(),
     ),
