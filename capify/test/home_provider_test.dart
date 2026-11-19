@@ -1,7 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:capify/models/lagu.dart';
+import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
+
+const Lagu laguUjiCoba = Lagu(
+  judul: 'Lagu Uji Coba',
+  penyanyi: 'Si Capy',
+  urlCover: '',
+  durasi: Duration(minutes: 2),
+);
+
+const Duration waktuTungguLaguMulai = Duration(milliseconds: 800);
 
 void main() {
   late HomeProvider home;
@@ -109,5 +119,78 @@ void main() {
     await home.muatIsiBeranda();
 
     expect(jumlahPemberitahuan, 2);
+  });
+
+  group('Pantau pemutar', () {
+    late AudioProvider audio;
+
+    setUp(() {
+      audio = AudioProvider();
+    });
+
+    tearDown(() {
+      audio.dispose();
+    });
+
+    test('Lagu yang diputar dari mana saja tercatat otomatis', () async {
+      await home.muatIsiBeranda();
+      home.pantauPemutar(audio);
+
+      audio.mulaiAntrian([laguUjiCoba], namaAntrian: 'Hasil Pencarian');
+      await Future.delayed(waktuTungguLaguMulai);
+
+      expect(home.laguUntukDilanjutkan?.lagu.judul, 'Lagu Uji Coba');
+      expect(home.riwayatTerakhirDiputar.length, 7);
+    });
+
+    test('Lagu yang cuma masuk antrian belum tercatat', () async {
+      await home.muatIsiBeranda();
+      home.pantauPemutar(audio);
+
+      audio.mulaiAntrian([laguUjiCoba], isLangsungDiputar: false);
+      await Future.delayed(waktuTungguLaguMulai);
+
+      expect(home.laguUntukDilanjutkan?.lagu.judul, 'Evaluasi');
+    });
+
+    test('Jeda lalu lanjut putar tidak membuat riwayat dobel', () async {
+      await home.muatIsiBeranda();
+      home.pantauPemutar(audio);
+      audio.mulaiAntrian([laguUjiCoba]);
+      await Future.delayed(waktuTungguLaguMulai);
+
+      int jumlahRiwayatAwal = home.riwayatTerakhirDiputar.length;
+      audio.jeda();
+      audio.putar();
+      await Future.delayed(waktuTungguLaguMulai);
+
+      expect(home.riwayatTerakhirDiputar.length, jumlahRiwayatAwal);
+      expect(home.laguUntukDilanjutkan?.lagu.judul, 'Lagu Uji Coba');
+    });
+
+    test('Lagu yang diputar sebelum beranda dimuat tidak hilang', () async {
+      home.pantauPemutar(audio);
+      audio.mulaiAntrian([laguUjiCoba]);
+      await Future.delayed(waktuTungguLaguMulai);
+
+      await home.muatIsiBeranda();
+
+      expect(home.laguUntukDilanjutkan?.lagu.judul, 'Lagu Uji Coba');
+      expect(home.riwayatTerakhirDiputar.length, 7);
+    });
+
+    test('Memantau pemutar yang sama dua kali tidak mencatat dobel', () async {
+      await home.muatIsiBeranda();
+      home.pantauPemutar(audio);
+      home.pantauPemutar(audio);
+
+      int jumlahPemberitahuan = 0;
+      home.addListener(() => jumlahPemberitahuan++);
+
+      audio.mulaiAntrian([laguUjiCoba]);
+      await Future.delayed(waktuTungguLaguMulai);
+
+      expect(jumlahPemberitahuan, 1);
+    });
   });
 }

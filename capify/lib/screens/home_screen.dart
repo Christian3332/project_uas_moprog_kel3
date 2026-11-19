@@ -26,7 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<HomeProvider>().muatIsiBeranda();
+      HomeProvider home = context.read<HomeProvider>();
+      home.pantauPemutar(context.read<AudioProvider>());
+      home.muatIsiBeranda();
     });
   }
 
@@ -66,13 +68,40 @@ class _HomeScreenState extends State<HomeScreen> {
   ) {
     if (indexLagu < 0 || indexLagu >= antrian.length) return;
 
-    context.read<AudioProvider>().mulaiAntrian(
-      antrian,
-      indexMulai: indexLagu,
-      namaAntrian: namaAntrian,
-    );
-    context.read<HomeProvider>().catatLaguDiputar(antrian[indexLagu]);
+    AudioProvider audio = context.read<AudioProvider>();
+    if (isLaguIniYangAktif(audio, antrian[indexLagu])) {
+      if (!audio.isLaguSedangDiputar) audio.putar();
+    } else {
+      audio.mulaiAntrian(
+        antrian,
+        indexMulai: indexLagu,
+        namaAntrian: namaAntrian,
+      );
+    }
     PlayerScreen.bukaLayarPenuh(context);
+  }
+
+  bool isLaguIniYangAktif(AudioProvider audio, Lagu lagu) {
+    Lagu? laguDiPemutar = audio.laguSekarang;
+    if (laguDiPemutar == null) return false;
+
+    HomeProvider home = context.read<HomeProvider>();
+    return home.kunciLagu(laguDiPemutar) == home.kunciLagu(lagu);
+  }
+
+  void tekanTombolPutarLanjutan(Lagu laguLanjutan) {
+    AudioProvider audio = context.read<AudioProvider>();
+    if (isLaguIniYangAktif(audio, laguLanjutan)) {
+      audio.togglePutarJeda();
+      return;
+    }
+
+    List<Lagu> antrianRiwayat = context
+        .read<HomeProvider>()
+        .riwayatTerakhirDiputar
+        .map((riwayat) => riwayat.lagu)
+        .toList();
+    audio.mulaiAntrian(antrianRiwayat, namaAntrian: 'Terakhir Diputar');
   }
 
   void putarDariRiwayat(int indexRiwayat) {
@@ -219,11 +248,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     int jumlahSisaRiwayat = semuaRiwayat.length - 1;
+    String kunciLaguLanjutan = home.kunciLagu(laguUntukDilanjutkan.lagu);
+
+    bool isLaguLanjutanAktif = context.select<AudioProvider, bool>((audio) {
+      Lagu? laguDiPemutar = audio.laguSekarang;
+      return laguDiPemutar != null &&
+          home.kunciLagu(laguDiPemutar) == kunciLaguLanjutan;
+    });
+    bool isPemutarSedangJalan = context.select<AudioProvider, bool>(
+      (audio) => audio.isLaguSedangDiputar,
+    );
+    bool isPemutarSedangMenyiapkan = context.select<AudioProvider, bool>(
+      (audio) => audio.isSedangMemuat,
+    );
 
     return [
       KartuLanjutDengerin(
         riwayat: laguUntukDilanjutkan,
+        isSedangDiputar: isLaguLanjutanAktif && isPemutarSedangJalan,
+        isSedangDisiapkan: isLaguLanjutanAktif && isPemutarSedangMenyiapkan,
         onTekan: () => putarDariRiwayat(0),
+        onTekanTombolPutar: () =>
+            tekanTombolPutarLanjutan(laguUntukDilanjutkan.lagu),
       ),
       if (jumlahSisaRiwayat > 0) ...[
         const SizedBox(height: 28),
