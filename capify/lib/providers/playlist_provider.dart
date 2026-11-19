@@ -1,13 +1,15 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/album_dummy.dart';
-import '../data/lagu_disukai_dummy.dart';
-import '../data/playlist_dummy.dart';
 import '../models/album.dart';
 import '../models/lagu.dart';
 import '../models/playlist.dart';
+import '../services/koleksi_service.dart';
 
 class PlaylistProvider extends ChangeNotifier {
+  final KoleksiService koleksiService;
+
+  PlaylistProvider({this.koleksiService = const KoleksiService()});
+
   List<Playlist> _daftarPlaylistSaya = [];
   List<Album> _daftarAlbumTersimpan = [];
   List<Lagu> _daftarLaguDisukai = [];
@@ -38,13 +40,21 @@ class PlaylistProvider extends ChangeNotifier {
     _isKoleksiSedangDimuat = true;
     _kabariLayar();
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    Future<List<Playlist>> permintaanPlaylist = koleksiService
+        .ambilPlaylistSaya();
+    Future<List<Album>> permintaanAlbum = koleksiService.ambilAlbumTersimpan();
+    Future<List<Lagu>> permintaanLaguDisukai = koleksiService
+        .ambilLaguDisukai();
+
+    List<Playlist> hasilPlaylist = await permintaanPlaylist;
+    List<Album> hasilAlbum = await permintaanAlbum;
+    List<Lagu> hasilLaguDisukai = await permintaanLaguDisukai;
 
     if (_isProviderSudahDitutup) return;
 
-    _daftarPlaylistSaya = List.of(daftarPlaylistDummy);
-    _daftarAlbumTersimpan = List.of(daftarAlbumTersimpanDummy);
-    _daftarLaguDisukai = List.of(daftarLaguDisukaiDummy);
+    _daftarPlaylistSaya = hasilPlaylist;
+    _daftarAlbumTersimpan = hasilAlbum;
+    _daftarLaguDisukai = hasilLaguDisukai;
     _isKoleksiSedangDimuat = false;
     _isKoleksiSudahPernahDimuat = true;
     _kabariLayar();
