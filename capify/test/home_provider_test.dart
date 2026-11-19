@@ -193,4 +193,65 @@ void main() {
       expect(jumlahPemberitahuan, 1);
     });
   });
+
+  group('Genre favorit', () {
+    List<String> urutanNamaRacikan() {
+      return home.daftarRacikanUntukmu
+          .map((racikan) => racikan.namaKategori)
+          .toList();
+    }
+
+    test('Racikan genre favorit tampil paling depan sesuai urutan', () async {
+      await home.muatIsiBeranda();
+
+      home.simpanGenreFavorit(['Jazz', 'Indie']);
+
+      expect(urutanNamaRacikan().take(4), ['Jazz', 'Indie', 'Pop', 'R&B']);
+      expect(home.daftarRacikanUntukmu.first.isGenreFavorit, isTrue);
+      expect(home.daftarRacikanUntukmu[2].isGenreFavorit, isFalse);
+    });
+
+    test('Genre dobel, asing, dan kelebihan tidak ikut disimpan', () {
+      home.simpanGenreFavorit([
+        'Jazz',
+        'Jazz',
+        'Dangdut',
+        'Pop',
+        'Indie',
+        'K-Pop',
+        'R&B',
+        'Lo-Fi',
+      ]);
+
+      expect(home.genreFavorit, ['Jazz', 'Pop', 'Indie', 'K-Pop', 'R&B']);
+      expect(home.isSudahPilihGenre, isTrue);
+    });
+
+    test('Lagu temuan dari genre favorit muncul duluan', () async {
+      await home.muatIsiBeranda();
+
+      home.simpanGenreFavorit(['Lo-Fi']);
+
+      expect(home.laguBelumPernahDidengar.first.judul, 'Coffee');
+    });
+
+    test('Genre favorit tanpa lagu tidak merusak urutan racikan', () async {
+      await home.muatIsiBeranda();
+
+      home.simpanGenreFavorit(['Podcast']);
+
+      expect(home.genreFavorit, ['Podcast']);
+      expect(urutanNamaRacikan().first, 'Pop');
+    });
+
+    test('Menyimpan daftar kosong menghapus semua genre favorit', () async {
+      await home.muatIsiBeranda();
+      home.simpanGenreFavorit(['Jazz']);
+
+      home.simpanGenreFavorit([]);
+
+      expect(home.isSudahPilihGenre, isFalse);
+      expect(urutanNamaRacikan().first, 'Pop');
+    });
+  });
 }

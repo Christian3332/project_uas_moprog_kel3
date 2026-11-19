@@ -9,37 +9,51 @@ import 'cover_album.dart';
 class JudulBagianBeranda extends StatelessWidget {
   final String judul;
   final String? keterangan;
+  final Widget? tombolAksi;
 
-  const JudulBagianBeranda({super.key, required this.judul, this.keterangan});
+  const JudulBagianBeranda({
+    super.key,
+    required this.judul,
+    this.keterangan,
+    this.tombolAksi,
+  });
 
   @override
   Widget build(BuildContext context) {
     String? teksKeterangan = keterangan;
+    Widget? aksi = tombolAksi;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(20, 0, 12, 12),
+      child: Row(
         children: [
-          Text(
-            judul,
-            style: const TextStyle(
-              fontSize: 18,
-              color: WarnaCapify.putih,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  judul,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: WarnaCapify.putih,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (teksKeterangan != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    teksKeterangan,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: WarnaCapify.krem.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (teksKeterangan != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              teksKeterangan,
-              style: TextStyle(
-                fontSize: 12,
-                color: WarnaCapify.krem.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-          ],
+          ?aksi,
         ],
       ),
     );
@@ -317,8 +331,16 @@ class KartuRacikanUntukmu extends StatelessWidget {
     required this.onTekan,
   });
 
+  String? get teksLencana {
+    if (racikan.isGenreFavorit) return 'Favorit';
+    if (racikan.jumlahLaguFamiliar > 0) return 'Cocok';
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    String? lencana = teksLencana;
+
     return SizedBox(
       width: 150,
       child: InkWell(
@@ -363,7 +385,7 @@ class KartuRacikanUntukmu extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (racikan.jumlahLaguFamiliar > 0)
+                  if (lencana != null)
                     Positioned(
                       top: 8,
                       right: 8,
@@ -376,9 +398,9 @@ class KartuRacikanUntukmu extends StatelessWidget {
                           color: WarnaCapify.krem,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          'Cocok',
-                          style: TextStyle(
+                        child: Text(
+                          lencana,
+                          style: const TextStyle(
                             color: WarnaCapify.coklatGelap,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,

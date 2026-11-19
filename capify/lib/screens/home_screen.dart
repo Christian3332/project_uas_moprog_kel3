@@ -10,6 +10,7 @@ import '../utils/warna_capify.dart';
 import '../widgets/komponen_beranda.dart';
 import 'detail_playlist_screen.dart';
 import 'player_screen.dart';
+import 'preferensi_genre_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String namaPengguna;
@@ -120,6 +121,16 @@ class _HomeScreenState extends State<HomeScreen> {
     putarAntrianDariBeranda(antrianTemuan, indexLagu, 'Temuan Baru dari Capy');
   }
 
+  Future<void> bukaPengaturanGenre() async {
+    bool? isPreferensiDisimpan = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const PreferensiGenreScreen()),
+    );
+
+    if (!mounted || isPreferensiDisimpan != true) return;
+    tampilkanPesan('Genre favoritmu sudah disimpan, racikan ikut diperbarui');
+  }
+
   void bukaRacikan(RacikanUntukmu racikan) {
     Navigator.push(
       context,
@@ -225,7 +236,10 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           ...buildBagianTerakhirDiputar(home),
           const SizedBox(height: 28),
-          ...buildBagianRacikanUntukmu(home.daftarRacikanUntukmu),
+          ...buildBagianRacikanUntukmu(
+            home.daftarRacikanUntukmu,
+            home.isSudahPilihGenre,
+          ),
           const SizedBox(height: 28),
           ...buildBagianLaguTemuan(home.laguBelumPernahDidengar),
         ],
@@ -291,11 +305,23 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
-  List<Widget> buildBagianRacikanUntukmu(List<RacikanUntukmu> daftarRacikan) {
+  List<Widget> buildBagianRacikanUntukmu(
+    List<RacikanUntukmu> daftarRacikan,
+    bool isSudahPilihGenre,
+  ) {
     return [
-      const JudulBagianBeranda(
+      JudulBagianBeranda(
         judul: 'Racikan untukmu',
-        keterangan: 'Diurutkan dari genre yang paling sering kamu putar',
+        keterangan: isSudahPilihGenre
+            ? 'Dimulai dari genre favoritmu'
+            : 'Diurutkan dari genre yang paling sering kamu putar',
+        tombolAksi: TextButton(
+          onPressed: bukaPengaturanGenre,
+          child: Text(
+            isSudahPilihGenre ? 'Atur genre' : 'Pilih genre',
+            style: const TextStyle(color: WarnaCapify.krem),
+          ),
+        ),
       ),
       if (daftarRacikan.isEmpty)
         const KotakBelumAdaIsi(

@@ -294,9 +294,7 @@ class TombolSosialAuth extends StatelessWidget {
         backgroundColor: WarnaCapify.hitam.withValues(alpha: 0.25),
         side: BorderSide(color: WarnaCapify.krem.withValues(alpha: 0.5)),
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
     );
   }
