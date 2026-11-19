@@ -37,20 +37,24 @@ const List<KategoriMusik> daftarKategoriDummy = [
     nama: 'Akustik',
     ikon: Icons.music_note_rounded,
     warnaKartu: Color(0xFFA0825C),
+    jenis: 'Suasana',
   ),
   KategoriMusik(
     nama: 'Lo-Fi',
     ikon: Icons.headphones_rounded,
     warnaKartu: Color(0xFF4A3A2A),
+    jenis: 'Suasana',
   ),
   KategoriMusik(
     nama: 'Podcast',
     ikon: Icons.podcasts_rounded,
     warnaKartu: Color(0xFF6E3B24),
+    jenis: 'Podcast',
   ),
   KategoriMusik(
     nama: 'Santai',
     ikon: Icons.spa_rounded,
     warnaKartu: Color(0xFF8A7458),
+    jenis: 'Suasana',
   ),
 ];
