@@ -130,6 +130,10 @@ class _LoginScreenState extends State<LoginScreen> {
       tampilkanPesan('Masih diproses, tunggu sebentar ya');
       return;
     }
+    if (kesalahan == KesalahanMasuk.gagalTerhubung) {
+      tampilkanPesan('Gagal terhubung ke server, coba lagi nanti');
+      return;
+    }
 
     setState(() {
       modeValidasi = AutovalidateMode.onUserInteraction;

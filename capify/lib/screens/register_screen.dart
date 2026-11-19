@@ -143,6 +143,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       formDaftarKey.currentState?.validate();
       return;
     }
+    if (kesalahan == KesalahanDaftar.gagalTerhubung) {
+      tampilkanPesan('Gagal terhubung ke server, coba lagi nanti');
+      return;
+    }
 
     Navigator.pop(context, emailController.text.trim().toLowerCase());
   }

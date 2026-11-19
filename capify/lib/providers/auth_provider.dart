@@ -1,44 +1,36 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/akun_pengguna.dart';
+import '../models/user.dart';
+import '../services/auth_service.dart';
 
-enum KesalahanMasuk { emailBelumTerdaftar, passwordSalah, masihDiproses }
+enum KesalahanMasuk {
+  emailBelumTerdaftar,
+  passwordSalah,
+  masihDiproses,
+  gagalTerhubung,
+}
 
-enum KesalahanDaftar { emailSudahTerdaftar, masihDiproses }
+enum KesalahanDaftar { emailSudahTerdaftar, masihDiproses, gagalTerhubung }
 
 class AuthProvider extends ChangeNotifier {
-  final Map<String, AkunPengguna> _akunTerdaftar = {
-    'capy@capify.id': const AkunPengguna(
-      nama: 'Capy Lovers',
-      email: 'capy@capify.id',
-      password: 'capy123',
-    ),
-  };
+  final AuthService _authService;
 
-  AkunPengguna? _akunAktif;
+  AuthProvider({AuthService? authService})
+    : _authService = authService ?? AuthService();
+
+  User? _penggunaAktif;
   bool _isIngatSaya = false;
   bool _isSedangMemproses = false;
 
-  AkunPengguna? get akunAktif => _akunAktif;
-  bool get isSudahMasuk => _akunAktif != null;
+  User? get penggunaAktif => _penggunaAktif;
+  bool get isSudahMasuk => _penggunaAktif != null;
   bool get isIngatSaya => _isIngatSaya;
   bool get isSedangMemproses => _isSedangMemproses;
-  String get namaTampilan => _akunAktif?.nama ?? 'Capy Lovers';
-  String get emailTampilan => _akunAktif?.email ?? 'Belum masuk ke akun';
-
-  String _rapikanEmail(String email) => email.trim().toLowerCase();
+  String get namaTampilan => _penggunaAktif?.nama ?? 'Capy Lovers';
+  String get emailTampilan => _penggunaAktif?.email ?? 'Belum masuk ke akun';
 
   bool isEmailSudahTerdaftar(String email) {
-    return _akunTerdaftar.containsKey(_rapikanEmail(email));
-  }
-
-  String _rapikanNama(String nama) {
-    return nama
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((kata) => kata.isNotEmpty)
-        .map((kata) => kata[0].toUpperCase() + kata.substring(1).toLowerCase())
-        .join(' ');
+    return _authService.isEmailTerdaftar(email);
   }
 
   Future<KesalahanMasuk?> masuk({
@@ -51,18 +43,23 @@ class AuthProvider extends ChangeNotifier {
     _isSedangMemproses = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(seconds: 2));
-
-    AkunPengguna? akunDitemukan = _akunTerdaftar[_rapikanEmail(email)];
     KesalahanMasuk? kesalahan;
-
-    if (akunDitemukan == null) {
-      kesalahan = KesalahanMasuk.emailBelumTerdaftar;
-    } else if (akunDitemukan.password != password) {
-      kesalahan = KesalahanMasuk.passwordSalah;
-    } else {
-      _akunAktif = akunDitemukan;
+    try {
+      _penggunaAktif = await _authService.masuk(
+        email: email,
+        password: password,
+      );
       _isIngatSaya = isIngatSaya;
+    } on AuthException catch (galat) {
+      if (galat.kode == AuthService.kodeEmailTidakDitemukan) {
+        kesalahan = KesalahanMasuk.emailBelumTerdaftar;
+      } else if (galat.kode == AuthService.kodePasswordSalah) {
+        kesalahan = KesalahanMasuk.passwordSalah;
+      } else {
+        kesalahan = KesalahanMasuk.gagalTerhubung;
+      }
+    } catch (_) {
+      kesalahan = KesalahanMasuk.gagalTerhubung;
     }
 
     _isSedangMemproses = false;
@@ -80,19 +77,15 @@ class AuthProvider extends ChangeNotifier {
     _isSedangMemproses = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(seconds: 2));
-
-    String emailRapi = _rapikanEmail(email);
     KesalahanDaftar? kesalahan;
-
-    if (_akunTerdaftar.containsKey(emailRapi)) {
-      kesalahan = KesalahanDaftar.emailSudahTerdaftar;
-    } else {
-      _akunTerdaftar[emailRapi] = AkunPengguna(
-        nama: _rapikanNama(nama),
-        email: emailRapi,
-        password: password,
-      );
+    try {
+      await _authService.daftar(nama: nama, email: email, password: password);
+    } on AuthException catch (galat) {
+      kesalahan = galat.kode == AuthService.kodeEmailSudahDipakai
+          ? KesalahanDaftar.emailSudahTerdaftar
+          : KesalahanDaftar.gagalTerhubung;
+    } catch (_) {
+      kesalahan = KesalahanDaftar.gagalTerhubung;
     }
 
     _isSedangMemproses = false;
@@ -101,7 +94,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void keluar() {
-    _akunAktif = null;
+    _penggunaAktif = null;
     _isIngatSaya = false;
     notifyListeners();
   }
