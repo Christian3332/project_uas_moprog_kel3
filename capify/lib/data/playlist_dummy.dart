@@ -3,6 +3,7 @@ import '../models/playlist.dart';
 
 const List<Playlist> daftarPlaylistDummy = [
   Playlist(
+    id: 'playlist-teman-begadang',
     nama: 'Teman Begadang',
     deskripsi: 'Lagu santai buat nemenin ngerjain tugas sampai pagi',
     daftarLagu: [
@@ -27,6 +28,7 @@ const List<Playlist> daftarPlaylistDummy = [
     ],
   ),
   Playlist(
+    id: 'playlist-semangat-pagi',
     nama: 'Semangat Pagi',
     deskripsi: 'Biar nggak ngantuk waktu berangkat kuliah',
     daftarLagu: [
@@ -45,6 +47,7 @@ const List<Playlist> daftarPlaylistDummy = [
     ],
   ),
   Playlist(
+    id: 'playlist-baruku',
     nama: 'Playlist Baruku',
     deskripsi: 'Belum sempat diisi',
     daftarLagu: [],
