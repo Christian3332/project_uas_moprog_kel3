@@ -64,6 +64,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
+  String? validasiEmailDaftar(String? isian) {
+    String? errorFormat = cekEmail(isian);
+    if (errorFormat != null) return errorFormat;
+
+    if (context.read<AuthProvider>().isEmailSudahTerdaftar(isian ?? '')) {
+      return 'Email ini sudah terdaftar, silakan masuk';
+    }
+    return null;
+  }
+
+  String? validasiPasswordDaftar(String? isian) {
+    String? errorFormat = cekPassword(isian);
+    if (errorFormat != null) return errorFormat;
+
+    String password = isian ?? '';
+    if (password.contains(' ')) return 'Password tidak boleh pakai spasi';
+
+    String passwordKecil = password.toLowerCase();
+    String depanEmail = emailController.text
+        .trim()
+        .toLowerCase()
+        .split('@')
+        .first;
+    List<String> kataDariNama = namaController.text
+        .trim()
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((kata) => kata.length >= 3)
+        .toList();
+
+    if (depanEmail.length >= 3 && passwordKecil.contains(depanEmail)) {
+      return 'Password jangan memuat nama emailmu';
+    }
+    if (kataDariNama.any(passwordKecil.contains)) {
+      return 'Password jangan memuat namamu';
+    }
+    if (hitungLevelPassword(password) < 2) {
+      return 'Terlalu lemah, tambahkan angka, huruf besar, atau simbol';
+    }
+    return null;
+  }
+
   String? cekUlangPassword(String? isian) {
     if ((isian ?? '').isEmpty) return 'Ketik ulang password kamu';
     if (isian != passwordController.text) return 'Password tidak sama';
@@ -80,11 +122,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         modeValidasi = AutovalidateMode.onUserInteraction;
         isSyaratBelumDicentang = !isSetujuSyarat;
       });
+      tampilkanPesan('Periksa lagi isian yang ditandai merah');
       return;
     }
 
     setState(() => isSedangMendaftar = true);
-    String? pesanGagal = await context.read<AuthProvider>().daftar(
+    KesalahanDaftar? kesalahan = await context.read<AuthProvider>().daftar(
       nama: namaController.text,
       email: emailController.text,
       password: passwordController.text,
@@ -92,8 +135,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
     setState(() => isSedangMendaftar = false);
 
-    if (pesanGagal != null) {
-      tampilkanPesan(pesanGagal);
+    if (kesalahan == KesalahanDaftar.masihDiproses) {
+      tampilkanPesan('Masih diproses, tunggu sebentar ya');
+      return;
+    }
+    if (kesalahan == KesalahanDaftar.emailSudahTerdaftar) {
+      formDaftarKey.currentState?.validate();
       return;
     }
 
@@ -210,7 +257,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ikonDepan: Icons.email_outlined,
                               jenisKeyboard: TextInputType.emailAddress,
                               jenisAutofill: const [AutofillHints.email],
-                              cekIsian: cekEmail,
+                              cekIsian: validasiEmailDaftar,
                               isBisaDiketik: !isSedangMendaftar,
                             ),
                             const SizedBox(height: 16),
@@ -220,7 +267,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ikonDepan: Icons.lock_outline,
                               isTeksDisembunyikan: isPasswordTersembunyi,
                               jenisAutofill: const [AutofillHints.newPassword],
-                              cekIsian: cekPassword,
+                              cekIsian: validasiPasswordDaftar,
                               isBisaDiketik: !isSedangMendaftar,
                               tombolBelakang: IconButton(
                                 icon: Icon(
