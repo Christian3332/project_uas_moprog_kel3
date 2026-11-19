@@ -15,7 +15,10 @@ class PlaylistProvider extends ChangeNotifier {
   List<Lagu> _daftarLaguDisukai = [];
   bool _isKoleksiSedangDimuat = false;
   bool _isKoleksiSudahPernahDimuat = false;
+  bool _isSedangMembuatPlaylist = false;
   bool _isProviderSudahDitutup = false;
+
+  final int batasPanjangNamaPlaylist = 40;
 
   List<Playlist> get daftarPlaylistSaya =>
       List.unmodifiable(_daftarPlaylistSaya);
@@ -24,6 +27,7 @@ class PlaylistProvider extends ChangeNotifier {
   List<Lagu> get daftarLaguDisukai => List.unmodifiable(_daftarLaguDisukai);
   bool get isKoleksiSedangDimuat => _isKoleksiSedangDimuat;
   bool get isKoleksiSudahPernahDimuat => _isKoleksiSudahPernahDimuat;
+  bool get isSedangMembuatPlaylist => _isSedangMembuatPlaylist;
 
   bool get isMasihMuatPertamaKali {
     return _isKoleksiSedangDimuat && !_isKoleksiSudahPernahDimuat;
@@ -58,6 +62,50 @@ class PlaylistProvider extends ChangeNotifier {
     _isKoleksiSedangDimuat = false;
     _isKoleksiSudahPernahDimuat = true;
     _kabariLayar();
+  }
+
+  String? cekNamaPlaylistBaru(String? namaYangDiketik) {
+    String namaRapi = (namaYangDiketik ?? '').trim();
+
+    if (namaRapi.isEmpty) return 'Nama playlist belum diisi';
+    if (namaRapi.length > batasPanjangNamaPlaylist) {
+      return 'Nama playlist maksimal $batasPanjangNamaPlaylist karakter';
+    }
+
+    bool isNamaSudahDipakai = _daftarPlaylistSaya.any(
+      (playlist) => playlist.nama.toLowerCase() == namaRapi.toLowerCase(),
+    );
+    if (isNamaSudahDipakai) return 'Kamu sudah punya playlist "$namaRapi"';
+
+    return null;
+  }
+
+  Future<String?> buatPlaylistBaru({
+    required String nama,
+    String deskripsi = '',
+  }) async {
+    if (_isSedangMembuatPlaylist) return 'Playlist sebelumnya masih dibuat';
+    if (_isKoleksiSedangDimuat) return 'Tunggu koleksi selesai dimuat dulu';
+
+    String? pesanGagal = cekNamaPlaylistBaru(nama);
+    if (pesanGagal != null) return pesanGagal;
+
+    String deskripsiRapi = deskripsi.trim();
+
+    _isSedangMembuatPlaylist = true;
+    _kabariLayar();
+
+    Playlist playlistBaru = await koleksiService.simpanPlaylistBaru(
+      nama: nama.trim(),
+      deskripsi: deskripsiRapi.isEmpty ? 'Playlist buatanmu' : deskripsiRapi,
+    );
+
+    if (_isProviderSudahDitutup) return null;
+
+    _daftarPlaylistSaya = [playlistBaru, ..._daftarPlaylistSaya];
+    _isSedangMembuatPlaylist = false;
+    _kabariLayar();
+    return null;
   }
 
   @override
