@@ -9,6 +9,7 @@ import '../models/playlist.dart';
 import '../models/racikan_untukmu.dart';
 import '../models/riwayat_putar.dart';
 import '../utils/warna_capify.dart';
+import 'audio_provider.dart';
 
 class HomeProvider extends ChangeNotifier {
   static const int batasJumlahRiwayat = 10;
@@ -20,6 +21,9 @@ class HomeProvider extends ChangeNotifier {
   bool _isSudahPernahDimuat = false;
   String? _pesanGagal;
   bool _isSudahDibuang = false;
+
+  AudioProvider? _pemutarYangDipantau;
+  String? _kunciLaguTerakhirDicatat;
 
   List<RiwayatPutar> get riwayatTerakhirDiputar =>
       List.unmodifiable(_riwayatTerakhirDiputar);
@@ -36,11 +40,31 @@ class HomeProvider extends ChangeNotifier {
     return _riwayatTerakhirDiputar.first;
   }
 
-  String _kunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
+  String kunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
 
   void _kabariPendengar() {
     if (_isSudahDibuang) return;
     notifyListeners();
+  }
+
+  void pantauPemutar(AudioProvider pemutar) {
+    if (identical(_pemutarYangDipantau, pemutar)) return;
+
+    _pemutarYangDipantau?.removeListener(_cekLaguYangSedangDiputar);
+    _pemutarYangDipantau = pemutar;
+    pemutar.addListener(_cekLaguYangSedangDiputar);
+    _cekLaguYangSedangDiputar();
+  }
+
+  void _cekLaguYangSedangDiputar() {
+    AudioProvider? pemutar = _pemutarYangDipantau;
+    if (pemutar == null || !pemutar.isLaguSedangDiputar) return;
+
+    Lagu? laguYangDiputar = pemutar.laguSekarang;
+    if (laguYangDiputar == null) return;
+    if (kunciLagu(laguYangDiputar) == _kunciLaguTerakhirDicatat) return;
+
+    catatLaguDiputar(laguYangDiputar);
   }
 
   Future<void> muatIsiBeranda({bool isPaksaMuatUlang = false}) async {
@@ -55,12 +79,7 @@ class HomeProvider extends ChangeNotifier {
       await Future.delayed(const Duration(milliseconds: 800));
 
       if (!_isSudahPernahDimuat) {
-        List<RiwayatPutar> riwayatDariYangTerbaru = List.of(
-          daftarRiwayatPutarDummy,
-        )..sort((a, b) => a.jarakSejakDiputar.compareTo(b.jarakSejakDiputar));
-        _riwayatTerakhirDiputar = riwayatDariYangTerbaru
-            .take(batasJumlahRiwayat)
-            .toList();
+        _gabungkanDenganRiwayatDummy();
       }
 
       _susunUlangRekomendasi();
@@ -73,14 +92,33 @@ class HomeProvider extends ChangeNotifier {
     _kabariPendengar();
   }
 
+  void _gabungkanDenganRiwayatDummy() {
+    List<RiwayatPutar> riwayatDummyTerbaru = List.of(daftarRiwayatPutarDummy)
+      ..sort((a, b) => a.jarakSejakDiputar.compareTo(b.jarakSejakDiputar));
+
+    Set<String> laguYangSudahDicatat = _riwayatTerakhirDiputar
+        .map((riwayat) => kunciLagu(riwayat.lagu))
+        .toSet();
+
+    List<RiwayatPutar> riwayatGabungan = [
+      ..._riwayatTerakhirDiputar,
+      ...riwayatDummyTerbaru.where(
+        (riwayat) => !laguYangSudahDicatat.contains(kunciLagu(riwayat.lagu)),
+      ),
+    ];
+
+    _riwayatTerakhirDiputar = riwayatGabungan.take(batasJumlahRiwayat).toList();
+  }
+
   void catatLaguDiputar(Lagu lagu) {
-    String kunciLaguBaru = _kunciLagu(lagu);
+    String kunciLaguBaru = kunciLagu(lagu);
+    _kunciLaguTerakhirDicatat = kunciLaguBaru;
 
     List<RiwayatPutar> riwayatBaru = [
       RiwayatPutar(lagu: lagu, jarakSejakDiputar: Duration.zero),
     ];
     for (RiwayatPutar riwayat in _riwayatTerakhirDiputar) {
-      if (_kunciLagu(riwayat.lagu) != kunciLaguBaru) {
+      if (kunciLagu(riwayat.lagu) != kunciLaguBaru) {
         riwayatBaru.add(riwayat);
       }
     }
@@ -92,7 +130,7 @@ class HomeProvider extends ChangeNotifier {
 
   void _susunUlangRekomendasi() {
     Set<String> laguYangPernahDiputar = _riwayatTerakhirDiputar
-        .map((riwayat) => _kunciLagu(riwayat.lagu))
+        .map((riwayat) => kunciLagu(riwayat.lagu))
         .toSet();
 
     _daftarRacikanUntukmu = _racikPlaylistDariKategori(laguYangPernahDiputar);
@@ -110,7 +148,7 @@ class HomeProvider extends ChangeNotifier {
       if (isiLagu.isEmpty) return;
 
       int jumlahFamiliar = isiLagu
-          .where((lagu) => laguYangPernahDiputar.contains(_kunciLagu(lagu)))
+          .where((lagu) => laguYangPernahDiputar.contains(kunciLagu(lagu)))
           .length;
 
       hasilRacikan.add(
@@ -166,7 +204,7 @@ class HomeProvider extends ChangeNotifier {
 
     for (List<Lagu> isiLagu in laguPerKategoriDummy.values) {
       for (Lagu lagu in isiLagu) {
-        String kunci = _kunciLagu(lagu);
+        String kunci = kunciLagu(lagu);
         bool isPernahDiputar = laguYangPernahDiputar.contains(kunci);
         bool isSudahMasukDaftar = laguYangSudahMasuk.contains(kunci);
 
@@ -183,6 +221,8 @@ class HomeProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isSudahDibuang = true;
+    _pemutarYangDipantau?.removeListener(_cekLaguYangSedangDiputar);
+    _pemutarYangDipantau = null;
     super.dispose();
   }
 }

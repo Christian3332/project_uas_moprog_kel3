@@ -111,13 +111,38 @@ class RakGeserHorizontal extends StatelessWidget {
 
 class KartuLanjutDengerin extends StatelessWidget {
   final RiwayatPutar riwayat;
+  final bool isSedangDiputar;
+  final bool isSedangDisiapkan;
   final VoidCallback onTekan;
+  final VoidCallback onTekanTombolPutar;
 
   const KartuLanjutDengerin({
     super.key,
     required this.riwayat,
+    required this.isSedangDiputar,
+    required this.isSedangDisiapkan,
     required this.onTekan,
+    required this.onTekanTombolPutar,
   });
+
+  Widget isiTombolPutar() {
+    if (isSedangDisiapkan) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          color: WarnaCapify.coklatGelap,
+        ),
+      );
+    }
+
+    return Icon(
+      isSedangDiputar ? Icons.pause_rounded : Icons.play_arrow_rounded,
+      size: 28,
+      color: WarnaCapify.coklatGelap,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,13 +172,27 @@ class KartuLanjutDengerin extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Lanjut dengerin',
-                        style: TextStyle(
-                          color: WarnaCapify.krem,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w300,
-                        ),
+                      Row(
+                        children: [
+                          if (isSedangDiputar) ...[
+                            const Icon(
+                              Icons.graphic_eq_rounded,
+                              size: 14,
+                              color: WarnaCapify.krem,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            isSedangDiputar
+                                ? 'Sedang diputar'
+                                : 'Lanjut dengerin',
+                            style: const TextStyle(
+                              color: WarnaCapify.krem,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -180,17 +219,17 @@ class KartuLanjutDengerin extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: WarnaCapify.krem,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    size: 28,
-                    color: WarnaCapify.coklatGelap,
+                Material(
+                  color: WarnaCapify.krem,
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: isSedangDisiapkan ? null : onTekanTombolPutar,
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(child: isiTombolPutar()),
+                    ),
                   ),
                 ),
               ],
