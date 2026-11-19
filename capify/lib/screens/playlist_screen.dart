@@ -7,6 +7,7 @@ import '../models/playlist.dart';
 import '../providers/playlist_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
+import '../widgets/form_buat_playlist.dart';
 import 'detail_playlist_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
@@ -45,6 +46,27 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         builder: (context) => DetailPlaylistScreen(playlist: playlistDipilih),
       ),
     );
+  }
+
+  Future<void> bukaFormBuatPlaylist() async {
+    String? namaPlaylistBaru = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: WarnaCapify.coklatGelap,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (konteksSheet) => const FormBuatPlaylist(),
+    );
+
+    if (!mounted || namaPlaylistBaru == null) return;
+
+    setState(() => kategoriTerpilih = 'Playlist');
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text('Playlist "$namaPlaylistBaru" berhasil dibuat')),
+      );
   }
 
   void tampilkanInfoSegeraHadir(String namaFitur) {
@@ -136,9 +158,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               ? 'Simpan album yang kamu suka supaya gampang diputar lagi'
               : 'Tekan ikon hati pada lagu supaya tersimpan di sini',
           teksTombol: isTabPlaylist ? 'Buat Playlist' : 'Cari Lagu',
-          onTombolDitekan: () => tampilkanInfoSegeraHadir(
-            isTabPlaylist ? 'Fitur buat playlist' : 'Fitur cari lagu',
-          ),
+          onTombolDitekan: isTabPlaylist
+              ? bukaFormBuatPlaylist
+              : () => tampilkanInfoSegeraHadir('Fitur cari lagu'),
         ),
       ],
     );
@@ -165,7 +187,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           IconButton(
             tooltip: 'Buat playlist',
             icon: const Icon(Icons.add, color: WarnaCapify.krem, size: 28),
-            onPressed: () => tampilkanInfoSegeraHadir('Fitur buat playlist'),
+            onPressed: bukaFormBuatPlaylist,
           ),
           const SizedBox(width: 8),
         ],
