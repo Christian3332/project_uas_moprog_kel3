@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../utils/warna_capify.dart';
-import 'halaman_utama_screen.dart';
 import 'login_screen.dart';
+import 'preferensi_genre_screen.dart';
 
 class IsiSlideOnboarding {
   final IconData ikon;
@@ -73,27 +73,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void selesaikanOnboarding() {
+  Future<void> selesaikanOnboarding() async {
     if (isSedangPindahHalaman) return;
     isSedangPindahHalaman = true;
 
-    Navigator.pushAndRemoveUntil(
+    await Navigator.push(
       context,
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (context, animasiMasuk, animasiKeluar) {
-          return const HalamanUtamaScreen();
-        },
-        transitionsBuilder:
-            (context, animasiMasuk, animasiKeluar, halamanTujuan) {
-              return FadeTransition(
-                opacity: animasiMasuk,
-                child: halamanTujuan,
-              );
-            },
+      MaterialPageRoute(
+        builder: (context) =>
+            const PreferensiGenreScreen(isDariOnboarding: true),
       ),
-      (ruteSebelumnya) => false,
     );
+
+    if (!mounted) return;
+    isSedangPindahHalaman = false;
   }
 
   void bukaHalamanMasuk() {

@@ -13,6 +13,7 @@ import 'audio_provider.dart';
 
 class HomeProvider extends ChangeNotifier {
   static const int batasJumlahRiwayat = 10;
+  static const int batasGenreFavorit = 5;
 
   List<RiwayatPutar> _riwayatTerakhirDiputar = [];
   List<RacikanUntukmu> _daftarRacikanUntukmu = [];
@@ -24,6 +25,7 @@ class HomeProvider extends ChangeNotifier {
 
   AudioProvider? _pemutarYangDipantau;
   String? _kunciLaguTerakhirDicatat;
+  List<String> _genreFavorit = [];
 
   List<RiwayatPutar> get riwayatTerakhirDiputar =>
       List.unmodifiable(_riwayatTerakhirDiputar);
@@ -34,6 +36,8 @@ class HomeProvider extends ChangeNotifier {
   bool get isSedangMemuat => _isSedangMemuat;
   bool get isSudahPernahDimuat => _isSudahPernahDimuat;
   String? get pesanGagal => _pesanGagal;
+  List<String> get genreFavorit => List.unmodifiable(_genreFavorit);
+  bool get isSudahPilihGenre => _genreFavorit.isNotEmpty;
 
   RiwayatPutar? get laguUntukDilanjutkan {
     if (_riwayatTerakhirDiputar.isEmpty) return null;
@@ -128,6 +132,44 @@ class HomeProvider extends ChangeNotifier {
     _kabariPendengar();
   }
 
+  void simpanGenreFavorit(List<String> genrePilihan) {
+    Set<String> namaGenreYangAda = daftarKategoriDummy
+        .map((kategori) => kategori.nama)
+        .toSet();
+
+    List<String> genreRapi = [];
+    for (String genre in genrePilihan) {
+      bool isGenreDikenal = namaGenreYangAda.contains(genre);
+      bool isSudahDimasukkan = genreRapi.contains(genre);
+      if (isGenreDikenal && !isSudahDimasukkan) {
+        genreRapi.add(genre);
+      }
+    }
+
+    _genreFavorit = genreRapi.take(batasGenreFavorit).toList();
+    _susunUlangRekomendasi();
+    _kabariPendengar();
+  }
+
+  List<String> _urutanKategoriSesuaiFavorit() {
+    List<String> kategoriFavoritDulu = _genreFavorit
+        .where((genre) => laguPerKategoriDummy.containsKey(genre))
+        .toList();
+
+    for (String namaKategori in laguPerKategoriDummy.keys) {
+      if (!kategoriFavoritDulu.contains(namaKategori)) {
+        kategoriFavoritDulu.add(namaKategori);
+      }
+    }
+    return kategoriFavoritDulu;
+  }
+
+  int _peringkatFavorit(String namaKategori) {
+    int posisi = _genreFavorit.indexOf(namaKategori);
+    if (posisi == -1) return _genreFavorit.length;
+    return posisi;
+  }
+
   void _susunUlangRekomendasi() {
     Set<String> laguYangPernahDiputar = _riwayatTerakhirDiputar
         .map((riwayat) => kunciLagu(riwayat.lagu))
@@ -153,6 +195,7 @@ class HomeProvider extends ChangeNotifier {
 
       hasilRacikan.add(
         RacikanUntukmu(
+          namaKategori: namaKategori,
           playlist: Playlist(
             nama: 'Racikan $namaKategori',
             deskripsi: _rangkumPenyanyi(isiLagu),
@@ -160,12 +203,17 @@ class HomeProvider extends ChangeNotifier {
           ),
           warnaAksen: _cariWarnaKategori(namaKategori),
           jumlahLaguFamiliar: jumlahFamiliar,
+          isGenreFavorit: _genreFavorit.contains(namaKategori),
         ),
       );
     });
 
     List<RacikanUntukmu> urutanAwal = List.of(hasilRacikan);
     hasilRacikan.sort((a, b) {
+      int selisihPeringkat =
+          _peringkatFavorit(a.namaKategori) - _peringkatFavorit(b.namaKategori);
+      if (selisihPeringkat != 0) return selisihPeringkat;
+
       int selisihFamiliar = b.jumlahLaguFamiliar - a.jumlahLaguFamiliar;
       if (selisihFamiliar != 0) return selisihFamiliar;
       return urutanAwal.indexOf(a) - urutanAwal.indexOf(b);
@@ -202,7 +250,8 @@ class HomeProvider extends ChangeNotifier {
     List<Lagu> hasilTemuan = [];
     Set<String> laguYangSudahMasuk = {};
 
-    for (List<Lagu> isiLagu in laguPerKategoriDummy.values) {
+    for (String namaKategori in _urutanKategoriSesuaiFavorit()) {
+      List<Lagu> isiLagu = laguPerKategoriDummy[namaKategori] ?? [];
       for (Lagu lagu in isiLagu) {
         String kunci = kunciLagu(lagu);
         bool isPernahDiputar = laguYangPernahDiputar.contains(kunci);

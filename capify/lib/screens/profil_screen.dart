@@ -62,7 +62,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
     });
 
     if (isKualitasHarusTurun) {
-      tampilkanPesan('Kualitas streaming diturunkan ke Rendah biar hemat kuota');
+      tampilkanPesan(
+        'Kualitas streaming diturunkan ke Rendah biar hemat kuota',
+      );
     }
   }
 
