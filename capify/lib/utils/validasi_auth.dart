@@ -1,9 +1,12 @@
 final RegExp polaEmail = RegExp(r'^[\w.+-]+@[\w-]+(\.[\w-]+)+$');
+final RegExp polaNama = RegExp(r"^[a-zA-Z\s.']+$");
 
 String? cekNama(String? isian) {
   String nama = (isian ?? '').trim();
   if (nama.isEmpty) return 'Nama belum diisi';
   if (nama.length < 3) return 'Nama minimal 3 huruf';
+  if (nama.length > 50) return 'Nama maksimal 50 karakter';
+  if (!polaNama.hasMatch(nama)) return 'Nama hanya boleh berisi huruf';
   return null;
 }
 

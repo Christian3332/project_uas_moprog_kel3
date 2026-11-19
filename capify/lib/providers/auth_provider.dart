@@ -4,6 +4,8 @@ import '../models/akun_pengguna.dart';
 
 enum KesalahanMasuk { emailBelumTerdaftar, passwordSalah, masihDiproses }
 
+enum KesalahanDaftar { emailSudahTerdaftar, masihDiproses }
+
 class AuthProvider extends ChangeNotifier {
   final Map<String, AkunPengguna> _akunTerdaftar = {
     'capy@capify.id': const AkunPengguna(
@@ -25,6 +27,10 @@ class AuthProvider extends ChangeNotifier {
   String get emailTampilan => _akunAktif?.email ?? 'Belum masuk ke akun';
 
   String _rapikanEmail(String email) => email.trim().toLowerCase();
+
+  bool isEmailSudahTerdaftar(String email) {
+    return _akunTerdaftar.containsKey(_rapikanEmail(email));
+  }
 
   String _rapikanNama(String nama) {
     return nama
@@ -64,12 +70,12 @@ class AuthProvider extends ChangeNotifier {
     return kesalahan;
   }
 
-  Future<String?> daftar({
+  Future<KesalahanDaftar?> daftar({
     required String nama,
     required String email,
     required String password,
   }) async {
-    if (_isSedangMemproses) return 'Masih diproses, tunggu sebentar ya';
+    if (_isSedangMemproses) return KesalahanDaftar.masihDiproses;
 
     _isSedangMemproses = true;
     notifyListeners();
@@ -77,10 +83,10 @@ class AuthProvider extends ChangeNotifier {
     await Future.delayed(const Duration(seconds: 2));
 
     String emailRapi = _rapikanEmail(email);
-    String? pesanGagal;
+    KesalahanDaftar? kesalahan;
 
     if (_akunTerdaftar.containsKey(emailRapi)) {
-      pesanGagal = 'Email ini sudah terdaftar, silakan masuk';
+      kesalahan = KesalahanDaftar.emailSudahTerdaftar;
     } else {
       _akunTerdaftar[emailRapi] = AkunPengguna(
         nama: _rapikanNama(nama),
@@ -91,7 +97,7 @@ class AuthProvider extends ChangeNotifier {
 
     _isSedangMemproses = false;
     notifyListeners();
-    return pesanGagal;
+    return kesalahan;
   }
 
   void keluar() {
