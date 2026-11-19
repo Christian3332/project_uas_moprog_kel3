@@ -5,6 +5,8 @@ import '../models/album.dart';
 import '../models/lagu.dart';
 import '../models/playlist.dart';
 
+final List<Playlist> _playlistDiServerPalsu = List.of(daftarPlaylistDummy);
+
 class KoleksiService {
   final Duration lamaResponServer;
 
@@ -14,7 +16,23 @@ class KoleksiService {
 
   Future<List<Playlist>> ambilPlaylistSaya() async {
     await Future.delayed(lamaResponServer);
-    return List.of(daftarPlaylistDummy);
+    return List.of(_playlistDiServerPalsu);
+  }
+
+  Future<Playlist> simpanPlaylistBaru({
+    required String nama,
+    required String deskripsi,
+  }) async {
+    await Future.delayed(lamaResponServer);
+
+    Playlist playlistTersimpan = Playlist(
+      id: 'playlist-${DateTime.now().microsecondsSinceEpoch}',
+      nama: nama,
+      deskripsi: deskripsi,
+      daftarLagu: const [],
+    );
+    _playlistDiServerPalsu.insert(0, playlistTersimpan);
+    return playlistTersimpan;
   }
 
   Future<List<Album>> ambilAlbumTersimpan() async {
