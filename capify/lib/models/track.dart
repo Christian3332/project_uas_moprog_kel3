@@ -57,6 +57,7 @@ class Track {
       penyanyi: penyanyi,
       urlCover: urlCover,
       durasi: durasi,
+      urlAudio: urlAudio,
     );
   }
 }
