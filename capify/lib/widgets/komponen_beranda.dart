@@ -96,6 +96,40 @@ class KotakBelumAdaIsi extends StatelessWidget {
   }
 }
 
+class SpandukDataCadangan extends StatelessWidget {
+  const SpandukDataCadangan({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: WarnaCapify.coklatTua,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: WarnaCapify.krem.withValues(alpha: 0.3)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 20, color: WarnaCapify.krem),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu. '
+              'Tarik ke bawah untuk coba lagi.',
+              style: TextStyle(
+                color: WarnaCapify.krem,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class RakGeserHorizontal extends StatelessWidget {
   final double tinggiRak;
   final int jumlahItem;

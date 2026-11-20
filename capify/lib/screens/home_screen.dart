@@ -234,6 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(top: 12, bottom: 32),
         children: [
+          if (home.isMemakaiDataCadangan) const SpandukDataCadangan(),
           ...buildBagianTerakhirDiputar(home),
           const SizedBox(height: 28),
           ...buildBagianRacikanUntukmu(

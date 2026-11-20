@@ -26,6 +26,7 @@ class HomeProvider extends ChangeNotifier {
   bool _isSedangMemuat = false;
   bool _isSudahPernahDimuat = false;
   String? _pesanGagal;
+  bool _isMemakaiDataCadangan = false;
   bool _isSudahDibuang = false;
 
   AudioProvider? _pemutarYangDipantau;
@@ -41,6 +42,7 @@ class HomeProvider extends ChangeNotifier {
   bool get isSedangMemuat => _isSedangMemuat;
   bool get isSudahPernahDimuat => _isSudahPernahDimuat;
   String? get pesanGagal => _pesanGagal;
+  bool get isMemakaiDataCadangan => _isMemakaiDataCadangan;
   List<String> get genreFavorit => List.unmodifiable(_genreFavorit);
   bool get isSudahPilihGenre => _genreFavorit.isNotEmpty;
 
@@ -89,6 +91,7 @@ class HomeProvider extends ChangeNotifier {
       if (_isSudahDibuang) return;
 
       _laguPerGenre = feedDariServer.laguPerGenre;
+      _isMemakaiDataCadangan = feedDariServer.isDariCadangan;
       _gabungkanDenganRiwayatServer(feedDariServer.riwayatPutar);
       _susunUlangRekomendasi();
       _isSudahPernahDimuat = true;

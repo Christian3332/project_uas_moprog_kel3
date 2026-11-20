@@ -5,10 +5,23 @@ import 'track.dart';
 class FeedBeranda {
   final List<RiwayatPutar> riwayatPutar;
   final Map<String, List<Lagu>> laguPerGenre;
+  final bool isDariCadangan;
 
-  const FeedBeranda({required this.riwayatPutar, required this.laguPerGenre});
+  const FeedBeranda({
+    required this.riwayatPutar,
+    required this.laguPerGenre,
+    this.isDariCadangan = false,
+  });
 
   bool get isKosong => riwayatPutar.isEmpty && laguPerGenre.isEmpty;
+
+  FeedBeranda tandaiSebagaiCadangan() {
+    return FeedBeranda(
+      riwayatPutar: riwayatPutar,
+      laguPerGenre: laguPerGenre,
+      isDariCadangan: true,
+    );
+  }
 
   int get jumlahLaguDiKatalog {
     int total = 0;

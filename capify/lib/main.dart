@@ -10,7 +10,9 @@ import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/auth_service.dart';
+import 'services/feed_service.dart';
 import 'services/supabase_auth_service.dart';
+import 'services/supabase_feed_service.dart';
 import 'utils/warna_capify.dart';
 
 Future<void> main() async {
@@ -32,7 +34,13 @@ Future<void> main() async {
               AudioProvider()
                 ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false),
         ),
-        ChangeNotifierProvider(create: (context) => HomeProvider()),
+        ChangeNotifierProvider(
+          create: (context) => HomeProvider(
+            feedService: isSupabaseSiap
+                ? const SupabaseFeedService()
+                : const FeedService(),
+          ),
+        ),
         ChangeNotifierProvider(create: (context) => SearchProvider()),
         ChangeNotifierProvider(
           create: (context) => PlaylistProvider()..muatKoleksi(),
