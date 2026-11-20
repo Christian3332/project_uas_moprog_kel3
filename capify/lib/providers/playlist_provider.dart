@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/album.dart';
+import '../models/koleksi_pengguna.dart';
 import '../models/lagu.dart';
 import '../models/playlist.dart';
 import '../services/koleksi_service.dart';
@@ -17,6 +18,8 @@ class PlaylistProvider extends ChangeNotifier {
   bool _isKoleksiSudahPernahDimuat = false;
   bool _isSedangMembuatPlaylist = false;
   bool _isProviderSudahDitutup = false;
+  bool _isMemakaiDataCadangan = false;
+  String? _pesanGagal;
 
   final int batasPanjangNamaPlaylist = 40;
 
@@ -28,6 +31,8 @@ class PlaylistProvider extends ChangeNotifier {
   bool get isKoleksiSedangDimuat => _isKoleksiSedangDimuat;
   bool get isKoleksiSudahPernahDimuat => _isKoleksiSudahPernahDimuat;
   bool get isSedangMembuatPlaylist => _isSedangMembuatPlaylist;
+  bool get isMemakaiDataCadangan => _isMemakaiDataCadangan;
+  String? get pesanGagal => _pesanGagal;
 
   bool get isMasihMuatPertamaKali {
     return _isKoleksiSedangDimuat && !_isKoleksiSudahPernahDimuat;
@@ -42,26 +47,31 @@ class PlaylistProvider extends ChangeNotifier {
     if (_isKoleksiSedangDimuat) return;
 
     _isKoleksiSedangDimuat = true;
+    _pesanGagal = null;
     _kabariLayar();
 
-    Future<List<Playlist>> permintaanPlaylist = koleksiService
-        .ambilPlaylistSaya();
-    Future<List<Album>> permintaanAlbum = koleksiService.ambilAlbumTersimpan();
-    Future<List<Lagu>> permintaanLaguDisukai = koleksiService
-        .ambilLaguDisukai();
+    try {
+      KoleksiPengguna koleksiDariServer = await koleksiService
+          .ambilKoleksiPengguna();
+      if (_isProviderSudahDitutup) return;
 
-    List<Playlist> hasilPlaylist = await permintaanPlaylist;
-    List<Album> hasilAlbum = await permintaanAlbum;
-    List<Lagu> hasilLaguDisukai = await permintaanLaguDisukai;
+      _daftarPlaylistSaya = List.of(koleksiDariServer.daftarPlaylist);
+      _daftarAlbumTersimpan = List.of(koleksiDariServer.daftarAlbumTersimpan);
+      _daftarLaguDisukai = List.of(koleksiDariServer.daftarLaguDisukai);
+      _isMemakaiDataCadangan = koleksiDariServer.isDariCadangan;
+      _isKoleksiSudahPernahDimuat = true;
+    } catch (error) {
+      _pesanGagal = _rapikanPesanGagal(error);
+    }
 
-    if (_isProviderSudahDitutup) return;
-
-    _daftarPlaylistSaya = hasilPlaylist;
-    _daftarAlbumTersimpan = hasilAlbum;
-    _daftarLaguDisukai = hasilLaguDisukai;
     _isKoleksiSedangDimuat = false;
-    _isKoleksiSudahPernahDimuat = true;
     _kabariLayar();
+  }
+
+  String _rapikanPesanGagal(Object error) {
+    String pesanAsli = error.toString().replaceFirst('Exception: ', '').trim();
+    if (pesanAsli.isEmpty) return 'Koleksi gagal dimuat, coba lagi sebentar ya';
+    return pesanAsli;
   }
 
   String? cekNamaPlaylistBaru(String? namaYangDiketik) {
