@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../data/kategori_dummy.dart';
-import '../data/lagu_per_kategori_dummy.dart';
-import '../data/riwayat_putar_dummy.dart';
+import '../models/feed_beranda.dart';
 import '../models/kategori_musik.dart';
 import '../models/lagu.dart';
 import '../models/playlist.dart';
 import '../models/racikan_untukmu.dart';
 import '../models/riwayat_putar.dart';
+import '../services/feed_service.dart';
 import '../utils/warna_capify.dart';
 import 'audio_provider.dart';
 
@@ -15,6 +15,11 @@ class HomeProvider extends ChangeNotifier {
   static const int batasJumlahRiwayat = 10;
   static const int batasGenreFavorit = 5;
 
+  final FeedService feedService;
+
+  HomeProvider({this.feedService = const FeedService()});
+
+  Map<String, List<Lagu>> _laguPerGenre = {};
   List<RiwayatPutar> _riwayatTerakhirDiputar = [];
   List<RacikanUntukmu> _daftarRacikanUntukmu = [];
   List<Lagu> _laguBelumPernahDidengar = [];
@@ -80,24 +85,29 @@ class HomeProvider extends ChangeNotifier {
     _kabariPendengar();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 800));
+      FeedBeranda feedDariServer = await feedService.ambilFeedBeranda();
+      if (_isSudahDibuang) return;
 
-      if (!_isSudahPernahDimuat) {
-        _gabungkanDenganRiwayatDummy();
-      }
-
+      _laguPerGenre = feedDariServer.laguPerGenre;
+      _gabungkanDenganRiwayatServer(feedDariServer.riwayatPutar);
       _susunUlangRekomendasi();
       _isSudahPernahDimuat = true;
     } catch (error) {
-      _pesanGagal = 'Beranda gagal dimuat, coba lagi sebentar ya';
+      _pesanGagal = _rapikanPesanGagal(error);
     }
 
     _isSedangMemuat = false;
     _kabariPendengar();
   }
 
-  void _gabungkanDenganRiwayatDummy() {
-    List<RiwayatPutar> riwayatDummyTerbaru = List.of(daftarRiwayatPutarDummy)
+  String _rapikanPesanGagal(Object error) {
+    String pesanAsli = error.toString().replaceFirst('Exception: ', '').trim();
+    if (pesanAsli.isEmpty) return 'Beranda gagal dimuat, coba lagi sebentar ya';
+    return pesanAsli;
+  }
+
+  void _gabungkanDenganRiwayatServer(List<RiwayatPutar> riwayatDariServer) {
+    List<RiwayatPutar> riwayatServerTerbaru = List.of(riwayatDariServer)
       ..sort((a, b) => a.jarakSejakDiputar.compareTo(b.jarakSejakDiputar));
 
     Set<String> laguYangSudahDicatat = _riwayatTerakhirDiputar
@@ -106,7 +116,7 @@ class HomeProvider extends ChangeNotifier {
 
     List<RiwayatPutar> riwayatGabungan = [
       ..._riwayatTerakhirDiputar,
-      ...riwayatDummyTerbaru.where(
+      ...riwayatServerTerbaru.where(
         (riwayat) => !laguYangSudahDicatat.contains(kunciLagu(riwayat.lagu)),
       ),
     ];
@@ -153,10 +163,10 @@ class HomeProvider extends ChangeNotifier {
 
   List<String> _urutanKategoriSesuaiFavorit() {
     List<String> kategoriFavoritDulu = _genreFavorit
-        .where((genre) => laguPerKategoriDummy.containsKey(genre))
+        .where((genre) => _laguPerGenre.containsKey(genre))
         .toList();
 
-    for (String namaKategori in laguPerKategoriDummy.keys) {
+    for (String namaKategori in _laguPerGenre.keys) {
       if (!kategoriFavoritDulu.contains(namaKategori)) {
         kategoriFavoritDulu.add(namaKategori);
       }
@@ -186,7 +196,7 @@ class HomeProvider extends ChangeNotifier {
   ) {
     List<RacikanUntukmu> hasilRacikan = [];
 
-    laguPerKategoriDummy.forEach((namaKategori, isiLagu) {
+    _laguPerGenre.forEach((namaKategori, isiLagu) {
       if (isiLagu.isEmpty) return;
 
       int jumlahFamiliar = isiLagu
@@ -251,7 +261,7 @@ class HomeProvider extends ChangeNotifier {
     Set<String> laguYangSudahMasuk = {};
 
     for (String namaKategori in _urutanKategoriSesuaiFavorit()) {
-      List<Lagu> isiLagu = laguPerKategoriDummy[namaKategori] ?? [];
+      List<Lagu> isiLagu = _laguPerGenre[namaKategori] ?? [];
       for (Lagu lagu in isiLagu) {
         String kunci = kunciLagu(lagu);
         bool isPernahDiputar = laguYangPernahDiputar.contains(kunci);
