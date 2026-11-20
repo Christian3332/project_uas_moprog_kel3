@@ -4,6 +4,7 @@ import 'package:capify/models/lagu.dart';
 import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
 import 'package:capify/services/feed_service.dart';
+import 'package:capify/services/supabase_feed_service.dart';
 
 import 'pemutar_audio_palsu.dart';
 
@@ -303,6 +304,26 @@ void main() {
         'Lagu Dua',
       ]);
       homeKecil.dispose();
+    });
+
+    test('Data mock biasa tidak dianggap data cadangan', () async {
+      await home.muatIsiBeranda();
+
+      expect(home.isMemakaiDataCadangan, isFalse);
+    });
+
+    test('Supabase gagal maka beranda tetap terisi data cadangan', () async {
+      HomeProvider homeSupabase = HomeProvider(
+        feedService: const SupabaseFeedService(),
+      );
+
+      await homeSupabase.muatIsiBeranda();
+
+      expect(homeSupabase.isSudahPernahDimuat, isTrue);
+      expect(homeSupabase.isMemakaiDataCadangan, isTrue);
+      expect(homeSupabase.pesanGagal, isNull);
+      expect(homeSupabase.laguUntukDilanjutkan?.lagu.judul, 'Evaluasi');
+      homeSupabase.dispose();
     });
 
     test('Feed kosong dari server tetap aman', () async {
