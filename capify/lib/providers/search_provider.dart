@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/lagu_dummy.dart';
 import '../data/lagu_per_kategori_dummy.dart';
+import '../models/album.dart';
+import '../models/hasil_pencarian.dart';
 import '../models/lagu.dart';
+import '../services/search_service.dart';
 
 List<Lagu> kumpulkanSemuaLaguDummy() {
   List<Lagu> semuaLagu = [];
@@ -33,21 +38,41 @@ class SearchProvider extends ChangeNotifier {
     filterPenyanyi,
   ];
 
-  final List<Lagu> sumberLagu;
+  final SearchService searchService;
+  final Duration jedaSetelahMengetik;
+  final List<String> saranPencarian;
   final int batasRiwayat = 5;
-  final int batasSaran = 8;
+  final int batasHasilDariServer = 20;
+  final int minimalHurufUntukCari = 2;
+  final int batasIsiCache = 20;
 
-  SearchProvider({List<Lagu>? sumberLagu})
-    : sumberLagu = sumberLagu ?? kumpulkanSemuaLaguDummy();
+  SearchProvider({
+    SearchService? searchService,
+    this.jedaSetelahMengetik = const Duration(milliseconds: 450),
+    List<String>? saranPencarian,
+  }) : searchService = searchService ?? SearchService(),
+       saranPencarian =
+           saranPencarian ??
+           kumpulkanSemuaLaguDummy()
+               .map((lagu) => lagu.penyanyi)
+               .toSet()
+               .take(8)
+               .toList();
 
   String _kataKunci = '';
-  String _kataKunciTerakhirDicari = '';
+  String _kataKunciHasilTampil = '';
   String _filterAktif = filterSemua;
-  List<Lagu> _hasilPencarian = [];
+  HasilPencarian? _hasilDariServer;
+  List<Lagu> _laguTampil = [];
+  List<Album> _albumTampil = [];
   List<String> _riwayatPencarian = [];
+  final Map<String, HasilPencarian> _cacheHasil = {};
+  Timer? _timerTungguKetikan;
+  String? _pesanError;
   bool _isSedangMencari = false;
   bool _isProviderSudahDitutup = false;
-  int _urutanKetikan = 0;
+  int _urutanPermintaan = 0;
+  int _jumlahPanggilanApi = 0;
 
   String get kataKunci => _kataKunci;
   String get kataKunciBersih => _kataKunci.trim();
@@ -55,16 +80,26 @@ class SearchProvider extends ChangeNotifier {
   bool get isFilterSemua => _filterAktif == filterSemua;
   bool get isKolomCariKosong => kataKunciBersih.isEmpty;
   bool get isSedangMencari => _isSedangMencari;
-  bool get isHasilKosong => !_isSedangMencari && _hasilPencarian.isEmpty;
-  List<Lagu> get hasilPencarian => List.unmodifiable(_hasilPencarian);
+  String? get pesanError => _pesanError;
+  bool get isAdaError => _pesanError != null;
+  bool get isHasilDariCadangan => _hasilDariServer?.isDariCadangan ?? false;
+  int get jumlahPanggilanApi => _jumlahPanggilanApi;
+  List<Lagu> get hasilPencarian => List.unmodifiable(_laguTampil);
+  List<Album> get albumDitemukan => List.unmodifiable(_albumTampil);
   List<String> get riwayatPencarian => List.unmodifiable(_riwayatPencarian);
 
+  bool get isKataKunciKependekan {
+    if (isKolomCariKosong) return false;
+    return potonganKataKunci.join(' ').length < minimalHurufUntukCari;
+  }
+
+  bool get isHasilKosong {
+    if (_isSedangMencari || isAdaError || isKataKunciKependekan) return false;
+    return _laguTampil.isEmpty && _albumTampil.isEmpty;
+  }
+
   List<String> get potonganKataKunci {
-    return kataKunciBersih
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .where((kata) => kata.isNotEmpty)
-        .toList();
+    return SearchService.pecahKataKunci(kataKunciBersih);
   }
 
   List<String> get kataSorotanJudul {
@@ -75,86 +110,144 @@ class SearchProvider extends ChangeNotifier {
     return _filterAktif == filterJudul ? [] : potonganKataKunci;
   }
 
-  List<String> get saranPencarian {
-    return sumberLagu
-        .map((lagu) => lagu.penyanyi)
-        .toSet()
-        .take(batasSaran)
-        .toList();
-  }
-
   void _kabariLayar() {
     if (_isProviderSudahDitutup) return;
     notifyListeners();
   }
 
-  String _teksYangDiperiksa(Lagu lagu) {
-    if (_filterAktif == filterJudul) return lagu.judul.toLowerCase();
-    if (_filterAktif == filterPenyanyi) return lagu.penyanyi.toLowerCase();
-    return '${lagu.judul} ${lagu.penyanyi}'.toLowerCase();
-  }
+  bool _isLolosFilter(String judul, String penyanyi) {
+    if (_filterAktif == filterSemua) return true;
 
-  bool _isLaguCocok(Lagu lagu, List<String> semuaPotonganKata) {
-    String teksLagu = _teksYangDiperiksa(lagu);
-    return semuaPotonganKata.every((kata) => teksLagu.contains(kata));
+    String teksYangDiperiksa = _filterAktif == filterJudul
+        ? judul.toLowerCase()
+        : penyanyi.toLowerCase();
+    return potonganKataKunci.every((kata) => teksYangDiperiksa.contains(kata));
   }
 
   void _jalankanFilter() {
-    List<String> semuaPotonganKata = potonganKataKunci;
-    String kataUtuh = semuaPotonganKata.join(' ');
-
-    List<Lagu> judulDiawaliKataKunci = [];
-    List<Lagu> judulMengandungKataKunci = [];
-    List<Lagu> cocokLewatPenyanyi = [];
-
-    for (Lagu lagu in sumberLagu) {
-      if (!_isLaguCocok(lagu, semuaPotonganKata)) continue;
-
-      String judulKecil = lagu.judul.toLowerCase();
-      if (judulKecil.startsWith(kataUtuh)) {
-        judulDiawaliKataKunci.add(lagu);
-      } else if (judulKecil.contains(kataUtuh)) {
-        judulMengandungKataKunci.add(lagu);
-      } else {
-        cocokLewatPenyanyi.add(lagu);
-      }
+    HasilPencarian? hasil = _hasilDariServer;
+    if (hasil == null) {
+      _laguTampil = [];
+      _albumTampil = [];
+      return;
     }
 
-    _hasilPencarian = [
-      ...judulDiawaliKataKunci,
-      ...judulMengandungKataKunci,
-      ...cocokLewatPenyanyi,
-    ];
+    _laguTampil = hasil.daftarTrack
+        .where((track) => _isLolosFilter(track.judul, track.penyanyi))
+        .map((track) => track.keLagu())
+        .toList();
+    _albumTampil = hasil.daftarAlbum
+        .where((album) => _isLolosFilter(album.judul, album.penyanyi))
+        .toList();
   }
 
-  Future<void> cariLagu(String ketikanUser) async {
+  void _pasangHasil(String kataYangDicari, HasilPencarian? hasil) {
+    _hasilDariServer = hasil;
+    _kataKunciHasilTampil = hasil == null ? '' : kataYangDicari;
+    _jalankanFilter();
+  }
+
+  void _simpanKeCache(String kataYangDicari, HasilPencarian hasil) {
+    if (hasil.isDariCadangan) return;
+
+    _cacheHasil.remove(kataYangDicari);
+    _cacheHasil[kataYangDicari] = hasil;
+    if (_cacheHasil.length > batasIsiCache) {
+      _cacheHasil.remove(_cacheHasil.keys.first);
+    }
+  }
+
+  String? _siapkanPencarian(String ketikanUser) {
     _kataKunci = ketikanUser;
+    _timerTungguKetikan?.cancel();
     String kataYangDicari = potonganKataKunci.join(' ');
 
-    if (kataYangDicari == _kataKunciTerakhirDicari) {
-      _kabariLayar();
-      return;
-    }
+    bool isHasilnyaSudahTampil =
+        kataYangDicari == _kataKunciHasilTampil && !isAdaError;
+    bool isTidakPerluKeServer = kataYangDicari.isEmpty || isKataKunciKependekan;
+    HasilPencarian? hasilDariCache = _cacheHasil[kataYangDicari];
 
-    _kataKunciTerakhirDicari = kataYangDicari;
-    _urutanKetikan++;
-    int ketikanIniKe = _urutanKetikan;
-
-    if (kataYangDicari.isEmpty) {
-      _hasilPencarian = [];
+    if (isHasilnyaSudahTampil ||
+        isTidakPerluKeServer ||
+        hasilDariCache != null) {
+      _urutanPermintaan++;
       _isSedangMencari = false;
+      _pesanError = null;
+      if (isTidakPerluKeServer) {
+        _pasangHasil('', null);
+      } else if (!isHasilnyaSudahTampil) {
+        _simpanKeCache(kataYangDicari, hasilDariCache!);
+        _pasangHasil(kataYangDicari, hasilDariCache);
+      }
       _kabariLayar();
-      return;
+      return null;
     }
 
+    return kataYangDicari;
+  }
+
+  void ketikKataKunci(String ketikanUser) {
+    String? kataYangDicari = _siapkanPencarian(ketikanUser);
+    if (kataYangDicari == null) return;
+
+    _urutanPermintaan++;
     _isSedangMencari = true;
+    _pesanError = null;
     _kabariLayar();
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    _timerTungguKetikan = Timer(
+      jedaSetelahMengetik,
+      () => _ambilDariServer(kataYangDicari),
+    );
+  }
 
-    if (_isProviderSudahDitutup || ketikanIniKe != _urutanKetikan) return;
+  Future<void> cariSekarang(String kataKunciBaru) async {
+    String? kataYangDicari = _siapkanPencarian(kataKunciBaru);
+    if (kataYangDicari == null) return;
 
-    _jalankanFilter();
+    await _ambilDariServer(kataYangDicari);
+  }
+
+  Future<void> cobaLagi() async {
+    _timerTungguKetikan?.cancel();
+    String kataYangDicari = potonganKataKunci.join(' ');
+    if (kataYangDicari.isEmpty || isKataKunciKependekan) return;
+
+    await _ambilDariServer(kataYangDicari);
+  }
+
+  Future<void> _ambilDariServer(String kataYangDicari) async {
+    if (_isProviderSudahDitutup) return;
+
+    _urutanPermintaan++;
+    int permintaanIniKe = _urutanPermintaan;
+    _isSedangMencari = true;
+    _pesanError = null;
+    _kabariLayar();
+
+    _jumlahPanggilanApi++;
+    HasilPencarian? hasilBaru;
+    String? pesanGagal;
+    try {
+      hasilBaru = await searchService.cari(
+        kataYangDicari,
+        batasPerJenis: batasHasilDariServer,
+      );
+    } on SearchException catch (masalah) {
+      pesanGagal = masalah.pesan;
+    } catch (_) {
+      pesanGagal = 'Pencarian gagal, periksa koneksi internetmu lalu coba lagi';
+    }
+
+    if (_isProviderSudahDitutup || permintaanIniKe != _urutanPermintaan) {
+      return;
+    }
+
+    if (hasilBaru != null) {
+      _simpanKeCache(kataYangDicari, hasilBaru);
+    }
+    _pasangHasil(kataYangDicari, hasilBaru);
+    _pesanError = pesanGagal;
     _isSedangMencari = false;
     _kabariLayar();
   }
@@ -164,9 +257,7 @@ class SearchProvider extends ChangeNotifier {
     if (!pilihanFilter.contains(filterBaru)) return;
 
     _filterAktif = filterBaru;
-    if (!_isSedangMencari && !isKolomCariKosong) {
-      _jalankanFilter();
-    }
+    _jalankanFilter();
     _kabariLayar();
   }
 
@@ -197,12 +288,13 @@ class SearchProvider extends ChangeNotifier {
   }
 
   void kosongkanPencarian() {
-    cariLagu('');
+    _siapkanPencarian('');
   }
 
   @override
   void dispose() {
     _isProviderSudahDitutup = true;
+    _timerTungguKetikan?.cancel();
     super.dispose();
   }
 }

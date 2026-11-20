@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../models/hasil_pencarian.dart';
+import 'feed_service.dart';
 import 'track_api.dart';
 
 class SearchException implements Exception {
@@ -78,12 +79,24 @@ class SearchService {
 ''';
 
   final Duration lamaMenunggu;
+  final String? responsTrackKhusus;
+  final String responsAlbumServer;
   bool isServerSedangGangguan;
 
   SearchService({
     this.lamaMenunggu = const Duration(milliseconds: 700),
     this.isServerSedangGangguan = false,
+    this.responsTrackKhusus,
+    this.responsAlbumServer = responsAlbumDummy,
   });
+
+  static List<String> pecahKataKunci(String kataKunci) {
+    return kataKunci
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((kata) => kata.isNotEmpty)
+        .toList();
+  }
 
   Future<HasilPencarian> cari(
     String kataKunci, {
@@ -107,7 +120,7 @@ class SearchService {
       return HasilPencarian(kataKunci: kataRapi);
     }
 
-    String responsServer = await _kirimPermintaanKeServer(
+    String responsServer = await kirimPermintaanKeServer(
       kataRapi,
       jenis,
       batasPerJenis,
@@ -115,7 +128,7 @@ class SearchService {
     return bacaResponsPencarian(responsServer);
   }
 
-  Future<String> _kirimPermintaanKeServer(
+  Future<String> kirimPermintaanKeServer(
     String kataKunci,
     String jenis,
     int batasPerJenis,
@@ -128,19 +141,19 @@ class SearchService {
       );
     }
 
-    List<String> potonganKata = kataKunci.toLowerCase().split(' ');
+    List<String> potonganKata = pecahKataKunci(kataKunci);
 
     List<Map<String, dynamic>> trackCocok = jenis == jenisAlbum
         ? []
-        : _saringDanUrutkan(
-            _bacaDataMentah(TrackApi.responsServerDummy),
+        : saringDanUrutkan(
+            ambilSemuaTrackMentah(),
             potonganKata,
             batasPerJenis,
           );
     List<Map<String, dynamic>> albumCocok = jenis == jenisTrack
         ? []
-        : _saringDanUrutkan(
-            _bacaDataMentah(responsAlbumDummy),
+        : saringDanUrutkan(
+            bacaDataMentah(responsAlbumServer),
             potonganKata,
             batasPerJenis,
           );
@@ -152,8 +165,33 @@ class SearchService {
     });
   }
 
-  List<Map<String, dynamic>> _bacaDataMentah(String teksJson) {
-    dynamic hasilDecode = jsonDecode(teksJson);
+  List<Map<String, dynamic>> ambilSemuaTrackMentah() {
+    if (responsTrackKhusus != null) {
+      return bacaDataMentah(responsTrackKhusus!);
+    }
+
+    dynamic feedMentah = jsonDecode(FeedService.responsServerDummy);
+    dynamic trackDiFeed = feedMentah is Map ? feedMentah['tracks'] : null;
+
+    List<Map<String, dynamic>> semuaTrack = [
+      ...bacaDataMentah(TrackApi.responsServerDummy),
+      if (trackDiFeed is List) ...trackDiFeed.whereType<Map<String, dynamic>>(),
+    ];
+
+    Set<String> tandaYangSudahAda = {};
+    return semuaTrack.where((track) {
+      String tanda = '${track['title']}|${track['artist']}'.toLowerCase();
+      return tandaYangSudahAda.add(tanda);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> bacaDataMentah(String teksJson) {
+    dynamic hasilDecode;
+    try {
+      hasilDecode = jsonDecode(teksJson);
+    } on FormatException {
+      return [];
+    }
     if (hasilDecode is! List) return [];
     return hasilDecode.whereType<Map<String, dynamic>>().toList();
   }
@@ -177,11 +215,13 @@ class SearchService {
     return 1;
   }
 
-  List<Map<String, dynamic>> _saringDanUrutkan(
+  List<Map<String, dynamic>> saringDanUrutkan(
     List<Map<String, dynamic>> semuaData,
     List<String> potonganKata,
     int batas,
   ) {
+    if (potonganKata.isEmpty) return [];
+
     List<MapEntry<Map<String, dynamic>, int>> dataBerskor = semuaData
         .map((data) => MapEntry(data, _hitungSkorKecocokan(data, potonganKata)))
         .where((dataDanSkor) => dataDanSkor.value > 0)

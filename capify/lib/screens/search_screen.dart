@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/album.dart';
 import '../models/lagu.dart';
 import '../providers/search_provider.dart';
 import '../utils/warna_capify.dart';
@@ -40,7 +41,13 @@ class _SearchScreenState extends State<SearchScreen> {
     );
     fokusKolomCari.unfocus();
     pencarian.simpanKeRiwayat(kataKunci);
-    pencarian.cariLagu(kataKunci);
+    pencarian.cariSekarang(kataKunci);
+  }
+
+  void kirimPencarian(String kataKunci) {
+    SearchProvider pencarian = context.read<SearchProvider>();
+    pencarian.simpanKeRiwayat(kataKunci);
+    pencarian.cariSekarang(kataKunci);
   }
 
   void hapusKataKunci() {
@@ -97,8 +104,8 @@ class _SearchScreenState extends State<SearchScreen> {
     return TextField(
       controller: kataKunciController,
       focusNode: fokusKolomCari,
-      onChanged: pencarian.cariLagu,
-      onSubmitted: pencarian.simpanKeRiwayat,
+      onChanged: pencarian.ketikKataKunci,
+      onSubmitted: kirimPencarian,
       onTapOutside: (event) => fokusKolomCari.unfocus(),
       textInputAction: TextInputAction.search,
       style: const TextStyle(color: WarnaCapify.coklatGelap),
@@ -172,6 +179,24 @@ class _SearchScreenState extends State<SearchScreen> {
       return tampilanSebelumMencari(pencarian);
     }
 
+    if (pencarian.isKataKunciKependekan) {
+      return PesanPencarianKosong(
+        ikon: Icons.keyboard_alt_outlined,
+        pesan: 'Ketik minimal ${pencarian.minimalHurufUntukCari} huruf ya',
+        keterangan: 'Biar hasilnya lebih pas dan server tidak kerepotan',
+      );
+    }
+
+    if (pencarian.isAdaError) {
+      return PesanPencarianKosong(
+        ikon: Icons.wifi_off_rounded,
+        pesan: pencarian.pesanError!,
+        keterangan: 'Kata kuncimu tetap tersimpan, tinggal coba lagi',
+        teksTombol: 'Coba lagi',
+        onTombolDitekan: pencarian.cobaLagi,
+      );
+    }
+
     if (pencarian.isHasilKosong) {
       if (!pencarian.isFilterSemua) {
         return PesanPencarianKosong(
@@ -194,32 +219,57 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    return ListView.builder(
+    List<Album> albumDitemukan = pencarian.albumDitemukan;
+    List<String> ringkasanJumlah = [
+      if (hasilPencarian.isNotEmpty) '${hasilPencarian.length} lagu',
+      if (albumDitemukan.isNotEmpty) '${albumDitemukan.length} album',
+    ];
+
+    return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      itemCount: hasilPencarian.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              '${hasilPencarian.length} lagu ditemukan',
-              style: TextStyle(
-                color: WarnaCapify.krem.withValues(alpha: 0.8),
-                fontSize: 13,
-              ),
+      children: [
+        if (pencarian.isHasilDariCadangan) const CatatanDataCadangan(),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            '${ringkasanJumlah.join(' • ')} ditemukan',
+            style: TextStyle(
+              color: WarnaCapify.krem.withValues(alpha: 0.8),
+              fontSize: 13,
             ),
-          );
-        }
-
-        Lagu laguIni = hasilPencarian[index - 1];
-        return BarisHasilLagu(
-          lagu: laguIni,
-          kataSorotanJudul: pencarian.kataSorotanJudul,
-          kataSorotanPenyanyi: pencarian.kataSorotanPenyanyi,
-          onDipilih: () => pilihLaguDariHasil(laguIni),
-        );
-      },
+          ),
+        ),
+        if (albumDitemukan.isNotEmpty) ...[
+          const JudulBagianHasil(teks: 'Album'),
+          SizedBox(
+            height: 186,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: albumDitemukan.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                Album albumIni = albumDitemukan[index];
+                return KartuAlbumHasil(
+                  album: albumIni,
+                  onDipilih: () => pakaiKataKunci(albumIni.penyanyi),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (hasilPencarian.isNotEmpty) ...[
+          if (albumDitemukan.isNotEmpty) const JudulBagianHasil(teks: 'Lagu'),
+          for (Lagu laguIni in hasilPencarian)
+            BarisHasilLagu(
+              lagu: laguIni,
+              kataSorotanJudul: pencarian.kataSorotanJudul,
+              kataSorotanPenyanyi: pencarian.kataSorotanPenyanyi,
+              onDipilih: () => pilihLaguDariHasil(laguIni),
+            ),
+        ],
+      ],
     );
   }
 
@@ -486,6 +536,112 @@ class BarisHasilLagu extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class JudulBagianHasil extends StatelessWidget {
+  final String teks;
+
+  const JudulBagianHasil({super.key, required this.teks});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        teks,
+        style: const TextStyle(
+          fontSize: 16,
+          color: WarnaCapify.putih,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class CatatanDataCadangan extends StatelessWidget {
+  const CatatanDataCadangan({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: WarnaCapify.coklatTua,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 18, color: WarnaCapify.krem),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Server belum bisa dihubungi, ini hasil dari data offline',
+              style: TextStyle(color: WarnaCapify.krem, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class KartuAlbumHasil extends StatelessWidget {
+  final Album album;
+  final VoidCallback onDipilih;
+
+  const KartuAlbumHasil({
+    super.key,
+    required this.album,
+    required this.onDipilih,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 124,
+      child: InkWell(
+        onTap: onDipilih,
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 124,
+              height: 124,
+              child: CoverAlbum(
+                urlCover: album.urlCover,
+                lengkungSudut: 12,
+                isPakaiBayangan: false,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              album.judul,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: WarnaCapify.putih,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${album.penyanyi} • ${album.jumlahLagu} lagu',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: WarnaCapify.krem.withValues(alpha: 0.8),
+                fontSize: 11,
+              ),
+            ),
+          ],
         ),
       ),
     );

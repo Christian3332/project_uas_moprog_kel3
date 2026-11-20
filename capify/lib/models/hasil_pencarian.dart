@@ -5,11 +5,13 @@ class HasilPencarian {
   final String kataKunci;
   final List<Track> daftarTrack;
   final List<Album> daftarAlbum;
+  final bool isDariCadangan;
 
   const HasilPencarian({
     required this.kataKunci,
     this.daftarTrack = const [],
     this.daftarAlbum = const [],
+    this.isDariCadangan = false,
   });
 
   factory HasilPencarian.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,7 @@ class HasilPencarian {
                 .map((dataAlbum) => Album.fromJson(dataAlbum))
                 .toList()
           : [],
+      isDariCadangan: json['from_backup'] == true,
     );
   }
 
