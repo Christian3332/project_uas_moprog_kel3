@@ -17,6 +17,7 @@ class AuthService {
   static const String kodeEmailAtauPasswordSalah = 'INVALID_CREDENTIALS';
   static const String kodeEmailBelumDikonfirmasi = 'EMAIL_NOT_CONFIRMED';
   static const String kodeGagalTerhubung = 'NETWORK_ERROR';
+  static const String kodePasswordTerlaluLemah = 'WEAK_PASSWORD';
 
   final Duration lamaMenunggu;
 
@@ -36,7 +37,7 @@ class AuthService {
 
   String _rapikanEmail(String email) => email.trim().toLowerCase();
 
-  String _rapikanNama(String nama) {
+  String rapikanNama(String nama) {
     return nama
         .trim()
         .split(RegExp(r'\s+'))
@@ -47,6 +48,12 @@ class AuthService {
 
   Map<String, dynamic> _buangPassword(Map<String, dynamic> barisAkun) {
     return Map.of(barisAkun)..remove('password');
+  }
+
+  bool get isPerluKonfirmasiEmail => false;
+
+  Future<void> keluar() async {
+    await Future.delayed(lamaMenunggu ~/ 4);
   }
 
   bool isEmailTerdaftar(String email) {
@@ -87,7 +94,7 @@ class AuthService {
 
     Map<String, dynamic> barisAkunBaru = {
       'id': 'usr-${_nomorIdBerikutnya.toString().padLeft(3, '0')}',
-      'name': _rapikanNama(nama),
+      'name': rapikanNama(nama),
       'email': emailRapi,
       'password': password,
       'photo_url': '',

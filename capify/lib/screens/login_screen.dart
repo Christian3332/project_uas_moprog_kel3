@@ -223,9 +223,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted || emailAkunBaru == null) return;
 
+    setState(() {
+      emailBelumTerdaftar = null;
+      emailDenganPasswordSalah = null;
+      passwordYangSalah = null;
+      isSalahnyaBisaDiEmail = false;
+    });
     emailController.text = emailAkunBaru;
     passwordController.clear();
-    tampilkanPesan('Akun berhasil dibuat, silakan masuk');
+    bool isPerluKonfirmasi = context.read<AuthProvider>().isPerluKonfirmasiEmail;
+    tampilkanPesan(
+      isPerluKonfirmasi
+          ? 'Akun dibuat! Konfirmasi lewat email dulu, lalu masuk'
+          : 'Akun berhasil dibuat, silakan masuk',
+    );
   }
 
   @override

@@ -12,7 +12,12 @@ enum KesalahanMasuk {
   gagalTerhubung,
 }
 
-enum KesalahanDaftar { emailSudahTerdaftar, masihDiproses, gagalTerhubung }
+enum KesalahanDaftar {
+  emailSudahTerdaftar,
+  passwordTerlaluLemah,
+  masihDiproses,
+  gagalTerhubung,
+}
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
@@ -23,11 +28,13 @@ class AuthProvider extends ChangeNotifier {
   User? _penggunaAktif;
   bool _isIngatSaya = false;
   bool _isSedangMemproses = false;
+  bool _isPerluKonfirmasiEmail = false;
 
   User? get penggunaAktif => _penggunaAktif;
   bool get isSudahMasuk => _penggunaAktif != null;
   bool get isIngatSaya => _isIngatSaya;
   bool get isSedangMemproses => _isSedangMemproses;
+  bool get isPerluKonfirmasiEmail => _isPerluKonfirmasiEmail;
   String get namaTampilan => _penggunaAktif?.nama ?? 'Capy Lovers';
   String get emailTampilan => _penggunaAktif?.email ?? 'Belum masuk ke akun';
 
@@ -86,10 +93,15 @@ class AuthProvider extends ChangeNotifier {
     KesalahanDaftar? kesalahan;
     try {
       await _authService.daftar(nama: nama, email: email, password: password);
+      _isPerluKonfirmasiEmail = _authService.isPerluKonfirmasiEmail;
     } on AuthException catch (galat) {
-      kesalahan = galat.kode == AuthService.kodeEmailSudahDipakai
-          ? KesalahanDaftar.emailSudahTerdaftar
-          : KesalahanDaftar.gagalTerhubung;
+      if (galat.kode == AuthService.kodeEmailSudahDipakai) {
+        kesalahan = KesalahanDaftar.emailSudahTerdaftar;
+      } else if (galat.kode == AuthService.kodePasswordTerlaluLemah) {
+        kesalahan = KesalahanDaftar.passwordTerlaluLemah;
+      } else {
+        kesalahan = KesalahanDaftar.gagalTerhubung;
+      }
     } catch (_) {
       kesalahan = KesalahanDaftar.gagalTerhubung;
     }
@@ -99,9 +111,17 @@ class AuthProvider extends ChangeNotifier {
     return kesalahan;
   }
 
-  void keluar() {
+  Future<void> keluar() async {
+    if (_isSedangMemproses) return;
+
+    _isSedangMemproses = true;
+    notifyListeners();
+
+    await _authService.keluar();
+
     _penggunaAktif = null;
     _isIngatSaya = false;
+    _isSedangMemproses = false;
     notifyListeners();
   }
 }
