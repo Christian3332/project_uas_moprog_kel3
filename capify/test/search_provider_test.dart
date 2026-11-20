@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:capify/models/lagu.dart';
 import 'package:capify/providers/search_provider.dart';
 import 'package:capify/services/search_service.dart';
+import 'package:capify/services/supabase_search_service.dart';
 
 const String trackUntukTes = '''
 [
@@ -42,7 +43,7 @@ void main() {
   test('Kata kunci beberapa kata tetap ketemu walau urutannya acak', () async {
     SearchProvider pencarian = providerUntukTes();
 
-    await pencarian.cariLagu('weeknd star');
+    await pencarian.cariSekarang('weeknd star');
 
     expect(judulHasil(pencarian), ['Starboy']);
     expect(pencarian.albumDitemukan, isEmpty);
@@ -51,7 +52,7 @@ void main() {
   test('Hasil dari service berisi lagu dan album sekaligus', () async {
     SearchProvider pencarian = providerUntukTes();
 
-    await pencarian.cariLagu('weeknd');
+    await pencarian.cariSekarang('weeknd');
 
     expect(judulHasil(pencarian), ['Blinding Lights', 'Starboy']);
     expect(pencarian.albumDitemukan.single.judul, 'After Hours');
@@ -61,7 +62,7 @@ void main() {
   test('Judul yang diawali kata kunci tampil paling atas', () async {
     SearchProvider pencarian = providerUntukTes();
 
-    await pencarian.cariLagu('lights');
+    await pencarian.cariSekarang('lights');
 
     expect(judulHasil(pencarian), ['Lights Up', 'Blinding Lights']);
   });
@@ -69,7 +70,7 @@ void main() {
   test('Filter penyanyi menyaring ulang tanpa memanggil server lagi', () async {
     SearchService service = serviceUntukTes();
     SearchProvider pencarian = providerUntukTes(service);
-    await pencarian.cariLagu('lights');
+    await pencarian.cariSekarang('lights');
 
     service.isServerSedangGangguan = true;
     pencarian.gantiFilter(SearchProvider.filterPenyanyi);
@@ -86,8 +87,8 @@ void main() {
   test('Ketikan lama tidak menimpa hasil ketikan terbaru', () async {
     SearchProvider pencarian = providerUntukTes();
 
-    Future<void> ketikanPertama = pencarian.cariLagu('star');
-    Future<void> ketikanKedua = pencarian.cariLagu('harry');
+    Future<void> ketikanPertama = pencarian.cariSekarang('star');
+    Future<void> ketikanKedua = pencarian.cariSekarang('harry');
     await Future.wait([ketikanPertama, ketikanKedua]);
 
     expect(judulHasil(pencarian), ['Lights Up']);
@@ -98,7 +99,7 @@ void main() {
     SearchService service = serviceUntukTes()..isServerSedangGangguan = true;
     SearchProvider pencarian = providerUntukTes(service);
 
-    await pencarian.cariLagu('starboy');
+    await pencarian.cariSekarang('starboy');
 
     expect(pencarian.isAdaError, isTrue);
     expect(pencarian.pesanError, contains('gangguan'));
@@ -114,7 +115,7 @@ void main() {
 
   test('Mengosongkan kolom cari menghapus hasil dan error', () async {
     SearchProvider pencarian = providerUntukTes();
-    await pencarian.cariLagu('weeknd');
+    await pencarian.cariSekarang('weeknd');
 
     pencarian.kosongkanPencarian();
 
@@ -140,5 +141,109 @@ void main() {
     for (String penyanyi in pencarian.saranPencarian) {
       expect((await service.cari(penyanyi)).isKosong, isFalse);
     }
+  });
+
+  group('Debounce kolom pencarian', () {
+    const Duration jedaTes = Duration(milliseconds: 60);
+    const Duration tungguLewatJeda = Duration(milliseconds: 150);
+
+    SearchProvider providerDenganJeda([SearchService? service]) {
+      return SearchProvider(
+        searchService: service ?? serviceUntukTes(),
+        jedaSetelahMengetik: jedaTes,
+      );
+    }
+
+    test('Mengetik cepat hanya memanggil API sekali', () async {
+      SearchProvider pencarian = providerDenganJeda();
+
+      for (String ketikan in ['s', 'st', 'sta', 'star']) {
+        pencarian.ketikKataKunci(ketikan);
+      }
+
+      expect(pencarian.isSedangMencari, isTrue);
+      expect(pencarian.jumlahPanggilanApi, 0);
+
+      await Future.delayed(tungguLewatJeda);
+
+      expect(pencarian.jumlahPanggilanApi, 1);
+      expect(judulHasil(pencarian), ['Starboy']);
+      expect(pencarian.isSedangMencari, isFalse);
+    });
+
+    test('Tekan enter langsung mencari tanpa menunggu jeda', () async {
+      SearchProvider pencarian = providerDenganJeda();
+
+      pencarian.ketikKataKunci('harry');
+      await pencarian.cariSekarang('harry');
+      expect(pencarian.jumlahPanggilanApi, 1);
+      expect(judulHasil(pencarian), ['Lights Up']);
+
+      await Future.delayed(tungguLewatJeda);
+      expect(pencarian.jumlahPanggilanApi, 1);
+    });
+
+    test('Kata kunci yang pernah dicari diambil dari cache', () async {
+      SearchProvider pencarian = providerDenganJeda();
+      await pencarian.cariSekarang('weeknd');
+      await pencarian.cariSekarang('lights');
+
+      pencarian.ketikKataKunci('Weeknd ');
+
+      expect(pencarian.isSedangMencari, isFalse);
+      expect(judulHasil(pencarian), ['Blinding Lights', 'Starboy']);
+      await Future.delayed(tungguLewatJeda);
+      expect(pencarian.jumlahPanggilanApi, 2);
+    });
+
+    test(
+      'Kembali ke kata kunci yang sedang tampil tidak memanggil API',
+      () async {
+        SearchProvider pencarian = providerDenganJeda();
+        await pencarian.cariSekarang('star');
+
+        pencarian.ketikKataKunci('starb');
+        pencarian.ketikKataKunci('star');
+
+        expect(pencarian.isSedangMencari, isFalse);
+        await Future.delayed(tungguLewatJeda);
+        expect(pencarian.jumlahPanggilanApi, 1);
+        expect(judulHasil(pencarian), ['Starboy']);
+      },
+    );
+
+    test('Satu huruf belum dikirim ke server', () async {
+      SearchProvider pencarian = providerDenganJeda();
+
+      pencarian.ketikKataKunci(' a ');
+      await Future.delayed(tungguLewatJeda);
+
+      expect(pencarian.isKataKunciKependekan, isTrue);
+      expect(pencarian.isHasilKosong, isFalse);
+      expect(pencarian.jumlahPanggilanApi, 0);
+    });
+
+    test('Hasil dari data cadangan tidak disimpan di cache', () async {
+      SearchProvider pencarian = providerDenganJeda(SupabaseSearchService());
+      await pencarian.cariSekarang('hindia');
+      expect(pencarian.isHasilDariCadangan, isTrue);
+      await pencarian.cariSekarang('ditto');
+
+      pencarian.ketikKataKunci('hindia');
+      expect(pencarian.isSedangMencari, isTrue);
+
+      await Future.delayed(tungguLewatJeda);
+      expect(pencarian.jumlahPanggilanApi, 3);
+    });
+
+    test('Provider ditutup saat masih menunggu jeda tetap aman', () async {
+      SearchProvider pencarian = providerDenganJeda();
+
+      pencarian.ketikKataKunci('starboy');
+      pencarian.dispose();
+      await Future.delayed(tungguLewatJeda);
+
+      expect(pencarian.jumlahPanggilanApi, 0);
+    });
   });
 }

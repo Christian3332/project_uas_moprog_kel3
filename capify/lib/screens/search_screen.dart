@@ -41,7 +41,13 @@ class _SearchScreenState extends State<SearchScreen> {
     );
     fokusKolomCari.unfocus();
     pencarian.simpanKeRiwayat(kataKunci);
-    pencarian.cariLagu(kataKunci);
+    pencarian.cariSekarang(kataKunci);
+  }
+
+  void kirimPencarian(String kataKunci) {
+    SearchProvider pencarian = context.read<SearchProvider>();
+    pencarian.simpanKeRiwayat(kataKunci);
+    pencarian.cariSekarang(kataKunci);
   }
 
   void hapusKataKunci() {
@@ -98,8 +104,8 @@ class _SearchScreenState extends State<SearchScreen> {
     return TextField(
       controller: kataKunciController,
       focusNode: fokusKolomCari,
-      onChanged: pencarian.cariLagu,
-      onSubmitted: pencarian.simpanKeRiwayat,
+      onChanged: pencarian.ketikKataKunci,
+      onSubmitted: kirimPencarian,
       onTapOutside: (event) => fokusKolomCari.unfocus(),
       textInputAction: TextInputAction.search,
       style: const TextStyle(color: WarnaCapify.coklatGelap),
@@ -171,6 +177,14 @@ class _SearchScreenState extends State<SearchScreen> {
 
     if (pencarian.isKolomCariKosong) {
       return tampilanSebelumMencari(pencarian);
+    }
+
+    if (pencarian.isKataKunciKependekan) {
+      return PesanPencarianKosong(
+        ikon: Icons.keyboard_alt_outlined,
+        pesan: 'Ketik minimal ${pencarian.minimalHurufUntukCari} huruf ya',
+        keterangan: 'Biar hasilnya lebih pas dan server tidak kerepotan',
+      );
     }
 
     if (pencarian.isAdaError) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/lagu_dummy.dart';
@@ -41,10 +43,12 @@ class SearchProvider extends ChangeNotifier {
   final List<String> saranPencarian;
   final int batasRiwayat = 5;
   final int batasHasilDariServer = 20;
+  final int minimalHurufUntukCari = 2;
+  final int batasIsiCache = 20;
 
   SearchProvider({
     SearchService? searchService,
-    this.jedaSetelahMengetik = const Duration(milliseconds: 350),
+    this.jedaSetelahMengetik = const Duration(milliseconds: 450),
     List<String>? saranPencarian,
   }) : searchService = searchService ?? SearchService(),
        saranPencarian =
@@ -56,16 +60,19 @@ class SearchProvider extends ChangeNotifier {
                .toList();
 
   String _kataKunci = '';
-  String _kataKunciTerakhirDicari = '';
+  String _kataKunciHasilTampil = '';
   String _filterAktif = filterSemua;
   HasilPencarian? _hasilDariServer;
   List<Lagu> _laguTampil = [];
   List<Album> _albumTampil = [];
   List<String> _riwayatPencarian = [];
+  final Map<String, HasilPencarian> _cacheHasil = {};
+  Timer? _timerTungguKetikan;
   String? _pesanError;
   bool _isSedangMencari = false;
   bool _isProviderSudahDitutup = false;
-  int _urutanKetikan = 0;
+  int _urutanPermintaan = 0;
+  int _jumlahPanggilanApi = 0;
 
   String get kataKunci => _kataKunci;
   String get kataKunciBersih => _kataKunci.trim();
@@ -76,12 +83,18 @@ class SearchProvider extends ChangeNotifier {
   String? get pesanError => _pesanError;
   bool get isAdaError => _pesanError != null;
   bool get isHasilDariCadangan => _hasilDariServer?.isDariCadangan ?? false;
+  int get jumlahPanggilanApi => _jumlahPanggilanApi;
   List<Lagu> get hasilPencarian => List.unmodifiable(_laguTampil);
   List<Album> get albumDitemukan => List.unmodifiable(_albumTampil);
   List<String> get riwayatPencarian => List.unmodifiable(_riwayatPencarian);
 
+  bool get isKataKunciKependekan {
+    if (isKolomCariKosong) return false;
+    return potonganKataKunci.join(' ').length < minimalHurufUntukCari;
+  }
+
   bool get isHasilKosong {
-    if (_isSedangMencari || isAdaError) return false;
+    if (_isSedangMencari || isAdaError || isKataKunciKependekan) return false;
     return _laguTampil.isEmpty && _albumTampil.isEmpty;
   }
 
@@ -128,38 +141,91 @@ class SearchProvider extends ChangeNotifier {
         .toList();
   }
 
-  bool _isKetikanSudahBasi(int ketikanIniKe) {
-    return _isProviderSudahDitutup || ketikanIniKe != _urutanKetikan;
+  void _pasangHasil(String kataYangDicari, HasilPencarian? hasil) {
+    _hasilDariServer = hasil;
+    _kataKunciHasilTampil = hasil == null ? '' : kataYangDicari;
+    _jalankanFilter();
   }
 
-  Future<void> cariLagu(String ketikanUser) async {
+  void _simpanKeCache(String kataYangDicari, HasilPencarian hasil) {
+    if (hasil.isDariCadangan) return;
+
+    _cacheHasil.remove(kataYangDicari);
+    _cacheHasil[kataYangDicari] = hasil;
+    if (_cacheHasil.length > batasIsiCache) {
+      _cacheHasil.remove(_cacheHasil.keys.first);
+    }
+  }
+
+  String? _siapkanPencarian(String ketikanUser) {
     _kataKunci = ketikanUser;
+    _timerTungguKetikan?.cancel();
     String kataYangDicari = potonganKataKunci.join(' ');
 
-    if (kataYangDicari == _kataKunciTerakhirDicari) {
-      _kabariLayar();
-      return;
-    }
+    bool isHasilnyaSudahTampil =
+        kataYangDicari == _kataKunciHasilTampil && !isAdaError;
+    bool isTidakPerluKeServer = kataYangDicari.isEmpty || isKataKunciKependekan;
+    HasilPencarian? hasilDariCache = _cacheHasil[kataYangDicari];
 
-    _kataKunciTerakhirDicari = kataYangDicari;
-    _urutanKetikan++;
-    int ketikanIniKe = _urutanKetikan;
-    _pesanError = null;
-
-    if (kataYangDicari.isEmpty) {
-      _hasilDariServer = null;
-      _jalankanFilter();
+    if (isHasilnyaSudahTampil ||
+        isTidakPerluKeServer ||
+        hasilDariCache != null) {
+      _urutanPermintaan++;
       _isSedangMencari = false;
+      _pesanError = null;
+      if (isTidakPerluKeServer) {
+        _pasangHasil('', null);
+      } else if (!isHasilnyaSudahTampil) {
+        _simpanKeCache(kataYangDicari, hasilDariCache!);
+        _pasangHasil(kataYangDicari, hasilDariCache);
+      }
       _kabariLayar();
-      return;
+      return null;
     }
 
+    return kataYangDicari;
+  }
+
+  void ketikKataKunci(String ketikanUser) {
+    String? kataYangDicari = _siapkanPencarian(ketikanUser);
+    if (kataYangDicari == null) return;
+
+    _urutanPermintaan++;
     _isSedangMencari = true;
+    _pesanError = null;
     _kabariLayar();
 
-    await Future.delayed(jedaSetelahMengetik);
-    if (_isKetikanSudahBasi(ketikanIniKe)) return;
+    _timerTungguKetikan = Timer(
+      jedaSetelahMengetik,
+      () => _ambilDariServer(kataYangDicari),
+    );
+  }
 
+  Future<void> cariSekarang(String kataKunciBaru) async {
+    String? kataYangDicari = _siapkanPencarian(kataKunciBaru);
+    if (kataYangDicari == null) return;
+
+    await _ambilDariServer(kataYangDicari);
+  }
+
+  Future<void> cobaLagi() async {
+    _timerTungguKetikan?.cancel();
+    String kataYangDicari = potonganKataKunci.join(' ');
+    if (kataYangDicari.isEmpty || isKataKunciKependekan) return;
+
+    await _ambilDariServer(kataYangDicari);
+  }
+
+  Future<void> _ambilDariServer(String kataYangDicari) async {
+    if (_isProviderSudahDitutup) return;
+
+    _urutanPermintaan++;
+    int permintaanIniKe = _urutanPermintaan;
+    _isSedangMencari = true;
+    _pesanError = null;
+    _kabariLayar();
+
+    _jumlahPanggilanApi++;
     HasilPencarian? hasilBaru;
     String? pesanGagal;
     try {
@@ -173,18 +239,17 @@ class SearchProvider extends ChangeNotifier {
       pesanGagal = 'Pencarian gagal, periksa koneksi internetmu lalu coba lagi';
     }
 
-    if (_isKetikanSudahBasi(ketikanIniKe)) return;
+    if (_isProviderSudahDitutup || permintaanIniKe != _urutanPermintaan) {
+      return;
+    }
 
-    _hasilDariServer = hasilBaru;
+    if (hasilBaru != null) {
+      _simpanKeCache(kataYangDicari, hasilBaru);
+    }
+    _pasangHasil(kataYangDicari, hasilBaru);
     _pesanError = pesanGagal;
-    _jalankanFilter();
     _isSedangMencari = false;
     _kabariLayar();
-  }
-
-  Future<void> cobaLagi() {
-    _kataKunciTerakhirDicari = '';
-    return cariLagu(_kataKunci);
   }
 
   void gantiFilter(String filterBaru) {
@@ -223,12 +288,13 @@ class SearchProvider extends ChangeNotifier {
   }
 
   void kosongkanPencarian() {
-    cariLagu('');
+    _siapkanPencarian('');
   }
 
   @override
   void dispose() {
     _isProviderSudahDitutup = true;
+    _timerTungguKetikan?.cancel();
     super.dispose();
   }
 }
