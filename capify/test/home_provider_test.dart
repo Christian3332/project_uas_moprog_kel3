@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:capify/models/lagu.dart';
 import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
+import 'package:capify/services/feed_service.dart';
 
 import 'pemutar_audio_palsu.dart';
 
@@ -254,6 +255,71 @@ void main() {
 
       expect(home.isSudahPilihGenre, isFalse);
       expect(urutanNamaRacikan().first, 'Pop');
+    });
+  });
+
+  group('Feed dari server', () {
+    test(
+      'Server gagal memberi pesan dan beranda belum dianggap dimuat',
+      () async {
+        HomeProvider homeGagal = HomeProvider(
+          feedService: const FeedService(
+            lamaResponServer: Duration.zero,
+            isSimulasiGagal: true,
+          ),
+        );
+
+        await homeGagal.muatIsiBeranda();
+
+        expect(homeGagal.isSudahPernahDimuat, isFalse);
+        expect(homeGagal.isSedangMemuat, isFalse);
+        expect(homeGagal.pesanGagal, contains('feed belum bisa diambil'));
+        expect(homeGagal.riwayatTerakhirDiputar, isEmpty);
+        homeGagal.dispose();
+      },
+    );
+
+    test('Racikan dan temuan mengikuti katalog dari server', () async {
+      HomeProvider homeKecil = HomeProvider(
+        feedService: const FeedService(
+          lamaResponServer: Duration.zero,
+          responsServer: '''
+{
+  "tracks": [
+    {"id": "1", "title": "Lagu Satu", "artist": "Capy", "duration_ms": 1000, "genre": "Jazz"},
+    {"id": "2", "title": "Lagu Dua", "artist": "Capy", "duration_ms": 1000, "genre": "Jazz"}
+  ],
+  "recently_played": [{"track_id": "1", "played_minutes_ago": 10}]
+}
+''',
+        ),
+      );
+
+      await homeKecil.muatIsiBeranda();
+
+      expect(homeKecil.daftarRacikanUntukmu.length, 1);
+      expect(homeKecil.daftarRacikanUntukmu.first.namaKategori, 'Jazz');
+      expect(homeKecil.laguBelumPernahDidengar.map((lagu) => lagu.judul), [
+        'Lagu Dua',
+      ]);
+      homeKecil.dispose();
+    });
+
+    test('Feed kosong dari server tetap aman', () async {
+      HomeProvider homeKosong = HomeProvider(
+        feedService: const FeedService(
+          lamaResponServer: Duration.zero,
+          responsServer: '{}',
+        ),
+      );
+
+      await homeKosong.muatIsiBeranda();
+
+      expect(homeKosong.isSudahPernahDimuat, isTrue);
+      expect(homeKosong.laguUntukDilanjutkan, isNull);
+      expect(homeKosong.daftarRacikanUntukmu, isEmpty);
+      expect(homeKosong.laguBelumPernahDidengar, isEmpty);
+      homeKosong.dispose();
     });
   });
 }

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
 import 'package:capify/screens/home_screen.dart';
+import 'package:capify/services/feed_service.dart';
 import 'package:capify/widgets/komponen_beranda.dart';
 
 import 'pemutar_audio_palsu.dart';
@@ -81,5 +82,25 @@ void main() {
     await tester.pump();
     expect(find.text('Lanjut dengerin'), findsOneWidget);
     expect(audio.isLaguSedangDiputar, isFalse);
+  });
+
+  testWidgets('Beranda menampilkan pesan dan tombol coba lagi saat gagal', (
+    tester,
+  ) async {
+    HomeProvider homeGagal = HomeProvider(
+      feedService: const FeedService(
+        lamaResponServer: Duration.zero,
+        isSimulasiGagal: true,
+      ),
+    );
+    addTearDown(homeGagal.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeGagal));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.textContaining('feed belum bisa diambil'), findsOneWidget);
+    expect(find.text('Coba lagi'), findsOneWidget);
+    expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
   });
 }
