@@ -6,6 +6,8 @@ import '../services/auth_service.dart';
 enum KesalahanMasuk {
   emailBelumTerdaftar,
   passwordSalah,
+  emailAtauPasswordSalah,
+  emailBelumDikonfirmasi,
   masihDiproses,
   gagalTerhubung,
 }
@@ -55,6 +57,10 @@ class AuthProvider extends ChangeNotifier {
         kesalahan = KesalahanMasuk.emailBelumTerdaftar;
       } else if (galat.kode == AuthService.kodePasswordSalah) {
         kesalahan = KesalahanMasuk.passwordSalah;
+      } else if (galat.kode == AuthService.kodeEmailAtauPasswordSalah) {
+        kesalahan = KesalahanMasuk.emailAtauPasswordSalah;
+      } else if (galat.kode == AuthService.kodeEmailBelumDikonfirmasi) {
+        kesalahan = KesalahanMasuk.emailBelumDikonfirmasi;
       } else {
         kesalahan = KesalahanMasuk.gagalTerhubung;
       }

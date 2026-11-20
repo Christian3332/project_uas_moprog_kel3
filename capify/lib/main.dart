@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'config/supabase_config.dart';
 import 'data/lagu_dummy.dart';
 import 'providers/audio_provider.dart';
 import 'providers/auth_provider.dart';
@@ -8,13 +9,24 @@ import 'providers/home_provider.dart';
 import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
 import 'screens/onboarding_screen.dart';
+import 'services/auth_service.dart';
+import 'services/supabase_auth_service.dart';
 import 'utils/warna_capify.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  bool isSupabaseSiap = await SupabaseConfig.siapkanSupabase();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
+        ChangeNotifierProvider(
+          create: (context) => AuthProvider(
+            authService: isSupabaseSiap
+                ? SupabaseAuthService()
+                : AuthService(),
+          ),
+        ),
         ChangeNotifierProvider(
           create: (context) =>
               AudioProvider()
