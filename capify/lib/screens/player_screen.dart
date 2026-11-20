@@ -205,11 +205,11 @@ class PlayerScreen extends StatelessWidget {
         SeekbarPlayer(
           posisiSekarang: audio.posisiSekarang,
           durasiLagu: audio.durasiLaguSekarang,
+          posisiTerbuffer: audio.posisiTerbuffer,
           onGeser: (detikTujuan) =>
               audio.geserKe(Duration(seconds: detikTujuan.round())),
         ),
-        if (audio.pesanError != null) buildPesanError(audio.pesanError!),
-        const SizedBox(height: 12),
+        SizedBox(height: 40, child: buildStatusPemutaran(audio)),
         TombolKontrolPlayer(
           isLaguSedangDiputar: audio.isLaguSedangDiputar,
           isSedangMemuat: audio.isSedangMemuat,
@@ -226,22 +226,51 @@ class PlayerScreen extends StatelessWidget {
     );
   }
 
-  Widget buildPesanError(String pesan) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
+  Widget buildStatusPemutaran(AudioProvider audio) {
+    String? pesanError = audio.pesanError;
+
+    if (pesanError != null) {
+      return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.wifi_off_rounded, size: 16, color: WarnaCapify.krem),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              pesan,
-              textAlign: TextAlign.center,
+              pesanError,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: WarnaCapify.krem, fontSize: 12),
             ),
           ),
+          TextButton(
+            onPressed: audio.cobaLagi,
+            style: TextButton.styleFrom(
+              foregroundColor: WarnaCapify.putih,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: const Text(
+              'Coba lagi',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+          ),
         ],
+      );
+    }
+
+    String? teksStatus;
+    if (audio.isSedangMenyiapkanLagu) {
+      teksStatus = 'Menyiapkan lagu...';
+    } else if (audio.isSedangBuffering) {
+      teksStatus = 'Buffering, koneksimu agak lambat...';
+    }
+
+    if (teksStatus == null) return const SizedBox.shrink();
+
+    return Center(
+      child: Text(
+        teksStatus,
+        style: const TextStyle(color: Colors.white60, fontSize: 12),
       ),
     );
   }

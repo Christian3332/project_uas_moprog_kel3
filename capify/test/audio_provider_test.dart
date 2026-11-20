@@ -148,4 +148,75 @@ void main() {
       audioGagal.dispose();
     });
   });
+
+  group('Buffering dan penanganan error', () {
+    late PemutarAudioPalsu pemutarPalsu;
+    late AudioProvider audioAsli;
+
+    Future<void> tungguStreamTerkirim() => Future<void>.delayed(Duration.zero);
+
+    setUp(() {
+      pemutarPalsu = PemutarAudioPalsu(lamaMemuat: Duration.zero);
+      audioAsli = AudioProvider(pemutarAudio: pemutarPalsu);
+      audioAsli.mulaiAntrian(laguTes, isLangsungDiputar: false);
+    });
+
+    tearDown(() => audioAsli.dispose());
+
+    test('Status buffering terbaca tanpa menghentikan lagu', () async {
+      await audioAsli.putar();
+      await tungguStreamTerkirim();
+
+      pemutarPalsu.mulaiBuffering();
+      await tungguStreamTerkirim();
+      expect(audioAsli.isSedangBuffering, isTrue);
+      expect(audioAsli.isLaguSedangDiputar, isTrue);
+
+      pemutarPalsu.selesaiBuffering();
+      await tungguStreamTerkirim();
+      expect(audioAsli.isSedangBuffering, isFalse);
+    });
+
+    test('Posisi lagu yang sudah ter-buffer ikut tersimpan', () async {
+      await audioAsli.putar();
+      pemutarPalsu.kirimPosisiTerbuffer(const Duration(seconds: 90));
+      await tungguStreamTerkirim();
+
+      expect(audioAsli.posisiTerbuffer, const Duration(seconds: 90));
+    });
+
+    test('Koneksi putus di tengah lagu bisa dicoba lagi', () async {
+      await audioAsli.putar();
+      audioAsli.geserKe(const Duration(seconds: 30));
+      await tungguStreamTerkirim();
+
+      pemutarPalsu.putuskanKoneksiDiTengahLagu();
+      await tungguStreamTerkirim();
+      expect(audioAsli.pesanError, isNotNull);
+      expect(audioAsli.isLaguSedangDiputar, isFalse);
+
+      audioAsli.cobaLagi();
+      await tungguStreamTerkirim();
+      await tungguStreamTerkirim();
+      expect(audioAsli.pesanError, isNull);
+      expect(audioAsli.isLaguSedangDiputar, isTrue);
+      expect(pemutarPalsu.jumlahDimuat, 2);
+    });
+
+    test('Memuat terlalu lama dianggap gagal karena koneksi lambat', () async {
+      AudioProvider audioLambat = AudioProvider(
+        pemutarAudio: PemutarAudioPalsu(
+          lamaMemuat: const Duration(milliseconds: 300),
+        ),
+        batasWaktuMemuat: const Duration(milliseconds: 50),
+      )..mulaiAntrian(laguTes, isLangsungDiputar: false);
+
+      await audioLambat.putar();
+
+      expect(audioLambat.pesanError, contains('lambat'));
+      expect(audioLambat.isSedangMemuat, isFalse);
+      expect(audioLambat.isLaguSedangDiputar, isFalse);
+      audioLambat.dispose();
+    });
+  });
 }

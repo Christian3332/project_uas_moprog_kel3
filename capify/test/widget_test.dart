@@ -160,4 +160,29 @@ void main() {
 
     expect(aksiYangTerpanggil, ['play', 'previous', 'next', 'acak', 'ulang']);
   });
+
+  testWidgets('Player menampilkan tombol coba lagi saat audio gagal dimuat', (
+    tester,
+  ) async {
+    PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(isHarusGagal: true);
+    AudioProvider audio = AudioProvider(pemutarAudio: pemutarPalsu)
+      ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false);
+
+    await tester.pumpWidget(bungkusDenganAudio(audio, const PlayerScreen()));
+
+    await tester.tap(find.byIcon(Icons.play_arrow_rounded));
+    await tester.pump();
+    expect(find.text('Menyiapkan lagu...'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Coba lagi'), findsOneWidget);
+    expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+
+    pemutarPalsu.isHarusGagal = false;
+    await tester.tap(find.text('Coba lagi'));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Coba lagi'), findsNothing);
+    expect(find.byIcon(Icons.pause_rounded), findsOneWidget);
+  });
 }
