@@ -34,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? emailBelumTerdaftar;
   String? emailDenganPasswordSalah;
   String? passwordYangSalah;
+  bool isSalahnyaBisaDiEmail = false;
   int jumlahPasswordSalah = 0;
   int sisaDetikTerkunci = 0;
   Timer? timerPenguncian;
@@ -98,7 +99,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return 'Terlalu banyak percobaan, tunggu sebentar ya';
     }
     int sisaPercobaan = batasPasswordSalah - jumlahPasswordSalah;
-    return 'Password salah, sisa $sisaPercobaan percobaan lagi';
+    String awalanPesan = isSalahnyaBisaDiEmail
+        ? 'Email atau password salah'
+        : 'Password salah';
+    return '$awalanPesan, sisa $sisaPercobaan percobaan lagi';
   }
 
   void mulaiPenguncian() {
@@ -134,6 +138,10 @@ class _LoginScreenState extends State<LoginScreen> {
       tampilkanPesan('Gagal terhubung ke server, coba lagi nanti');
       return;
     }
+    if (kesalahan == KesalahanMasuk.emailBelumDikonfirmasi) {
+      tampilkanPesan('Email belum dikonfirmasi, cek kotak masuk emailmu dulu');
+      return;
+    }
 
     setState(() {
       modeValidasi = AutovalidateMode.onUserInteraction;
@@ -141,6 +149,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (kesalahan == KesalahanMasuk.emailBelumTerdaftar) {
         emailBelumTerdaftar = rapikanEmail(emailController.text);
       } else {
+        isSalahnyaBisaDiEmail =
+            kesalahan == KesalahanMasuk.emailAtauPasswordSalah;
         jumlahPasswordSalah++;
         emailDenganPasswordSalah = rapikanEmail(emailController.text);
         passwordYangSalah = passwordController.text;

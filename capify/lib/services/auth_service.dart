@@ -14,6 +14,9 @@ class AuthService {
   static const String kodeEmailTidakDitemukan = 'EMAIL_NOT_FOUND';
   static const String kodePasswordSalah = 'WRONG_PASSWORD';
   static const String kodeEmailSudahDipakai = 'EMAIL_ALREADY_USED';
+  static const String kodeEmailAtauPasswordSalah = 'INVALID_CREDENTIALS';
+  static const String kodeEmailBelumDikonfirmasi = 'EMAIL_NOT_CONFIRMED';
+  static const String kodeGagalTerhubung = 'NETWORK_ERROR';
 
   final Duration lamaMenunggu;
 
