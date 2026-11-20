@@ -223,6 +223,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted || emailAkunBaru == null) return;
 
+    setState(() {
+      emailBelumTerdaftar = null;
+      emailDenganPasswordSalah = null;
+      passwordYangSalah = null;
+      isSalahnyaBisaDiEmail = false;
+    });
     emailController.text = emailAkunBaru;
     passwordController.clear();
     bool isPerluKonfirmasi = context.read<AuthProvider>().isPerluKonfirmasiEmail;
