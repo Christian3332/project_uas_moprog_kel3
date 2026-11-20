@@ -4,6 +4,8 @@ import 'package:capify/models/lagu.dart';
 import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
 
+import 'pemutar_audio_palsu.dart';
+
 const Lagu laguUjiCoba = Lagu(
   judul: 'Lagu Uji Coba',
   penyanyi: 'Si Capy',
@@ -125,7 +127,7 @@ void main() {
     late AudioProvider audio;
 
     setUp(() {
-      audio = AudioProvider();
+      audio = AudioProvider(pemutarAudio: PemutarAudioPalsu());
     });
 
     tearDown(() {
