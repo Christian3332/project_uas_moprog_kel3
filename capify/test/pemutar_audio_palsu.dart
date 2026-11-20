@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 
 class PemutarAudioPalsu implements AudioPlayer {
-  final bool isHarusGagal;
+  bool isHarusGagal;
   final Duration durasiPalsu;
   final Duration lamaMemuat;
 
@@ -19,13 +19,37 @@ class PemutarAudioPalsu implements AudioPlayer {
       StreamController<Duration>.broadcast();
   final StreamController<Duration?> pengirimDurasi =
       StreamController<Duration?>.broadcast();
+  final StreamController<Duration> pengirimPosisiTerbuffer =
+      StreamController<Duration>.broadcast();
+  final StreamController<PlayerException> pengirimError =
+      StreamController<PlayerException>.broadcast();
 
   bool isSedangMemutar = false;
+  bool isSudahDistop = false;
+  int jumlahDimuat = 0;
   String? urlTerakhirDimuat;
   Duration? posisiTerakhirDiseek;
 
   void selesaikanLagu() {
     pengirimStatus.add(PlayerState(true, ProcessingState.completed));
+  }
+
+  void mulaiBuffering() {
+    pengirimStatus.add(PlayerState(isSedangMemutar, ProcessingState.buffering));
+  }
+
+  void selesaiBuffering() {
+    pengirimStatus.add(PlayerState(isSedangMemutar, ProcessingState.ready));
+  }
+
+  void kirimPosisiTerbuffer(Duration posisi) {
+    pengirimPosisiTerbuffer.add(posisi);
+  }
+
+  void putuskanKoneksiDiTengahLagu() {
+    isSedangMemutar = false;
+    pengirimError.add(PlayerException(0, 'Koneksi terputus', null));
+    pengirimStatus.add(PlayerState(false, ProcessingState.idle));
   }
 
   @override
@@ -36,6 +60,12 @@ class PemutarAudioPalsu implements AudioPlayer {
 
   @override
   Stream<Duration?> get durationStream => pengirimDurasi.stream;
+
+  @override
+  Stream<Duration> get bufferedPositionStream => pengirimPosisiTerbuffer.stream;
+
+  @override
+  Stream<PlayerException> get errorStream => pengirimError.stream;
 
   @override
   Future<Duration?> setUrl(
@@ -49,7 +79,9 @@ class PemutarAudioPalsu implements AudioPlayer {
     if (isHarusGagal) {
       throw PlayerException(0, 'Koneksi terputus', null);
     }
+    jumlahDimuat++;
     urlTerakhirDimuat = url;
+    isSudahDistop = false;
     pengirimStatus.add(PlayerState(isSedangMemutar, ProcessingState.ready));
     return durasiPalsu;
   }
@@ -67,6 +99,13 @@ class PemutarAudioPalsu implements AudioPlayer {
   }
 
   @override
+  Future<void> stop() async {
+    isSedangMemutar = false;
+    isSudahDistop = true;
+    pengirimStatus.add(PlayerState(false, ProcessingState.idle));
+  }
+
+  @override
   Future<void> seek(Duration? position, {int? index}) async {
     posisiTerakhirDiseek = position;
     pengirimPosisi.add(position ?? Duration.zero);
@@ -77,6 +116,8 @@ class PemutarAudioPalsu implements AudioPlayer {
     await pengirimStatus.close();
     await pengirimPosisi.close();
     await pengirimDurasi.close();
+    await pengirimPosisiTerbuffer.close();
+    await pengirimError.close();
   }
 
   @override

@@ -6,12 +6,14 @@ import '../utils/warna_capify.dart';
 class SeekbarPlayer extends StatefulWidget {
   final Duration posisiSekarang;
   final Duration durasiLagu;
+  final Duration posisiTerbuffer;
   final ValueChanged<double> onGeser;
 
   const SeekbarPlayer({
     super.key,
     required this.posisiSekarang,
     required this.durasiLagu,
+    this.posisiTerbuffer = Duration.zero,
     required this.onGeser,
   });
 
@@ -43,6 +45,10 @@ class _SeekbarPlayerState extends State<SeekbarPlayer> {
           maksSlider,
         );
     Duration posisiYangDitampilkan = Duration(seconds: posisiSlider.round());
+    double posisiBuffer = widget.posisiTerbuffer.inSeconds.toDouble().clamp(
+      0,
+      maksSlider,
+    );
 
     return Column(
       children: [
@@ -51,12 +57,14 @@ class _SeekbarPlayerState extends State<SeekbarPlayer> {
             trackHeight: 3,
             activeTrackColor: WarnaCapify.krem,
             inactiveTrackColor: Colors.white24,
+            secondaryActiveTrackColor: Colors.white54,
             thumbColor: WarnaCapify.krem,
             overlayColor: WarnaCapify.krem.withValues(alpha: 0.2),
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
           ),
           child: Slider(
             value: posisiSlider,
+            secondaryTrackValue: posisiBuffer,
             min: 0,
             max: maksSlider,
             onChanged: (detikBaru) {

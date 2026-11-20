@@ -65,6 +65,7 @@ class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
                 lagu: lagu,
                 isLaguSedangDiputar: audio.isLaguSedangDiputar,
                 isSedangMemuat: audio.isSedangMemuat,
+                pesanError: audio.pesanError,
                 onTekanMiniPlayer: () => PlayerScreen.bukaLayarPenuh(context),
                 onTekanPlay: audio.togglePutarJeda,
                 onTekanNext: () => laguBerikutnyaDariMiniPlayer(audio),

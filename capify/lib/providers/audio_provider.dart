@@ -11,8 +11,12 @@ class AudioProvider extends ChangeNotifier {
   static const String urlAudioCadangan =
       'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
 
-  AudioProvider({AudioPlayer? pemutarAudio}) : _pemutar = pemutarAudio;
+  AudioProvider({
+    AudioPlayer? pemutarAudio,
+    this.batasWaktuMemuat = const Duration(seconds: 20),
+  }) : _pemutar = pemutarAudio;
 
+  final Duration batasWaktuMemuat;
   AudioPlayer? _pemutar;
   final List<StreamSubscription> _langgananStream = [];
 
@@ -25,6 +29,7 @@ class AudioProvider extends ChangeNotifier {
   bool _isAcak = false;
   ModeUlang _modeUlang = ModeUlang.mati;
   Duration _posisiSekarang = Duration.zero;
+  Duration _posisiTerbuffer = Duration.zero;
   Duration? _durasiDariAudio;
   String? _pesanError;
   final Set<String> _kunciLaguDisukai = {};
@@ -38,9 +43,12 @@ class AudioProvider extends ChangeNotifier {
   String get namaAntrian => _namaAntrian;
   bool get isLaguSedangDiputar => _isLaguSedangDiputar;
   bool get isSedangMemuat => _isSedangMenyiapkanLagu || _isSedangBuffering;
+  bool get isSedangMenyiapkanLagu => _isSedangMenyiapkanLagu;
+  bool get isSedangBuffering => _isSedangBuffering && !_isSedangMenyiapkanLagu;
   bool get isAcak => _isAcak;
   ModeUlang get modeUlang => _modeUlang;
   Duration get posisiSekarang => _posisiSekarang;
+  Duration get posisiTerbuffer => _posisiTerbuffer;
   String? get pesanError => _pesanError;
 
   Lagu? get laguSekarang {
@@ -87,8 +95,42 @@ class AudioProvider extends ChangeNotifier {
       );
       _langgananStream.add(pemutar.positionStream.listen(_saatPosisiBerubah));
       _langgananStream.add(pemutar.durationStream.listen(_saatDurasiDidapat));
+      _langgananStream.add(
+        pemutar.bufferedPositionStream.listen(_saatPosisiTerbufferBerubah),
+      );
+      _langgananStream.add(pemutar.errorStream.listen(_saatTerjadiError));
     }
     return pemutar;
+  }
+
+  String _buatPesanError(Object error) {
+    if (error is TimeoutException) {
+      return 'Koneksi terlalu lambat, lagu belum bisa dimuat';
+    }
+    if (error is PlayerException) {
+      return 'Lagu gagal dimuat. Cek koneksi internetmu lalu coba lagi';
+    }
+    return 'Terjadi kesalahan saat memutar lagu';
+  }
+
+  void _saatPosisiTerbufferBerubah(Duration posisiBaru) {
+    if (!_isLaguSekarangSudahDimuat) return;
+
+    bool isDetiknyaBerubah = posisiBaru.inSeconds != _posisiTerbuffer.inSeconds;
+    _posisiTerbuffer = posisiBaru;
+    if (isDetiknyaBerubah) {
+      _kabariPendengar();
+    }
+  }
+
+  void _saatTerjadiError(PlayerException error) {
+    if (_isSedangMenyiapkanLagu) return;
+
+    _isLaguSedangDiputar = false;
+    _isSedangBuffering = false;
+    _laguYangSudahDimuat = null;
+    _pesanError = _buatPesanError(error);
+    _kabariPendengar();
   }
 
   void _saatStatusPemutarBerubah(PlayerState status) {
@@ -130,15 +172,15 @@ class AudioProvider extends ChangeNotifier {
     _isSedangMenyiapkanLagu = true;
     _pesanError = null;
     _durasiDariAudio = null;
+    _posisiTerbuffer = Duration.zero;
     _laguYangSudahDimuat = null;
     _kabariPendengar();
 
     try {
       AudioPlayer pemutar = _ambilPemutar();
-      Duration? durasiAsli = await pemutar.setUrl(
-        _ambilUrlAudio(lagu),
-        initialPosition: _posisiSekarang,
-      );
+      Duration? durasiAsli = await pemutar
+          .setUrl(_ambilUrlAudio(lagu), initialPosition: _posisiSekarang)
+          .timeout(batasWaktuMemuat);
       if (_isSudahDibuang || nomorPermintaanIni != _nomorPermintaanMuat) {
         return;
       }
@@ -151,15 +193,25 @@ class AudioProvider extends ChangeNotifier {
       if (isLangsungDiputar) {
         _mulaiPutarDiPemutar();
       }
-    } catch (_) {
+    } catch (error) {
       if (_isSudahDibuang || nomorPermintaanIni != _nomorPermintaanMuat) {
         return;
       }
+      if (error is TimeoutException) {
+        _pemutar?.stop();
+      }
       _isSedangMenyiapkanLagu = false;
+      _isSedangBuffering = false;
       _isLaguSedangDiputar = false;
-      _pesanError = 'Lagu gagal diputar. Cek koneksi internetmu lalu coba lagi';
+      _pesanError = _buatPesanError(error);
       _kabariPendengar();
     }
+  }
+
+  void cobaLagi() {
+    if (laguSekarang == null || _isSedangMenyiapkanLagu) return;
+    _laguYangSudahDimuat = null;
+    _muatLaguSekarang(isLangsungDiputar: true);
   }
 
   void _mulaiPutarDiPemutar() {
@@ -168,9 +220,10 @@ class AudioProvider extends ChangeNotifier {
 
     _isLaguSedangDiputar = true;
     _kabariPendengar();
-    pemutar.play().catchError((Object _) {
+    pemutar.play().catchError((Object error) {
       _isLaguSedangDiputar = false;
-      _pesanError = 'Lagu gagal diputar. Coba lagi sebentar lagi';
+      _laguYangSudahDimuat = null;
+      _pesanError = _buatPesanError(error);
       _kabariPendengar();
     });
   }
@@ -214,6 +267,7 @@ class AudioProvider extends ChangeNotifier {
     }
 
     _posisiSekarang = Duration.zero;
+    _posisiTerbuffer = Duration.zero;
     _durasiDariAudio = null;
     _pesanError = null;
     _kabariPendengar();
@@ -318,6 +372,7 @@ class AudioProvider extends ChangeNotifier {
 
     _indexLaguSekarang = indexBaru;
     _posisiSekarang = Duration.zero;
+    _posisiTerbuffer = Duration.zero;
     _durasiDariAudio = null;
     _pesanError = null;
 
