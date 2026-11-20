@@ -6,6 +6,7 @@ import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
 import 'package:capify/screens/home_screen.dart';
 import 'package:capify/services/feed_service.dart';
+import 'package:capify/services/supabase_feed_service.dart';
 import 'package:capify/widgets/komponen_beranda.dart';
 
 import 'pemutar_audio_palsu.dart';
@@ -102,5 +103,29 @@ void main() {
     expect(find.textContaining('feed belum bisa diambil'), findsOneWidget);
     expect(find.text('Coba lagi'), findsOneWidget);
     expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
+  });
+
+  testWidgets('Spanduk muncul saat beranda memakai data cadangan', (
+    tester,
+  ) async {
+    HomeProvider homeSupabase = HomeProvider(
+      feedService: const SupabaseFeedService(),
+    );
+    addTearDown(homeSupabase.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeSupabase));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(SpandukDataCadangan), findsOneWidget);
+    expect(find.text('Evaluasi'), findsOneWidget);
+  });
+
+  testWidgets('Spanduk tidak muncul untuk data biasa', (tester) async {
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, home));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(SpandukDataCadangan), findsNothing);
   });
 }
