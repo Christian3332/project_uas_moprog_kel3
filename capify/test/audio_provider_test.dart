@@ -4,6 +4,8 @@ import 'package:capify/models/lagu.dart';
 import 'package:capify/models/mode_ulang.dart';
 import 'package:capify/providers/audio_provider.dart';
 
+import 'pemutar_audio_palsu.dart';
+
 void main() {
   const List<Lagu> laguTes = [
     Lagu(
@@ -80,5 +82,70 @@ void main() {
     expect(audio.isLaguSekarangDisukai, isFalse);
     audio.laguSebelumnya();
     expect(audio.isLaguSekarangDisukai, isTrue);
+  });
+
+  group('Pemutaran audio dengan just_audio', () {
+    late PemutarAudioPalsu pemutarPalsu;
+    late AudioProvider audioAsli;
+
+    Future<void> tungguStreamTerkirim() => Future<void>.delayed(Duration.zero);
+
+    setUp(() {
+      pemutarPalsu = PemutarAudioPalsu();
+      audioAsli = AudioProvider(pemutarAudio: pemutarPalsu);
+      audioAsli.mulaiAntrian(laguTes, isLangsungDiputar: false);
+    });
+
+    tearDown(() => audioAsli.dispose());
+
+    test('Putar memuat audio lalu durasi diambil dari file aslinya', () async {
+      await audioAsli.putar();
+      await tungguStreamTerkirim();
+
+      expect(pemutarPalsu.urlTerakhirDimuat, AudioProvider.urlAudioCadangan);
+      expect(audioAsli.isLaguSedangDiputar, isTrue);
+      expect(audioAsli.durasiLaguSekarang, const Duration(minutes: 5));
+    });
+
+    test('Jeda menghentikan pemutar audio', () async {
+      await audioAsli.putar();
+      audioAsli.jeda();
+      await tungguStreamTerkirim();
+
+      expect(pemutarPalsu.isSedangMemutar, isFalse);
+      expect(audioAsli.isLaguSedangDiputar, isFalse);
+    });
+
+    test('Geser seekbar diteruskan ke pemutar audio', () async {
+      await audioAsli.putar();
+      audioAsli.geserKe(const Duration(seconds: 42));
+
+      expect(pemutarPalsu.posisiTerakhirDiseek, const Duration(seconds: 42));
+    });
+
+    test('Lagu yang selesai otomatis lanjut ke lagu berikutnya', () async {
+      await audioAsli.putar();
+      await tungguStreamTerkirim();
+
+      pemutarPalsu.selesaikanLagu();
+      await tungguStreamTerkirim();
+      await tungguStreamTerkirim();
+
+      expect(audioAsli.laguSekarang?.judul, 'Lagu B');
+      expect(audioAsli.isLaguSedangDiputar, isTrue);
+    });
+
+    test('Gagal memuat audio memunculkan pesan error', () async {
+      AudioProvider audioGagal = AudioProvider(
+        pemutarAudio: PemutarAudioPalsu(isHarusGagal: true),
+      )..mulaiAntrian(laguTes, isLangsungDiputar: false);
+
+      await audioGagal.putar();
+
+      expect(audioGagal.pesanError, isNotNull);
+      expect(audioGagal.isLaguSedangDiputar, isFalse);
+      expect(audioGagal.isSedangMemuat, isFalse);
+      audioGagal.dispose();
+    });
   });
 }

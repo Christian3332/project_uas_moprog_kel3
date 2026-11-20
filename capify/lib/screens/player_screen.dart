@@ -204,10 +204,11 @@ class PlayerScreen extends StatelessWidget {
         const SizedBox(height: 16),
         SeekbarPlayer(
           posisiSekarang: audio.posisiSekarang,
-          durasiLagu: lagu.durasi,
+          durasiLagu: audio.durasiLaguSekarang,
           onGeser: (detikTujuan) =>
               audio.geserKe(Duration(seconds: detikTujuan.round())),
         ),
+        if (audio.pesanError != null) buildPesanError(audio.pesanError!),
         const SizedBox(height: 12),
         TombolKontrolPlayer(
           isLaguSedangDiputar: audio.isLaguSedangDiputar,
@@ -222,6 +223,26 @@ class PlayerScreen extends StatelessWidget {
         ),
         const SizedBox(height: 32),
       ],
+    );
+  }
+
+  Widget buildPesanError(String pesan) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 16, color: WarnaCapify.krem),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              pesan,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: WarnaCapify.krem, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

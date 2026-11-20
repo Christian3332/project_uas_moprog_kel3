@@ -15,6 +15,8 @@ import 'package:capify/widgets/cover_album.dart';
 import 'package:capify/widgets/kontrol_player.dart';
 import 'package:capify/widgets/mini_player.dart';
 
+import 'pemutar_audio_palsu.dart';
+
 Widget bungkusDenganAudio(AudioProvider audio, Widget halaman) {
   return MultiProvider(
     providers: [
@@ -66,7 +68,7 @@ void main() {
   testWidgets('Mini player dan player layar penuh selalu sinkron', (
     tester,
   ) async {
-    AudioProvider audio = AudioProvider()
+    AudioProvider audio = AudioProvider(pemutarAudio: PemutarAudioPalsu())
       ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false);
 
     await tester.pumpWidget(

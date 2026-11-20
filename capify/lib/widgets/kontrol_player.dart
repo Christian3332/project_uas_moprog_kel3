@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/mode_ulang.dart';
 import '../utils/warna_capify.dart';
 
-class SeekbarPlayer extends StatelessWidget {
+class SeekbarPlayer extends StatefulWidget {
   final Duration posisiSekarang;
   final Duration durasiLagu;
   final ValueChanged<double> onGeser;
@@ -15,20 +15,34 @@ class SeekbarPlayer extends StatelessWidget {
     required this.onGeser,
   });
 
+  @override
+  State<SeekbarPlayer> createState() => _SeekbarPlayerState();
+}
+
+class _SeekbarPlayerState extends State<SeekbarPlayer> {
+  double? detikSaatDigeser;
+
   String formatWaktu(Duration waktu) {
     int menit = waktu.inMinutes;
     int detik = waktu.inSeconds % 60;
     return '$menit:${detik.toString().padLeft(2, '0')}';
   }
 
+  void lepasGeseran(double detikTujuan) {
+    setState(() => detikSaatDigeser = null);
+    widget.onGeser(detikTujuan);
+  }
+
   @override
   Widget build(BuildContext context) {
-    double durasiDalamDetik = durasiLagu.inSeconds.toDouble();
+    double durasiDalamDetik = widget.durasiLagu.inSeconds.toDouble();
     double maksSlider = durasiDalamDetik > 0 ? durasiDalamDetik : 1;
-    double posisiSlider = posisiSekarang.inSeconds.toDouble().clamp(
-      0,
-      maksSlider,
-    );
+    double posisiSlider =
+        (detikSaatDigeser ?? widget.posisiSekarang.inSeconds.toDouble()).clamp(
+          0,
+          maksSlider,
+        );
+    Duration posisiYangDitampilkan = Duration(seconds: posisiSlider.round());
 
     return Column(
       children: [
@@ -45,7 +59,10 @@ class SeekbarPlayer extends StatelessWidget {
             value: posisiSlider,
             min: 0,
             max: maksSlider,
-            onChanged: onGeser,
+            onChanged: (detikBaru) {
+              setState(() => detikSaatDigeser = detikBaru);
+            },
+            onChangeEnd: lepasGeseran,
           ),
         ),
         Padding(
@@ -54,11 +71,11 @@ class SeekbarPlayer extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                formatWaktu(posisiSekarang),
+                formatWaktu(posisiYangDitampilkan),
                 style: const TextStyle(color: Colors.white60, fontSize: 12),
               ),
               Text(
-                formatWaktu(durasiLagu),
+                formatWaktu(widget.durasiLagu),
                 style: const TextStyle(color: Colors.white60, fontSize: 12),
               ),
             ],

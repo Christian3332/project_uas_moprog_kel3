@@ -2,37 +2,56 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../models/lagu.dart';
 import '../models/mode_ulang.dart';
 
 class AudioProvider extends ChangeNotifier {
+  static const String urlAudioCadangan =
+      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+
+  AudioProvider({AudioPlayer? pemutarAudio}) : _pemutar = pemutarAudio;
+
+  AudioPlayer? _pemutar;
+  final List<StreamSubscription> _langgananStream = [];
+
   List<Lagu> _antrianLagu = [];
   int _indexLaguSekarang = 0;
   String _namaAntrian = 'Lagu Pilihanmu';
   bool _isLaguSedangDiputar = false;
-  bool _isSedangMemuat = false;
+  bool _isSedangMenyiapkanLagu = false;
+  bool _isSedangBuffering = false;
   bool _isAcak = false;
   ModeUlang _modeUlang = ModeUlang.mati;
   Duration _posisiSekarang = Duration.zero;
+  Duration? _durasiDariAudio;
+  String? _pesanError;
   final Set<String> _kunciLaguDisukai = {};
 
-  Timer? _timerPemutar;
-  int _nomorPermintaanPutar = 0;
+  Lagu? _laguYangSudahDimuat;
+  int _nomorPermintaanMuat = 0;
   bool _isSudahDibuang = false;
 
   List<Lagu> get antrianLagu => List.unmodifiable(_antrianLagu);
   int get indexLaguSekarang => _indexLaguSekarang;
   String get namaAntrian => _namaAntrian;
   bool get isLaguSedangDiputar => _isLaguSedangDiputar;
-  bool get isSedangMemuat => _isSedangMemuat;
+  bool get isSedangMemuat => _isSedangMenyiapkanLagu || _isSedangBuffering;
   bool get isAcak => _isAcak;
   ModeUlang get modeUlang => _modeUlang;
   Duration get posisiSekarang => _posisiSekarang;
+  String? get pesanError => _pesanError;
 
   Lagu? get laguSekarang {
     if (_antrianLagu.isEmpty) return null;
     return _antrianLagu[_indexLaguSekarang];
+  }
+
+  Duration get durasiLaguSekarang {
+    Lagu? lagu = laguSekarang;
+    if (lagu == null) return Duration.zero;
+    return _durasiDariAudio ?? lagu.durasi;
   }
 
   bool get isLaguSekarangDisukai {
@@ -41,11 +60,119 @@ class AudioProvider extends ChangeNotifier {
     return _kunciLaguDisukai.contains(_buatKunciLagu(lagu));
   }
 
+  bool get _isLaguSekarangSudahDimuat {
+    Lagu? lagu = laguSekarang;
+    return lagu != null && identical(lagu, _laguYangSudahDimuat);
+  }
+
   String _buatKunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
+
+  String _ambilUrlAudio(Lagu lagu) {
+    String urlAudio = lagu.urlAudio.trim();
+    return urlAudio.isEmpty ? urlAudioCadangan : urlAudio;
+  }
 
   void _kabariPendengar() {
     if (_isSudahDibuang) return;
     notifyListeners();
+  }
+
+  AudioPlayer _ambilPemutar() {
+    AudioPlayer pemutar = _pemutar ?? AudioPlayer();
+    _pemutar = pemutar;
+
+    if (_langgananStream.isEmpty) {
+      _langgananStream.add(
+        pemutar.playerStateStream.listen(_saatStatusPemutarBerubah),
+      );
+      _langgananStream.add(pemutar.positionStream.listen(_saatPosisiBerubah));
+      _langgananStream.add(pemutar.durationStream.listen(_saatDurasiDidapat));
+    }
+    return pemutar;
+  }
+
+  void _saatStatusPemutarBerubah(PlayerState status) {
+    if (status.processingState == ProcessingState.completed) {
+      _laguSudahHabis();
+      return;
+    }
+
+    _isLaguSedangDiputar = status.playing;
+    _isSedangBuffering =
+        status.processingState == ProcessingState.loading ||
+        status.processingState == ProcessingState.buffering;
+    _kabariPendengar();
+  }
+
+  void _saatPosisiBerubah(Duration posisiBaru) {
+    if (!_isLaguSekarangSudahDimuat || _isSedangMenyiapkanLagu) return;
+
+    bool isDetiknyaBerubah = posisiBaru.inSeconds != _posisiSekarang.inSeconds;
+    _posisiSekarang = posisiBaru;
+    if (isDetiknyaBerubah) {
+      _kabariPendengar();
+    }
+  }
+
+  void _saatDurasiDidapat(Duration? durasiBaru) {
+    if (durasiBaru == null || !_isLaguSekarangSudahDimuat) return;
+    _durasiDariAudio = durasiBaru;
+    _kabariPendengar();
+  }
+
+  Future<void> _muatLaguSekarang({required bool isLangsungDiputar}) async {
+    Lagu? lagu = laguSekarang;
+    if (lagu == null) return;
+
+    _nomorPermintaanMuat++;
+    int nomorPermintaanIni = _nomorPermintaanMuat;
+
+    _isSedangMenyiapkanLagu = true;
+    _pesanError = null;
+    _durasiDariAudio = null;
+    _laguYangSudahDimuat = null;
+    _kabariPendengar();
+
+    try {
+      AudioPlayer pemutar = _ambilPemutar();
+      Duration? durasiAsli = await pemutar.setUrl(
+        _ambilUrlAudio(lagu),
+        initialPosition: _posisiSekarang,
+      );
+      if (_isSudahDibuang || nomorPermintaanIni != _nomorPermintaanMuat) {
+        return;
+      }
+
+      _laguYangSudahDimuat = lagu;
+      _durasiDariAudio = durasiAsli;
+      _isSedangMenyiapkanLagu = false;
+      _kabariPendengar();
+
+      if (isLangsungDiputar) {
+        _mulaiPutarDiPemutar();
+      }
+    } catch (_) {
+      if (_isSudahDibuang || nomorPermintaanIni != _nomorPermintaanMuat) {
+        return;
+      }
+      _isSedangMenyiapkanLagu = false;
+      _isLaguSedangDiputar = false;
+      _pesanError = 'Lagu gagal diputar. Cek koneksi internetmu lalu coba lagi';
+      _kabariPendengar();
+    }
+  }
+
+  void _mulaiPutarDiPemutar() {
+    AudioPlayer? pemutar = _pemutar;
+    if (pemutar == null) return;
+
+    _isLaguSedangDiputar = true;
+    _kabariPendengar();
+    pemutar.play().catchError((Object _) {
+      _isLaguSedangDiputar = false;
+      _pesanError = 'Lagu gagal diputar. Coba lagi sebentar lagi';
+      _kabariPendengar();
+    });
   }
 
   void mulaiAntrian(
@@ -55,7 +182,7 @@ class AudioProvider extends ChangeNotifier {
     bool isLangsungDiputar = true,
   }) {
     if (daftarLagu.isEmpty) {
-      _hentikanPemutar();
+      _berhentiDanKembaliKeAwal();
       _antrianLagu = [];
       _indexLaguSekarang = 0;
       _kabariPendengar();
@@ -68,48 +195,54 @@ class AudioProvider extends ChangeNotifier {
     bool isLaguYangSama =
         laguSebelumnya != null &&
         _buatKunciLagu(laguSebelumnya) == _buatKunciLagu(laguYangDipilih);
+    bool isTadiSedangDiputar = _isLaguSedangDiputar || _isSedangMenyiapkanLagu;
+
+    if (isLaguYangSama && _laguYangSudahDimuat != null) {
+      _laguYangSudahDimuat = laguYangDipilih;
+    }
 
     _antrianLagu = List.of(daftarLagu);
     _indexLaguSekarang = indexAman;
     _namaAntrian = namaAntrian;
 
-    if (!isLaguYangSama) {
-      _posisiSekarang = Duration.zero;
+    if (isLaguYangSama) {
+      _kabariPendengar();
+      if (isLangsungDiputar && !isTadiSedangDiputar) {
+        putar();
+      }
+      return;
     }
+
+    _posisiSekarang = Duration.zero;
+    _durasiDariAudio = null;
+    _pesanError = null;
     _kabariPendengar();
 
-    if (isLangsungDiputar && !_isLaguSedangDiputar) {
-      putar();
+    if (isLangsungDiputar || isTadiSedangDiputar) {
+      _muatLaguSekarang(isLangsungDiputar: true);
     }
   }
 
   Future<void> putar() async {
-    if (laguSekarang == null || _isSedangMemuat || _isLaguSedangDiputar) {
+    if (laguSekarang == null || _isSedangMenyiapkanLagu) return;
+
+    if (_isLaguSekarangSudahDimuat) {
+      _pesanError = null;
+      _mulaiPutarDiPemutar();
       return;
     }
-
-    _nomorPermintaanPutar++;
-    int nomorPermintaanIni = _nomorPermintaanPutar;
-
-    _isSedangMemuat = true;
-    _kabariPendengar();
-
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (_isSudahDibuang || nomorPermintaanIni != _nomorPermintaanPutar) return;
-
-    _isSedangMemuat = false;
-    _isLaguSedangDiputar = true;
-    _mulaiHitungWaktu();
-    _kabariPendengar();
+    await _muatLaguSekarang(isLangsungDiputar: true);
   }
 
   void jeda() {
-    _hentikanPemutar();
+    _nomorPermintaanMuat++;
+    _isSedangMenyiapkanLagu = false;
+    _isLaguSedangDiputar = false;
+    _pemutar?.pause();
     _kabariPendengar();
   }
 
   void togglePutarJeda() {
-    if (_isSedangMemuat) return;
     if (_isLaguSedangDiputar) {
       jeda();
     } else {
@@ -117,33 +250,21 @@ class AudioProvider extends ChangeNotifier {
     }
   }
 
-  void _hentikanPemutar() {
-    _nomorPermintaanPutar++;
-    _timerPemutar?.cancel();
-    _timerPemutar = null;
+  void _berhentiDanKembaliKeAwal() {
+    _nomorPermintaanMuat++;
+    _isSedangMenyiapkanLagu = false;
     _isLaguSedangDiputar = false;
-    _isSedangMemuat = false;
-  }
-
-  void _mulaiHitungWaktu() {
-    _timerPemutar?.cancel();
-    _timerPemutar = Timer.periodic(const Duration(seconds: 1), (_) {
-      Lagu? lagu = laguSekarang;
-      if (lagu == null) return;
-
-      Duration posisiBerikutnya = _posisiSekarang + const Duration(seconds: 1);
-      if (posisiBerikutnya >= lagu.durasi) {
-        _laguSudahHabis();
-        return;
-      }
-      _posisiSekarang = posisiBerikutnya;
-      _kabariPendengar();
-    });
+    _posisiSekarang = Duration.zero;
+    _pemutar?.pause();
+    if (_isLaguSekarangSudahDimuat) {
+      _pemutar?.seek(Duration.zero);
+    }
   }
 
   void _laguSudahHabis() {
     if (_modeUlang == ModeUlang.satu) {
       _posisiSekarang = Duration.zero;
+      _pemutar?.seek(Duration.zero);
       _kabariPendengar();
       return;
     }
@@ -172,8 +293,7 @@ class AudioProvider extends ChangeNotifier {
 
     int? indexBerikutnya = _cariIndexBerikutnya();
     if (indexBerikutnya == null) {
-      _hentikanPemutar();
-      _posisiSekarang = Duration.zero;
+      _berhentiDanKembaliKeAwal();
       _kabariPendengar();
       return false;
     }
@@ -187,29 +307,42 @@ class AudioProvider extends ChangeNotifier {
 
     bool sudahLewatTigaDetik = _posisiSekarang.inSeconds > 3;
     if (sudahLewatTigaDetik || _indexLaguSekarang == 0) {
-      _posisiSekarang = Duration.zero;
-      _kabariPendengar();
+      geserKe(Duration.zero);
       return;
     }
     _gantiLagu(_indexLaguSekarang - 1);
   }
 
   void _gantiLagu(int indexBaru) {
+    bool isTadiSedangDiputar = _isLaguSedangDiputar || _isSedangMenyiapkanLagu;
+
     _indexLaguSekarang = indexBaru;
     _posisiSekarang = Duration.zero;
-    _kabariPendengar();
+    _durasiDariAudio = null;
+    _pesanError = null;
+
+    if (isTadiSedangDiputar) {
+      _muatLaguSekarang(isLangsungDiputar: true);
+    } else {
+      _nomorPermintaanMuat++;
+      _kabariPendengar();
+    }
   }
 
   void geserKe(Duration posisiTujuan) {
-    Lagu? lagu = laguSekarang;
-    if (lagu == null) return;
+    if (laguSekarang == null) return;
 
+    Duration batasAkhir = durasiLaguSekarang;
     if (posisiTujuan < Duration.zero) {
       _posisiSekarang = Duration.zero;
-    } else if (posisiTujuan > lagu.durasi) {
-      _posisiSekarang = lagu.durasi;
+    } else if (posisiTujuan > batasAkhir) {
+      _posisiSekarang = batasAkhir;
     } else {
       _posisiSekarang = posisiTujuan;
+    }
+
+    if (_isLaguSekarangSudahDimuat) {
+      _pemutar?.seek(_posisiSekarang);
     }
     _kabariPendengar();
   }
@@ -241,7 +374,10 @@ class AudioProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isSudahDibuang = true;
-    _timerPemutar?.cancel();
+    for (StreamSubscription langganan in _langgananStream) {
+      langganan.cancel();
+    }
+    _pemutar?.dispose();
     super.dispose();
   }
 }
