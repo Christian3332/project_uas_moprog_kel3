@@ -11,9 +11,11 @@ import 'providers/search_provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/auth_service.dart';
 import 'services/feed_service.dart';
+import 'services/koleksi_service.dart';
 import 'services/search_service.dart';
 import 'services/supabase_auth_service.dart';
 import 'services/supabase_feed_service.dart';
+import 'services/supabase_koleksi_service.dart';
 import 'services/supabase_search_service.dart';
 import 'utils/warna_capify.dart';
 
@@ -49,7 +51,11 @@ Future<void> main() async {
           ),
         ),
         ChangeNotifierProvider(
-          create: (context) => PlaylistProvider()..muatKoleksi(),
+          create: (context) => PlaylistProvider(
+            koleksiService: isSupabaseSiap
+                ? const SupabaseKoleksiService()
+                : const KoleksiService(),
+          )..muatKoleksi(),
         ),
       ],
       child: const CapifyApp(),

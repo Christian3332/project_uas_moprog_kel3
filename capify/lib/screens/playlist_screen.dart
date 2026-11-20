@@ -8,6 +8,7 @@ import '../providers/playlist_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import '../widgets/form_buat_playlist.dart';
+import '../widgets/komponen_beranda.dart';
 import 'detail_playlist_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
@@ -35,8 +36,67 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     return '$menit:$detik';
   }
 
-  Future<void> muatUlangKoleksi() {
-    return context.read<PlaylistProvider>().muatKoleksi();
+  Future<void> muatUlangKoleksi() async {
+    PlaylistProvider koleksi = context.read<PlaylistProvider>();
+    await koleksi.muatKoleksi();
+    if (!mounted) return;
+
+    String? pesanGagal = koleksi.pesanGagal;
+    if (pesanGagal == null) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(pesanGagal)));
+  }
+
+  Widget bangunAreaKoleksi(PlaylistProvider koleksi) {
+    String? pesanGagal = koleksi.pesanGagal;
+
+    if (!koleksi.isKoleksiSudahPernahDimuat && pesanGagal != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.cloud_off_rounded,
+                size: 48,
+                color: WarnaCapify.krem,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                pesanGagal,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: WarnaCapify.krem),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: koleksi.muatKoleksi,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: WarnaCapify.krem,
+                  foregroundColor: WarnaCapify.coklatGelap,
+                ),
+                child: const Text('Coba lagi'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!koleksi.isKoleksiSudahPernahDimuat) {
+      return const Center(
+        child: CircularProgressIndicator(color: WarnaCapify.krem),
+      );
+    }
+
+    return RefreshIndicator(
+      color: WarnaCapify.coklatGelap,
+      backgroundColor: WarnaCapify.krem,
+      onRefresh: muatUlangKoleksi,
+      child: bangunIsiKoleksi(koleksi),
+    );
   }
 
   void bukaDetailPlaylist(Playlist playlistDipilih) {
@@ -223,18 +283,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                 }).toList(),
               ),
             ),
-            Expanded(
-              child: koleksi.isMasihMuatPertamaKali
-                  ? const Center(
-                      child: CircularProgressIndicator(color: WarnaCapify.krem),
-                    )
-                  : RefreshIndicator(
-                      color: WarnaCapify.coklatGelap,
-                      backgroundColor: WarnaCapify.krem,
-                      onRefresh: muatUlangKoleksi,
-                      child: bangunIsiKoleksi(koleksi),
-                    ),
-            ),
+            if (koleksi.isMemakaiDataCadangan) const SpandukDataCadangan(),
+            Expanded(child: bangunAreaKoleksi(koleksi)),
           ],
         ),
       ),
