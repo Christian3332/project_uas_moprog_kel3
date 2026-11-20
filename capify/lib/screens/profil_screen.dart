@@ -28,6 +28,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   bool isNotifikasiAktif = true;
   bool isHematData = false;
   String kualitasStreaming = 'Normal';
+  bool isSedangKeluar = false;
 
   String ambilInisial(String namaLengkap) {
     List<String> daftarKata = namaLengkap
@@ -164,8 +165,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
     if (!mounted || isYakinKeluar != true) return;
 
+    setState(() => isSedangKeluar = true);
     context.read<AudioProvider>().jeda();
-    context.read<AuthProvider>().keluar();
+    await context.read<AuthProvider>().keluar();
+    if (!mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
@@ -296,14 +299,24 @@ class _ProfilScreenState extends State<ProfilScreen> {
           SizedBox(
             height: 50,
             child: OutlinedButton.icon(
-              onPressed: konfirmasiKeluar,
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text(
-                'Keluar',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              onPressed: isSedangKeluar ? null : konfirmasiKeluar,
+              icon: isSedangKeluar
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFFFF8A80),
+                      ),
+                    )
+                  : const Icon(Icons.logout_rounded),
+              label: Text(
+                isSedangKeluar ? 'Sedang keluar...' : 'Keluar',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFFFF8A80),
+                disabledForegroundColor: const Color(0xFFFF8A80),
                 side: const BorderSide(color: Color(0xFFFF8A80)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25),

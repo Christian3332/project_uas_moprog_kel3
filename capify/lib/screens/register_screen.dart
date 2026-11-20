@@ -25,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isSetujuSyarat = false;
   bool isSyaratBelumDicentang = false;
   int levelPassword = 0;
+  String? emailDitolakServer;
   AutovalidateMode modeValidasi = AutovalidateMode.disabled;
 
   @override
@@ -68,7 +69,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String? errorFormat = cekEmail(isian);
     if (errorFormat != null) return errorFormat;
 
-    if (context.read<AuthProvider>().isEmailSudahTerdaftar(isian ?? '')) {
+    bool isPernahDitolakServer =
+        (isian ?? '').trim().toLowerCase() == emailDitolakServer;
+    if (isPernahDitolakServer ||
+        context.read<AuthProvider>().isEmailSudahTerdaftar(isian ?? '')) {
       return 'Email ini sudah terdaftar, silakan masuk';
     }
     return null;
@@ -140,7 +144,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
     if (kesalahan == KesalahanDaftar.emailSudahTerdaftar) {
+      setState(() {
+        emailDitolakServer = emailController.text.trim().toLowerCase();
+      });
       formDaftarKey.currentState?.validate();
+      return;
+    }
+    if (kesalahan == KesalahanDaftar.passwordTerlaluLemah) {
+      tampilkanPesan('Password ditolak server, coba yang lebih kuat');
       return;
     }
     if (kesalahan == KesalahanDaftar.gagalTerhubung) {
