@@ -44,6 +44,12 @@ class _SearchScreenState extends State<SearchScreen> {
     pencarian.cariSekarang(kataKunci);
   }
 
+  String ringkasKataKunci(String kataKunci) {
+    const int batasTampil = 28;
+    if (kataKunci.length <= batasTampil) return kataKunci;
+    return '${kataKunci.substring(0, batasTampil).trimRight()}…';
+  }
+
   void kirimPencarian(String kataKunci) {
     SearchProvider pencarian = context.read<SearchProvider>();
     pencarian.simpanKeRiwayat(kataKunci);
@@ -197,25 +203,28 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    if (pencarian.isHasilKosong) {
-      if (!pencarian.isFilterSemua) {
-        return PesanPencarianKosong(
-          ikon: Icons.filter_alt_off_outlined,
-          pesan:
-              'Tidak ada ${pencarian.filterAktif.toLowerCase()} yang cocok dengan "$kataKunciSekarang"',
-          keterangan: 'Mungkin lagunya ketemu kalau filternya dilonggarkan',
-          teksTombol: 'Cari di semua',
-          onTombolDitekan: () =>
-              pencarian.gantiFilter(SearchProvider.filterSemua),
-        );
-      }
-
+    if (pencarian.isHasilTersembunyiOlehFilter) {
+      int jumlahTersembunyi = pencarian.jumlahHasilTanpaFilter;
       return PesanPencarianKosong(
-        ikon: Icons.music_off_outlined,
-        pesan: 'Tidak ada hasil untuk "$kataKunciSekarang"',
-        keterangan: 'Coba periksa ejaannya atau pakai kata kunci lain',
-        teksTombol: 'Hapus pencarian',
-        onTombolDitekan: hapusKataKunci,
+        ikon: Icons.filter_alt_off_outlined,
+        pesan:
+            'Tidak ada ${pencarian.filterAktif.toLowerCase()} yang cocok dengan "${ringkasKataKunci(kataKunciSekarang)}"',
+        keterangan:
+            'Tapi ada $jumlahTersembunyi hasil lain kalau filternya dilepas',
+        teksTombol: 'Lihat $jumlahTersembunyi hasil',
+        onTombolDitekan: () =>
+            pencarian.gantiFilter(SearchProvider.filterSemua),
+      );
+    }
+
+    if (pencarian.isHasilKosong) {
+      return TampilanHasilKosong(
+        kataKunci: ringkasKataKunci(kataKunciSekarang),
+        saranEjaan: pencarian.saranEjaan,
+        kataTunggalUntukDicoba: pencarian.kataTunggalUntukDicoba,
+        isPakaiDataOffline: pencarian.isHasilDariCadangan,
+        onPakaiKataLain: pakaiKataKunci,
+        onHapusPencarian: hapusKataKunci,
       );
     }
 
@@ -538,6 +547,172 @@ class BarisHasilLagu extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class TampilanHasilKosong extends StatelessWidget {
+  final String kataKunci;
+  final String? saranEjaan;
+  final String? kataTunggalUntukDicoba;
+  final bool isPakaiDataOffline;
+  final ValueChanged<String> onPakaiKataLain;
+  final VoidCallback onHapusPencarian;
+
+  const TampilanHasilKosong({
+    super.key,
+    required this.kataKunci,
+    required this.saranEjaan,
+    required this.kataTunggalUntukDicoba,
+    required this.isPakaiDataOffline,
+    required this.onPakaiKataLain,
+    required this.onHapusPencarian,
+  });
+
+  List<String> susunTips() {
+    return [
+      'Periksa lagi ejaannya, satu huruf saja bisa bikin beda',
+      if (kataTunggalUntukDicoba != null)
+        'Pakai kata yang lebih sedikit atau lebih umum',
+      'Coba cari pakai nama penyanyinya',
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String keterangan = isPakaiDataOffline
+        ? 'Server belum bisa dihubungi, jadi pencarian ini cuma dari data offline yang isinya terbatas'
+        : 'Belum ada lagu atau album yang cocok di katalog Capify';
+
+    return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
+      children: [
+        Icon(
+          isPakaiDataOffline ? Icons.cloud_off_rounded : Icons.search_off,
+          size: 56,
+          color: WarnaCapify.krem,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Tidak ada hasil untuk "$kataKunci"',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: WarnaCapify.putih,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          keterangan,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: WarnaCapify.krem,
+            fontWeight: FontWeight.w300,
+          ),
+        ),
+        if (saranEjaan != null) ...[
+          const SizedBox(height: 20),
+          const Text(
+            'Mungkin maksudmu',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: WarnaCapify.krem, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          Center(
+            child: ActionChip(
+              avatar: const Icon(
+                Icons.auto_fix_high_rounded,
+                size: 18,
+                color: WarnaCapify.coklatGelap,
+              ),
+              label: Text(saranEjaan!),
+              labelStyle: const TextStyle(
+                color: WarnaCapify.coklatGelap,
+                fontWeight: FontWeight.w600,
+              ),
+              backgroundColor: WarnaCapify.krem,
+              side: BorderSide.none,
+              shape: const StadiumBorder(),
+              onPressed: () => onPakaiKataLain(saranEjaan!),
+            ),
+          ),
+        ],
+        if (kataTunggalUntukDicoba != null) ...[
+          const SizedBox(height: 12),
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: () => onPakaiKataLain(kataTunggalUntukDicoba!),
+              icon: const Icon(Icons.short_text_rounded),
+              label: Text('Cari "$kataTunggalUntukDicoba" saja'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: WarnaCapify.krem,
+                side: const BorderSide(color: WarnaCapify.krem),
+                shape: const StadiumBorder(),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: WarnaCapify.coklatTua.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Tips biar ketemu',
+                style: TextStyle(
+                  color: WarnaCapify.putih,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (String tips in susunTips())
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 16,
+                          color: WarnaCapify.krem,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          tips,
+                          style: const TextStyle(
+                            color: WarnaCapify.krem,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: TextButton(
+            onPressed: onHapusPencarian,
+            child: const Text(
+              'Hapus pencarian',
+              style: TextStyle(color: WarnaCapify.krem),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

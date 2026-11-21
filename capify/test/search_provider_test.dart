@@ -143,6 +143,63 @@ void main() {
     }
   });
 
+  group('Hasil pencarian kosong', () {
+    test('Salah ketik memberi saran ejaan dari katalog', () async {
+      SearchProvider pencarian = providerUntukTes();
+
+      await pencarian.cariSekarang('weekend');
+
+      expect(pencarian.isHasilKosong, isTrue);
+      expect(pencarian.saranEjaan, 'The Weeknd');
+    });
+
+    test('Saran ejaan tidak muncul kalau hasilnya ada', () async {
+      SearchProvider pencarian = providerUntukTes();
+
+      await pencarian.cariSekarang('weeknd');
+
+      expect(pencarian.saranEjaan, isNull);
+      expect(pencarian.isHasilTersembunyiOlehFilter, isFalse);
+    });
+
+    test('Filter yang menyembunyikan hasil bisa dihitung', () async {
+      SearchProvider pencarian = providerUntukTes();
+      await pencarian.cariSekarang('lights');
+
+      pencarian.gantiFilter(SearchProvider.filterPenyanyi);
+
+      expect(pencarian.isHasilTersembunyiOlehFilter, isTrue);
+      expect(pencarian.jumlahHasilTanpaFilter, 2);
+      expect(pencarian.saranEjaan, isNull);
+    });
+
+    test('Kata yang dikenal katalog dipilih untuk dicoba sendirian', () async {
+      SearchProvider pencarian = providerUntukTes();
+
+      await pencarian.cariSekarang('capybara starboy');
+      expect(pencarian.kataTunggalUntukDicoba, 'starboy');
+
+      await pencarian.cariSekarang('qwerty zz');
+      expect(pencarian.kataTunggalUntukDicoba, 'qwerty');
+
+      await pencarian.cariSekarang('weeknd');
+      expect(pencarian.kataTunggalUntukDicoba, isNull);
+    });
+
+    test('Kamus kosong tidak bikin error', () async {
+      SearchProvider pencarian = SearchProvider(
+        searchService: serviceUntukTes(),
+        jedaSetelahMengetik: Duration.zero,
+        kamusSaranEjaan: [],
+      );
+
+      await pencarian.cariSekarang('weekend');
+
+      expect(pencarian.isHasilKosong, isTrue);
+      expect(pencarian.saranEjaan, isNull);
+    });
+  });
+
   group('Debounce kolom pencarian', () {
     const Duration jedaTes = Duration(milliseconds: 60);
     const Duration tungguLewatJeda = Duration(milliseconds: 150);
