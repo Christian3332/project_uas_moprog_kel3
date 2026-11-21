@@ -258,6 +258,30 @@ class PlayerScreen extends StatelessWidget {
       );
     }
 
+    String? pesanInterupsi = audio.pesanInterupsi;
+    if (pesanInterupsi != null) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.phone_paused_rounded,
+            size: 16,
+            color: WarnaCapify.krem,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              pesanInterupsi,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: WarnaCapify.krem, fontSize: 12),
+            ),
+          ),
+        ],
+      );
+    }
+
     String? teksStatus;
     if (audio.isSedangMenyiapkanLagu) {
       teksStatus = 'Menyiapkan lagu...';

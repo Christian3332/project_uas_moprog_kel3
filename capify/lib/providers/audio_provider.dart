@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
 import '../models/lagu.dart';
 import '../models/mode_ulang.dart';
@@ -19,6 +21,77 @@ class AudioProvider extends ChangeNotifier {
   final Duration batasWaktuMemuat;
   AudioPlayer? _pemutar;
   final List<StreamSubscription> _langgananStream = [];
+  final List<StreamSubscription> _langgananSesiAudio = [];
+  bool _isDijedaKarenaInterupsi = false;
+  String? _pesanInterupsi;
+
+  static Future<void> siapkanPemutaranBackground() async {
+    try {
+      await JustAudioBackground.init(
+        androidNotificationChannelId: 'com.example.capify.channel.audio',
+        androidNotificationChannelName: 'Pemutaran Musik Capify',
+        androidNotificationOngoing: true,
+      );
+    } catch (_) {
+      debugPrint('Pemutaran background tidak didukung di perangkat ini');
+    }
+  }
+
+  Future<void> siapkanSesiAudio() async {
+    try {
+      AudioSession sesi = await AudioSession.instance;
+      await sesi.configure(const AudioSessionConfiguration.music());
+      _langgananSesiAudio.add(
+        sesi.interruptionEventStream.listen(saatAdaInterupsi),
+      );
+      _langgananSesiAudio.add(
+        sesi.becomingNoisyEventStream.listen((_) => saatHeadsetDicabut()),
+      );
+    } catch (_) {
+      debugPrint('Sesi audio tidak tersedia, interupsi tidak dipantau');
+    }
+  }
+
+  void saatAdaInterupsi(AudioInterruptionEvent interupsi) {
+    if (interupsi.type == AudioInterruptionType.duck) {
+      _pemutar?.setVolume(interupsi.begin ? 0.3 : 1.0);
+      return;
+    }
+
+    if (interupsi.begin) {
+      if (!_isLaguSedangDiputar && !_isSedangMenyiapkanLagu) return;
+      _jedaPemutar();
+      _isDijedaKarenaInterupsi = true;
+      _pesanInterupsi =
+          'Lagu dijeda sementara karena ada panggilan atau suara lain';
+      _kabariPendengar();
+      return;
+    }
+
+    if (!_isDijedaKarenaInterupsi) return;
+    _isDijedaKarenaInterupsi = false;
+
+    if (interupsi.type == AudioInterruptionType.pause) {
+      _pesanInterupsi = null;
+      putar();
+    } else {
+      _pesanInterupsi = 'Gangguan sudah selesai, ketuk play untuk melanjutkan';
+      _kabariPendengar();
+    }
+  }
+
+  void saatHeadsetDicabut() {
+    if (!_isLaguSedangDiputar) return;
+    _jedaPemutar();
+    _isDijedaKarenaInterupsi = false;
+    _pesanInterupsi = 'Headset terlepas, lagu dijeda';
+    _kabariPendengar();
+  }
+
+  void _hapusStatusInterupsi() {
+    _isDijedaKarenaInterupsi = false;
+    _pesanInterupsi = null;
+  }
 
   List<Lagu> _antrianLagu = [];
   int _indexLaguSekarang = 0;
@@ -50,6 +123,7 @@ class AudioProvider extends ChangeNotifier {
   Duration get posisiSekarang => _posisiSekarang;
   Duration get posisiTerbuffer => _posisiTerbuffer;
   String? get pesanError => _pesanError;
+  String? get pesanInterupsi => _pesanInterupsi;
 
   Lagu? get laguSekarang {
     if (_antrianLagu.isEmpty) return null;
@@ -86,7 +160,7 @@ class AudioProvider extends ChangeNotifier {
   }
 
   AudioPlayer _ambilPemutar() {
-    AudioPlayer pemutar = _pemutar ?? AudioPlayer();
+    AudioPlayer pemutar = _pemutar ?? AudioPlayer(handleInterruptions: false);
     _pemutar = pemutar;
 
     if (_langgananStream.isEmpty) {
@@ -171,6 +245,7 @@ class AudioProvider extends ChangeNotifier {
 
     _isSedangMenyiapkanLagu = true;
     _pesanError = null;
+    _hapusStatusInterupsi();
     _durasiDariAudio = null;
     _posisiTerbuffer = Duration.zero;
     _laguYangSudahDimuat = null;
@@ -179,7 +254,11 @@ class AudioProvider extends ChangeNotifier {
     try {
       AudioPlayer pemutar = _ambilPemutar();
       Duration? durasiAsli = await pemutar
-          .setUrl(_ambilUrlAudio(lagu), initialPosition: _posisiSekarang)
+          .setUrl(
+            _ambilUrlAudio(lagu),
+            initialPosition: _posisiSekarang,
+            tag: _buatInfoNotifikasi(lagu),
+          )
           .timeout(batasWaktuMemuat);
       if (_isSudahDibuang || nomorPermintaanIni != _nomorPermintaanMuat) {
         return;
@@ -277,8 +356,21 @@ class AudioProvider extends ChangeNotifier {
     }
   }
 
+  MediaItem _buatInfoNotifikasi(Lagu lagu) {
+    String urlCover = lagu.urlCover.trim();
+    return MediaItem(
+      id: '${_buatKunciLagu(lagu)}|$_indexLaguSekarang',
+      title: lagu.judul,
+      artist: lagu.penyanyi,
+      album: _namaAntrian,
+      duration: lagu.durasi,
+      artUri: urlCover.isEmpty ? null : Uri.tryParse(urlCover),
+    );
+  }
+
   Future<void> putar() async {
     if (laguSekarang == null || _isSedangMenyiapkanLagu) return;
+    _hapusStatusInterupsi();
 
     if (_isLaguSekarangSudahDimuat) {
       _pesanError = null;
@@ -288,11 +380,16 @@ class AudioProvider extends ChangeNotifier {
     await _muatLaguSekarang(isLangsungDiputar: true);
   }
 
-  void jeda() {
+  void _jedaPemutar() {
     _nomorPermintaanMuat++;
     _isSedangMenyiapkanLagu = false;
     _isLaguSedangDiputar = false;
     _pemutar?.pause();
+  }
+
+  void jeda() {
+    _hapusStatusInterupsi();
+    _jedaPemutar();
     _kabariPendengar();
   }
 
@@ -430,6 +527,9 @@ class AudioProvider extends ChangeNotifier {
   void dispose() {
     _isSudahDibuang = true;
     for (StreamSubscription langganan in _langgananStream) {
+      langganan.cancel();
+    }
+    for (StreamSubscription langganan in _langgananSesiAudio) {
       langganan.cancel();
     }
     _pemutar?.dispose();

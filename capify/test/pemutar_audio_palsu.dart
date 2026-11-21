@@ -26,6 +26,7 @@ class PemutarAudioPalsu implements AudioPlayer {
 
   bool isSedangMemutar = false;
   bool isSudahDistop = false;
+  double volumeSekarang = 1.0;
   int jumlahDimuat = 0;
   String? urlTerakhirDimuat;
   Duration? posisiTerakhirDiseek;
@@ -103,6 +104,11 @@ class PemutarAudioPalsu implements AudioPlayer {
     isSedangMemutar = false;
     isSudahDistop = true;
     pengirimStatus.add(PlayerState(false, ProcessingState.idle));
+  }
+
+  @override
+  Future<void> setVolume(double volume) async {
+    volumeSekarang = volume;
   }
 
   @override

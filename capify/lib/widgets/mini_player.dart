@@ -9,6 +9,7 @@ class MiniPlayer extends StatelessWidget {
   final bool isLaguSedangDiputar;
   final bool isSedangMemuat;
   final String? pesanError;
+  final String? pesanInterupsi;
   final VoidCallback onTekanMiniPlayer;
   final VoidCallback onTekanPlay;
   final VoidCallback onTekanNext;
@@ -19,6 +20,7 @@ class MiniPlayer extends StatelessWidget {
     required this.isLaguSedangDiputar,
     this.isSedangMemuat = false,
     this.pesanError,
+    this.pesanInterupsi,
     required this.onTekanMiniPlayer,
     required this.onTekanPlay,
     required this.onTekanNext,
@@ -27,7 +29,13 @@ class MiniPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isTampilkanSpinner = isSedangMemuat && !isLaguSedangDiputar;
-    bool isAdaError = pesanError != null;
+    String teksBawahJudul = lagu.penyanyi;
+    if (pesanError != null) {
+      teksBawahJudul = 'Gagal memuat, ketuk play untuk coba lagi';
+    } else if (pesanInterupsi != null) {
+      teksBawahJudul = pesanInterupsi!;
+    }
+    bool isTeksPeringatan = pesanError != null || pesanInterupsi != null;
 
     return Material(
       color: WarnaCapify.coklatTua,
@@ -66,13 +74,13 @@ class MiniPlayer extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isAdaError
-                          ? 'Gagal memuat, ketuk play untuk coba lagi'
-                          : lagu.penyanyi,
+                      teksBawahJudul,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isAdaError ? WarnaCapify.krem : Colors.white70,
+                        color: isTeksPeringatan
+                            ? WarnaCapify.krem
+                            : Colors.white70,
                         fontSize: 12,
                         fontWeight: FontWeight.w300,
                       ),
