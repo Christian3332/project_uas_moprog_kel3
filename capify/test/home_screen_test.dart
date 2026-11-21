@@ -128,4 +128,75 @@ void main() {
 
     expect(find.byType(SpandukDataCadangan), findsNothing);
   });
+
+  testWidgets('Kerangka beranda tampil saat muat pertama lalu hilang', (
+    tester,
+  ) async {
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, home));
+
+    expect(find.byType(KerangkaBerandaMemuat), findsOneWidget);
+    expect(find.text('Menyiapkan berandamu...'), findsOneWidget);
+
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(KerangkaBerandaMemuat), findsNothing);
+    expect(find.byType(KartuLanjutDengerin), findsOneWidget);
+  });
+
+  testWidgets('Pesan koneksi lambat muncul kalau server kelamaan', (
+    tester,
+  ) async {
+    HomeProvider homeLambat = HomeProvider(
+      feedService: const FeedService(lamaResponServer: Duration(seconds: 3)),
+      batasSabarMenunggu: const Duration(seconds: 1),
+    );
+    addTearDown(homeLambat.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeLambat));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1100));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.textContaining('Koneksi lagi lambat'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.byType(KerangkaBerandaMemuat), findsNothing);
+    expect(find.text('Evaluasi'), findsOneWidget);
+  });
+
+  testWidgets('Tombol coba lagi di spanduk menampilkan progres dan pesan', (
+    tester,
+  ) async {
+    HomeProvider homeSupabase = HomeProvider(
+      feedService: const SupabaseFeedService(),
+    );
+    addTearDown(homeSupabase.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeSupabase));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SpandukDataCadangan),
+        matching: find.text('Coba lagi'),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SpandukDataCadangan),
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('masih belum bisa dihubungi'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+  });
 }

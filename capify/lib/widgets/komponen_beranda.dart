@@ -97,31 +97,212 @@ class KotakBelumAdaIsi extends StatelessWidget {
 }
 
 class SpandukDataCadangan extends StatelessWidget {
-  const SpandukDataCadangan({super.key});
+  final bool isSedangMencoba;
+  final VoidCallback? onCobaLagi;
+
+  const SpandukDataCadangan({
+    super.key,
+    this.isSedangMencoba = false,
+    this.onCobaLagi,
+  });
 
   @override
   Widget build(BuildContext context) {
+    VoidCallback? aksiCobaLagi = onCobaLagi;
+    bool isAdaTombolCobaLagi = aksiCobaLagi != null;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: EdgeInsets.fromLTRB(14, 6, isAdaTombolCobaLagi ? 6 : 14, 6),
+      constraints: const BoxConstraints(minHeight: 52),
       decoration: BoxDecoration(
         color: WarnaCapify.coklatTua,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: WarnaCapify.krem.withValues(alpha: 0.3)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.cloud_off_rounded, size: 20, color: WarnaCapify.krem),
-          SizedBox(width: 10),
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 20,
+            color: WarnaCapify.krem,
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu. '
-              'Tarik ke bawah untuk coba lagi.',
-              style: TextStyle(
+              isAdaTombolCobaLagi
+                  ? 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu.'
+                  : 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu. '
+                        'Tarik ke bawah untuk coba lagi.',
+              style: const TextStyle(
                 color: WarnaCapify.krem,
                 fontSize: 12,
                 height: 1.4,
               ),
+            ),
+          ),
+          if (aksiCobaLagi != null) ...[
+            const SizedBox(width: 4),
+            SizedBox(
+              width: 88,
+              height: 40,
+              child: isSedangMencoba
+                  ? const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: WarnaCapify.krem,
+                        ),
+                      ),
+                    )
+                  : TextButton(
+                      onPressed: aksiCobaLagi,
+                      child: const Text(
+                        'Coba lagi',
+                        style: TextStyle(
+                          color: WarnaCapify.krem,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class KerangkaBerandaMemuat extends StatefulWidget {
+  final bool isKoneksiLambat;
+
+  const KerangkaBerandaMemuat({super.key, required this.isKoneksiLambat});
+
+  @override
+  State<KerangkaBerandaMemuat> createState() => _KerangkaBerandaMemuatState();
+}
+
+class _KerangkaBerandaMemuatState extends State<KerangkaBerandaMemuat>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController pengaturKedipan = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  late final Animation<double> tingkatTerang = Tween<double>(
+    begin: 0.35,
+    end: 0.8,
+  ).animate(pengaturKedipan);
+
+  @override
+  void dispose() {
+    pengaturKedipan.dispose();
+    super.dispose();
+  }
+
+  Widget balokAbu({double? lebar, required double tinggi, double sudut = 8}) {
+    return Container(
+      width: lebar,
+      height: tinggi,
+      decoration: BoxDecoration(
+        color: WarnaCapify.coklatTua,
+        borderRadius: BorderRadius.circular(sudut),
+      ),
+    );
+  }
+
+  Widget kerangkaJudulBagian() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: balokAbu(lebar: 160, tinggi: 18),
+    );
+  }
+
+  Widget kerangkaDeretanKartu() {
+    return SizedBox(
+      height: 190,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: 4,
+        separatorBuilder: (context, index) => const SizedBox(width: 14),
+        itemBuilder: (context, index) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              balokAbu(lebar: 140, tinggi: 140, sudut: 12),
+              const SizedBox(height: 10),
+              balokAbu(lebar: 110, tinggi: 12),
+              const SizedBox(height: 6),
+              balokAbu(lebar: 70, tinggi: 10),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String teksStatus = widget.isKoneksiLambat
+        ? 'Koneksi lagi lambat, Capy masih mencoba...'
+        : 'Menyiapkan berandamu...';
+
+    return Semantics(
+      label: 'Beranda sedang dimuat',
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 12, bottom: 32),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: WarnaCapify.krem,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: Text(
+                      teksStatus,
+                      key: ValueKey(teksStatus),
+                      style: const TextStyle(
+                        color: WarnaCapify.krem,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          FadeTransition(
+            opacity: tingkatTerang,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: balokAbu(tinggi: 100, sudut: 16),
+                ),
+                const SizedBox(height: 28),
+                kerangkaJudulBagian(),
+                kerangkaDeretanKartu(),
+                const SizedBox(height: 28),
+                kerangkaJudulBagian(),
+                kerangkaDeretanKartu(),
+              ],
             ),
           ),
         ],

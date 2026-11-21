@@ -343,4 +343,72 @@ void main() {
       homeKosong.dispose();
     });
   });
+
+  group('Status memuat', () {
+    test('Tanda koneksi lambat menyala kalau server kelamaan', () async {
+      HomeProvider homeLambat = HomeProvider(
+        feedService: const FeedService(
+          lamaResponServer: Duration(milliseconds: 300),
+        ),
+        batasSabarMenunggu: const Duration(milliseconds: 100),
+      );
+
+      Future<void> prosesMuat = homeLambat.muatIsiBeranda();
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(homeLambat.isMemuatTerlaluLama, isFalse);
+
+      await Future.delayed(const Duration(milliseconds: 100));
+      expect(homeLambat.isMemuatTerlaluLama, isTrue);
+      expect(homeLambat.isMuatPertamaKali, isTrue);
+
+      await prosesMuat;
+      expect(homeLambat.isMemuatTerlaluLama, isFalse);
+      expect(homeLambat.isMuatPertamaKali, isFalse);
+      homeLambat.dispose();
+    });
+
+    test('Server yang cepat tidak memicu tanda lambat sama sekali', () async {
+      HomeProvider homeCepat = HomeProvider(
+        feedService: const FeedService(lamaResponServer: Duration.zero),
+        batasSabarMenunggu: const Duration(milliseconds: 100),
+      );
+      await homeCepat.muatIsiBeranda();
+
+      int jumlahPemberitahuan = 0;
+      homeCepat.addListener(() => jumlahPemberitahuan++);
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      expect(jumlahPemberitahuan, 0);
+      expect(homeCepat.isMemuatTerlaluLama, isFalse);
+      homeCepat.dispose();
+    });
+
+    test('Muat ulang dianggap menyegarkan, bukan muat pertama', () async {
+      expect(home.isMuatPertamaKali, isTrue);
+      expect(home.isSedangMenyegarkan, isFalse);
+      await home.muatIsiBeranda();
+
+      Future<void> prosesSegarkan = home.muatIsiBeranda(isPaksaMuatUlang: true);
+      expect(home.isSedangMenyegarkan, isTrue);
+      expect(home.isMuatPertamaKali, isFalse);
+
+      await prosesSegarkan;
+      expect(home.isSedangMenyegarkan, isFalse);
+    });
+
+    test('Provider dibuang saat memuat tidak membuat error', () async {
+      HomeProvider homeSebentar = HomeProvider(
+        feedService: const FeedService(
+          lamaResponServer: Duration(milliseconds: 200),
+        ),
+        batasSabarMenunggu: const Duration(milliseconds: 50),
+      );
+
+      Future<void> prosesMuat = homeSebentar.muatIsiBeranda();
+      homeSebentar.dispose();
+
+      await prosesMuat;
+      await Future.delayed(const Duration(milliseconds: 100));
+    });
+  });
 }
