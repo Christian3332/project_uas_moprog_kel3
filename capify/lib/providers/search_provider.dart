@@ -111,7 +111,8 @@ class SearchProvider extends ChangeNotifier {
   }
 
   bool get isHasilKosong {
-    if (_isSedangMencari || isAdaError || isKataKunciKependekan) return false;
+    if (isKolomCariKosong || isKataKunciKependekan) return false;
+    if (_isSedangMencari || isAdaError) return false;
     return _laguTampil.isEmpty && _albumTampil.isEmpty;
   }
 
@@ -225,6 +226,7 @@ class SearchProvider extends ChangeNotifier {
       _pesanError = null;
       if (isTidakPerluKeServer) {
         _pasangHasil('', null);
+        if (kataYangDicari.isEmpty) _filterAktif = filterSemua;
       } else if (!isHasilnyaSudahTampil) {
         _simpanKeCache(kataYangDicari, hasilDariCache!);
         _pasangHasil(kataYangDicari, hasilDariCache);
@@ -338,6 +340,12 @@ class SearchProvider extends ChangeNotifier {
   }
 
   void kosongkanPencarian() {
+    _siapkanPencarian('');
+  }
+
+  void bersihkanSemuaPencarian() {
+    _riwayatPencarian = [];
+    _cacheHasil.clear();
     _siapkanPencarian('');
   }
 

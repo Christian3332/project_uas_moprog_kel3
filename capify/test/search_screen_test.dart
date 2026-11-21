@@ -91,4 +91,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Cari lagu atau penyanyi favoritmu'), findsOneWidget);
   });
+
+  testWidgets('Tombol X mengosongkan kolom, hasil, dan filter', (tester) async {
+    await bukaLayarCari(tester);
+    await ketikLaluTunggu(tester, 'starboy');
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Judul'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 lagu ditemukan'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    TextField kolomCari = tester.widget(find.byType(TextField));
+    expect(kolomCari.controller!.text, isEmpty);
+    expect(find.text('1 lagu ditemukan'), findsNothing);
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(find.text('Cari lagu atau penyanyi favoritmu'), findsOneWidget);
+
+    await ketikLaluTunggu(tester, 'harry');
+    ChoiceChip chipSemua = tester.widget(
+      find.widgetWithText(ChoiceChip, 'Semua'),
+    );
+    expect(chipSemua.selected, isTrue);
+  });
+
+  testWidgets('Menghapus teks sampai habis langsung membersihkan hasil', (
+    tester,
+  ) async {
+    await bukaLayarCari(tester);
+    await ketikLaluTunggu(tester, 'weekend');
+    expect(find.text('Mungkin maksudmu'), findsOneWidget);
+
+    await ketikLaluTunggu(tester, '');
+
+    expect(find.text('Mungkin maksudmu'), findsNothing);
+    expect(find.byIcon(Icons.close), findsNothing);
+    expect(find.text('Cari lagu atau penyanyi favoritmu'), findsOneWidget);
+  });
 }
