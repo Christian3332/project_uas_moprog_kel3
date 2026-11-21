@@ -8,7 +8,7 @@ import 'providers/auth_provider.dart';
 import 'providers/home_provider.dart';
 import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
-import 'screens/onboarding_screen.dart';
+import 'screens/cek_sesi_screen.dart';
 import 'services/auth_service.dart';
 import 'services/feed_service.dart';
 import 'services/koleksi_service.dart';
@@ -85,7 +85,7 @@ class CapifyApp extends StatelessWidget {
           contentTextStyle: TextStyle(color: WarnaCapify.coklatGelap),
         ),
       ),
-      home: const OnboardingScreen(),
+      home: const CekSesiScreen(),
     );
   }
 }
