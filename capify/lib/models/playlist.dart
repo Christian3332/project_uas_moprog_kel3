@@ -17,4 +17,13 @@ class Playlist {
     if (daftarLagu.isEmpty) return '';
     return daftarLagu.first.urlCover;
   }
+
+  Playlist denganLaguTambahan(Lagu laguBaru) {
+    return Playlist(
+      id: id,
+      nama: nama,
+      deskripsi: deskripsi,
+      daftarLagu: [...daftarLagu, laguBaru],
+    );
+  }
 }
