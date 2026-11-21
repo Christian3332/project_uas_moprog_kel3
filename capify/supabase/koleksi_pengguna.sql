@@ -64,3 +64,15 @@ create policy "Pengguna hanya melihat album yang dia simpan"
   on public.saved_albums for select
   to authenticated
   using ((select auth.uid()) = user_id);
+
+drop policy if exists "Pengguna hanya menambah lagu ke playlistnya sendiri" on public.playlist_tracks;
+create policy "Pengguna hanya menambah lagu ke playlistnya sendiri"
+  on public.playlist_tracks for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.playlists
+      where playlists.id = playlist_tracks.playlist_id
+        and playlists.user_id = (select auth.uid())
+    )
+  );
