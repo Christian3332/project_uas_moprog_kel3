@@ -107,17 +107,24 @@ class PlaylistProvider extends ChangeNotifier {
     _isSedangMembuatPlaylist = true;
     _kabariLayar();
 
-    Playlist playlistBaru = await koleksiService.simpanPlaylistBaru(
-      nama: nama.trim(),
-      deskripsi: deskripsiRapi.isEmpty ? 'Playlist buatanmu' : deskripsiRapi,
-    );
+    String? pesanGagalSimpan;
+    try {
+      Playlist playlistBaru = await koleksiService.simpanPlaylistBaru(
+        nama: nama.trim(),
+        deskripsi: deskripsiRapi.isEmpty ? 'Playlist buatanmu' : deskripsiRapi,
+      );
+      if (_isProviderSudahDitutup) return null;
 
-    if (_isProviderSudahDitutup) return null;
+      _daftarPlaylistSaya = [playlistBaru, ..._daftarPlaylistSaya];
+    } catch (error) {
+      pesanGagalSimpan = error is Exception
+          ? _rapikanPesanGagal(error)
+          : 'Playlist gagal dibuat, coba lagi sebentar';
+    }
 
-    _daftarPlaylistSaya = [playlistBaru, ..._daftarPlaylistSaya];
     _isSedangMembuatPlaylist = false;
     _kabariLayar();
-    return null;
+    return pesanGagalSimpan;
   }
 
   Playlist? cariPlaylist(String idPlaylist) {

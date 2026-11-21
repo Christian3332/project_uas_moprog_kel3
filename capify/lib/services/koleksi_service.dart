@@ -36,6 +36,10 @@ class KoleksiService {
   }) async {
     await Future.delayed(lamaResponServer);
 
+    if (isSimulasiGagal) {
+      throw Exception('Server Capify sedang sibuk, playlist belum bisa dibuat');
+    }
+
     Playlist playlistTersimpan = Playlist(
       id: 'playlist-${DateTime.now().microsecondsSinceEpoch}',
       nama: nama,
