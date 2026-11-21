@@ -21,6 +21,7 @@ import 'utils/warna_capify.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AudioProvider.siapkanPemutaranBackground();
   bool isSupabaseSiap = await SupabaseConfig.siapkanSupabase();
 
   runApp(
@@ -34,7 +35,8 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (context) =>
               AudioProvider()
-                ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false),
+                ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false)
+                ..siapkanSesiAudio(),
         ),
         ChangeNotifierProvider(
           create: (context) => HomeProvider(

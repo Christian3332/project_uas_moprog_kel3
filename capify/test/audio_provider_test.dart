@@ -1,3 +1,4 @@
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:capify/models/lagu.dart';
@@ -217,6 +218,97 @@ void main() {
       expect(audioLambat.isSedangMemuat, isFalse);
       expect(audioLambat.isLaguSedangDiputar, isFalse);
       audioLambat.dispose();
+    });
+  });
+
+  group('Interupsi pemutaran', () {
+    late PemutarAudioPalsu pemutarPalsu;
+    late AudioProvider audioAsli;
+
+    Future<void> tungguStreamTerkirim() => Future<void>.delayed(Duration.zero);
+
+    setUp(() async {
+      pemutarPalsu = PemutarAudioPalsu(lamaMemuat: Duration.zero);
+      audioAsli = AudioProvider(pemutarAudio: pemutarPalsu);
+      audioAsli.mulaiAntrian(laguTes, isLangsungDiputar: false);
+      await audioAsli.putar();
+      await tungguStreamTerkirim();
+    });
+
+    tearDown(() => audioAsli.dispose());
+
+    test('Telepon masuk menjeda lagu lalu lanjut setelah selesai', () async {
+      audioAsli.saatAdaInterupsi(
+        AudioInterruptionEvent(true, AudioInterruptionType.pause),
+      );
+      await tungguStreamTerkirim();
+      expect(audioAsli.isLaguSedangDiputar, isFalse);
+      expect(audioAsli.pesanInterupsi, isNotNull);
+
+      audioAsli.saatAdaInterupsi(
+        AudioInterruptionEvent(false, AudioInterruptionType.pause),
+      );
+      await tungguStreamTerkirim();
+      expect(audioAsli.isLaguSedangDiputar, isTrue);
+      expect(audioAsli.pesanInterupsi, isNull);
+    });
+
+    test(
+      'Lagu yang dijeda sendiri tidak ikut lanjut setelah telepon',
+      () async {
+        audioAsli.jeda();
+        audioAsli.saatAdaInterupsi(
+          AudioInterruptionEvent(true, AudioInterruptionType.pause),
+        );
+        audioAsli.saatAdaInterupsi(
+          AudioInterruptionEvent(false, AudioInterruptionType.pause),
+        );
+        await tungguStreamTerkirim();
+
+        expect(audioAsli.isLaguSedangDiputar, isFalse);
+        expect(audioAsli.pesanInterupsi, isNull);
+      },
+    );
+
+    test(
+      'Interupsi tanpa jenis jelas menunggu pengguna menekan play',
+      () async {
+        audioAsli.saatAdaInterupsi(
+          AudioInterruptionEvent(true, AudioInterruptionType.unknown),
+        );
+        audioAsli.saatAdaInterupsi(
+          AudioInterruptionEvent(false, AudioInterruptionType.unknown),
+        );
+        await tungguStreamTerkirim();
+
+        expect(audioAsli.isLaguSedangDiputar, isFalse);
+        expect(audioAsli.pesanInterupsi, contains('ketuk play'));
+
+        await audioAsli.putar();
+        expect(audioAsli.pesanInterupsi, isNull);
+      },
+    );
+
+    test('Notifikasi singkat hanya mengecilkan suara sementara', () {
+      audioAsli.saatAdaInterupsi(
+        AudioInterruptionEvent(true, AudioInterruptionType.duck),
+      );
+      expect(pemutarPalsu.volumeSekarang, lessThan(1.0));
+      expect(audioAsli.isLaguSedangDiputar, isTrue);
+
+      audioAsli.saatAdaInterupsi(
+        AudioInterruptionEvent(false, AudioInterruptionType.duck),
+      );
+      expect(pemutarPalsu.volumeSekarang, 1.0);
+    });
+
+    test('Headset dicabut langsung menjeda lagu', () async {
+      audioAsli.saatHeadsetDicabut();
+      await tungguStreamTerkirim();
+
+      expect(audioAsli.isLaguSedangDiputar, isFalse);
+      expect(pemutarPalsu.isSedangMemutar, isFalse);
+      expect(audioAsli.pesanInterupsi, contains('Headset'));
     });
   });
 }
