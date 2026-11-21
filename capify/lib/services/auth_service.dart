@@ -18,6 +18,12 @@ class AuthService {
   static const String kodeEmailBelumDikonfirmasi = 'EMAIL_NOT_CONFIRMED';
   static const String kodeGagalTerhubung = 'NETWORK_ERROR';
   static const String kodePasswordTerlaluLemah = 'WEAK_PASSWORD';
+  static const String kodeTidakAdaInternet = 'NO_INTERNET';
+  static const String kodeServerLambat = 'TIMEOUT';
+  static const String kodeTerlaluSering = 'TOO_MANY_REQUESTS';
+  static const String kodeBatasEmailTercapai = 'EMAIL_RATE_LIMIT';
+  static const String kodeEmailTidakBisaDipakai = 'EMAIL_NOT_ALLOWED';
+  static const String kodePendaftaranDitutup = 'SIGNUP_DISABLED';
 
   final Duration lamaMenunggu;
 

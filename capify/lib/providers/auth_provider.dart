@@ -8,13 +8,22 @@ enum KesalahanMasuk {
   passwordSalah,
   emailAtauPasswordSalah,
   emailBelumDikonfirmasi,
+  terlaluSeringMencoba,
+  tidakAdaInternet,
+  serverTerlaluLama,
   masihDiproses,
   gagalTerhubung,
 }
 
 enum KesalahanDaftar {
   emailSudahTerdaftar,
+  emailTidakBisaDipakai,
   passwordTerlaluLemah,
+  pendaftaranDitutup,
+  batasEmailTercapai,
+  terlaluSeringMencoba,
+  tidakAdaInternet,
+  serverTerlaluLama,
   masihDiproses,
   gagalTerhubung,
 }
@@ -42,6 +51,37 @@ class AuthProvider extends ChangeNotifier {
     return _authService.isEmailTerdaftar(email);
   }
 
+  KesalahanMasuk _ubahKeKesalahanMasuk(String kode) {
+    return switch (kode) {
+      AuthService.kodeEmailTidakDitemukan => KesalahanMasuk.emailBelumTerdaftar,
+      AuthService.kodePasswordSalah => KesalahanMasuk.passwordSalah,
+      AuthService.kodeEmailAtauPasswordSalah =>
+        KesalahanMasuk.emailAtauPasswordSalah,
+      AuthService.kodeEmailBelumDikonfirmasi =>
+        KesalahanMasuk.emailBelumDikonfirmasi,
+      AuthService.kodeTerlaluSering => KesalahanMasuk.terlaluSeringMencoba,
+      AuthService.kodeTidakAdaInternet => KesalahanMasuk.tidakAdaInternet,
+      AuthService.kodeServerLambat => KesalahanMasuk.serverTerlaluLama,
+      _ => KesalahanMasuk.gagalTerhubung,
+    };
+  }
+
+  KesalahanDaftar _ubahKeKesalahanDaftar(String kode) {
+    return switch (kode) {
+      AuthService.kodeEmailSudahDipakai => KesalahanDaftar.emailSudahTerdaftar,
+      AuthService.kodeEmailTidakBisaDipakai =>
+        KesalahanDaftar.emailTidakBisaDipakai,
+      AuthService.kodePasswordTerlaluLemah =>
+        KesalahanDaftar.passwordTerlaluLemah,
+      AuthService.kodePendaftaranDitutup => KesalahanDaftar.pendaftaranDitutup,
+      AuthService.kodeBatasEmailTercapai => KesalahanDaftar.batasEmailTercapai,
+      AuthService.kodeTerlaluSering => KesalahanDaftar.terlaluSeringMencoba,
+      AuthService.kodeTidakAdaInternet => KesalahanDaftar.tidakAdaInternet,
+      AuthService.kodeServerLambat => KesalahanDaftar.serverTerlaluLama,
+      _ => KesalahanDaftar.gagalTerhubung,
+    };
+  }
+
   Future<KesalahanMasuk?> masuk({
     required String email,
     required String password,
@@ -60,17 +100,7 @@ class AuthProvider extends ChangeNotifier {
       );
       _isIngatSaya = isIngatSaya;
     } on AuthException catch (galat) {
-      if (galat.kode == AuthService.kodeEmailTidakDitemukan) {
-        kesalahan = KesalahanMasuk.emailBelumTerdaftar;
-      } else if (galat.kode == AuthService.kodePasswordSalah) {
-        kesalahan = KesalahanMasuk.passwordSalah;
-      } else if (galat.kode == AuthService.kodeEmailAtauPasswordSalah) {
-        kesalahan = KesalahanMasuk.emailAtauPasswordSalah;
-      } else if (galat.kode == AuthService.kodeEmailBelumDikonfirmasi) {
-        kesalahan = KesalahanMasuk.emailBelumDikonfirmasi;
-      } else {
-        kesalahan = KesalahanMasuk.gagalTerhubung;
-      }
+      kesalahan = _ubahKeKesalahanMasuk(galat.kode);
     } catch (_) {
       kesalahan = KesalahanMasuk.gagalTerhubung;
     }
@@ -95,13 +125,7 @@ class AuthProvider extends ChangeNotifier {
       await _authService.daftar(nama: nama, email: email, password: password);
       _isPerluKonfirmasiEmail = _authService.isPerluKonfirmasiEmail;
     } on AuthException catch (galat) {
-      if (galat.kode == AuthService.kodeEmailSudahDipakai) {
-        kesalahan = KesalahanDaftar.emailSudahTerdaftar;
-      } else if (galat.kode == AuthService.kodePasswordTerlaluLemah) {
-        kesalahan = KesalahanDaftar.passwordTerlaluLemah;
-      } else {
-        kesalahan = KesalahanDaftar.gagalTerhubung;
-      }
+      kesalahan = _ubahKeKesalahanDaftar(galat.kode);
     } catch (_) {
       kesalahan = KesalahanDaftar.gagalTerhubung;
     }
