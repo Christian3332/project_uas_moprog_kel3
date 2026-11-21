@@ -31,6 +31,7 @@ class _SeekbarPlayerState extends State<SeekbarPlayer> {
   }
 
   void lepasGeseran(double detikTujuan) {
+    if (!mounted) return;
     setState(() => detikSaatDigeser = null);
     widget.onGeser(detikTujuan);
   }
@@ -38,7 +39,8 @@ class _SeekbarPlayerState extends State<SeekbarPlayer> {
   @override
   Widget build(BuildContext context) {
     double durasiDalamDetik = widget.durasiLagu.inSeconds.toDouble();
-    double maksSlider = durasiDalamDetik > 0 ? durasiDalamDetik : 1;
+    bool isBisaDigeser = durasiDalamDetik > 0;
+    double maksSlider = isBisaDigeser ? durasiDalamDetik : 1;
     double posisiSlider =
         (detikSaatDigeser ?? widget.posisiSekarang.inSeconds.toDouble()).clamp(
           0,
@@ -67,10 +69,10 @@ class _SeekbarPlayerState extends State<SeekbarPlayer> {
             secondaryTrackValue: posisiBuffer,
             min: 0,
             max: maksSlider,
-            onChanged: (detikBaru) {
-              setState(() => detikSaatDigeser = detikBaru);
-            },
-            onChangeEnd: lepasGeseran,
+            onChanged: isBisaDigeser
+                ? (detikBaru) => setState(() => detikSaatDigeser = detikBaru)
+                : null,
+            onChangeEnd: isBisaDigeser ? lepasGeseran : null,
           ),
         ),
         Padding(

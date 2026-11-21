@@ -253,15 +253,24 @@ class AudioProvider extends ChangeNotifier {
 
     try {
       AudioPlayer pemutar = _ambilPemutar();
+      Duration posisiSaatMulaiMuat = _posisiSekarang;
       Duration? durasiAsli = await pemutar
           .setUrl(
             _ambilUrlAudio(lagu),
-            initialPosition: _posisiSekarang,
+            initialPosition: posisiSaatMulaiMuat,
             tag: _buatInfoNotifikasi(lagu),
           )
           .timeout(batasWaktuMemuat);
       if (_isSudahDibuang || nomorPermintaanIni != _nomorPermintaanMuat) {
         return;
+      }
+
+      bool isDigeserSaatMemuat = _posisiSekarang != posisiSaatMulaiMuat;
+      if (isDigeserSaatMemuat) {
+        await pemutar.seek(_posisiSekarang);
+        if (_isSudahDibuang || nomorPermintaanIni != _nomorPermintaanMuat) {
+          return;
+        }
       }
 
       _laguYangSudahDimuat = lagu;

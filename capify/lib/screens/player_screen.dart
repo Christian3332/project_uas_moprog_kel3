@@ -203,6 +203,7 @@ class PlayerScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         SeekbarPlayer(
+          key: ValueKey(lagu),
           posisiSekarang: audio.posisiSekarang,
           durasiLagu: audio.durasiLaguSekarang,
           posisiTerbuffer: audio.posisiTerbuffer,

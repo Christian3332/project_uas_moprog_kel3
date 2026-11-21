@@ -311,4 +311,38 @@ void main() {
       expect(audioAsli.pesanInterupsi, contains('Headset'));
     });
   });
+
+  group('Seekbar dan timeline', () {
+    test('Geseran saat lagu masih dimuat tetap dipakai', () async {
+      PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(
+        lamaMemuat: const Duration(milliseconds: 50),
+      );
+      AudioProvider audioUji = AudioProvider(pemutarAudio: pemutarPalsu)
+        ..mulaiAntrian(laguTes, isLangsungDiputar: false);
+
+      Future<void> prosesMemuat = audioUji.putar();
+      expect(audioUji.isSedangMenyiapkanLagu, isTrue);
+      audioUji.geserKe(const Duration(seconds: 40));
+      await prosesMemuat;
+
+      expect(pemutarPalsu.posisiTerakhirDiseek, const Duration(seconds: 40));
+      expect(audioUji.posisiSekarang, const Duration(seconds: 40));
+      audioUji.dispose();
+    });
+
+    test('Posisi dari pemutar audio memperbarui timeline', () async {
+      PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(
+        lamaMemuat: Duration.zero,
+      );
+      AudioProvider audioUji = AudioProvider(pemutarAudio: pemutarPalsu)
+        ..mulaiAntrian(laguTes, isLangsungDiputar: false);
+      await audioUji.putar();
+
+      pemutarPalsu.pengirimPosisi.add(const Duration(seconds: 75));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(audioUji.posisiSekarang, const Duration(seconds: 75));
+      audioUji.dispose();
+    });
+  });
 }
