@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/kategori_dummy.dart';
@@ -16,8 +18,12 @@ class HomeProvider extends ChangeNotifier {
   static const int batasGenreFavorit = 5;
 
   final FeedService feedService;
+  final Duration batasSabarMenunggu;
 
-  HomeProvider({this.feedService = const FeedService()});
+  HomeProvider({
+    this.feedService = const FeedService(),
+    this.batasSabarMenunggu = const Duration(seconds: 4),
+  });
 
   Map<String, List<Lagu>> _laguPerGenre = {};
   List<RiwayatPutar> _riwayatTerakhirDiputar = [];
@@ -27,6 +33,8 @@ class HomeProvider extends ChangeNotifier {
   bool _isSudahPernahDimuat = false;
   String? _pesanGagal;
   bool _isMemakaiDataCadangan = false;
+  bool _isMemuatTerlaluLama = false;
+  Timer? _timerPenandaLambat;
   bool _isSudahDibuang = false;
 
   AudioProvider? _pemutarYangDipantau;
@@ -43,6 +51,9 @@ class HomeProvider extends ChangeNotifier {
   bool get isSudahPernahDimuat => _isSudahPernahDimuat;
   String? get pesanGagal => _pesanGagal;
   bool get isMemakaiDataCadangan => _isMemakaiDataCadangan;
+  bool get isMemuatTerlaluLama => _isMemuatTerlaluLama;
+  bool get isSedangMenyegarkan => _isSedangMemuat && _isSudahPernahDimuat;
+  bool get isMuatPertamaKali => !_isSudahPernahDimuat && _pesanGagal == null;
   List<String> get genreFavorit => List.unmodifiable(_genreFavorit);
   bool get isSudahPilihGenre => _genreFavorit.isNotEmpty;
 
@@ -84,6 +95,7 @@ class HomeProvider extends ChangeNotifier {
 
     _isSedangMemuat = true;
     _pesanGagal = null;
+    _mulaiHitungKesabaran();
     _kabariPendengar();
 
     try {
@@ -99,8 +111,25 @@ class HomeProvider extends ChangeNotifier {
       _pesanGagal = _rapikanPesanGagal(error);
     }
 
+    _hentikanHitungKesabaran();
     _isSedangMemuat = false;
     _kabariPendengar();
+  }
+
+  void _mulaiHitungKesabaran() {
+    _timerPenandaLambat?.cancel();
+    _isMemuatTerlaluLama = false;
+    _timerPenandaLambat = Timer(batasSabarMenunggu, () {
+      if (!_isSedangMemuat) return;
+      _isMemuatTerlaluLama = true;
+      _kabariPendengar();
+    });
+  }
+
+  void _hentikanHitungKesabaran() {
+    _timerPenandaLambat?.cancel();
+    _timerPenandaLambat = null;
+    _isMemuatTerlaluLama = false;
   }
 
   String _rapikanPesanGagal(Object error) {
@@ -283,6 +312,7 @@ class HomeProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isSudahDibuang = true;
+    _timerPenandaLambat?.cancel();
     _pemutarYangDipantau?.removeListener(_cekLaguYangSedangDiputar);
     _pemutarYangDipantau = null;
     super.dispose();

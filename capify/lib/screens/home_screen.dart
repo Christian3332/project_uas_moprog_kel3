@@ -22,6 +22,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool isSedangTarikSegarkan = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,11 +37,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> segarkanBeranda() async {
     HomeProvider home = context.read<HomeProvider>();
+    setState(() => isSedangTarikSegarkan = true);
+    await home.muatIsiBeranda(isPaksaMuatUlang: true);
+    if (!mounted) return;
+    setState(() => isSedangTarikSegarkan = false);
+
+    String? pesanGagal = home.pesanGagal;
+    if (pesanGagal != null) tampilkanPesan(pesanGagal);
+  }
+
+  Future<void> cobaHubungkanLagi() async {
+    HomeProvider home = context.read<HomeProvider>();
+    if (home.isSedangMemuat) return;
+
     await home.muatIsiBeranda(isPaksaMuatUlang: true);
     if (!mounted) return;
 
     String? pesanGagal = home.pesanGagal;
-    if (pesanGagal != null) tampilkanPesan(pesanGagal);
+    if (pesanGagal != null) {
+      tampilkanPesan(pesanGagal);
+    } else if (home.isMemakaiDataCadangan) {
+      tampilkanPesan('Server masih belum bisa dihubungi, coba lagi nanti ya');
+    } else {
+      tampilkanPesan('Berhasil terhubung, beranda sudah diperbarui');
+    }
   }
 
   String teksDurasi(Duration durasi) {
@@ -221,30 +242,50 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (!home.isSudahPernahDimuat) {
-      return const Center(
-        child: CircularProgressIndicator(color: WarnaCapify.krem),
-      );
+      return KerangkaBerandaMemuat(isKoneksiLambat: home.isMemuatTerlaluLama);
     }
 
-    return RefreshIndicator(
-      color: WarnaCapify.coklatGelap,
-      backgroundColor: WarnaCapify.krem,
-      onRefresh: segarkanBeranda,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 12, bottom: 32),
-        children: [
-          if (home.isMemakaiDataCadangan) const SpandukDataCadangan(),
-          ...buildBagianTerakhirDiputar(home),
-          const SizedBox(height: 28),
-          ...buildBagianRacikanUntukmu(
-            home.daftarRacikanUntukmu,
-            home.isSudahPilihGenre,
+    bool isTampilkanGarisProgres =
+        home.isSedangMenyegarkan && !isSedangTarikSegarkan;
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 3,
+          child: isTampilkanGarisProgres
+              ? const LinearProgressIndicator(
+                  color: WarnaCapify.krem,
+                  backgroundColor: WarnaCapify.coklatTua,
+                )
+              : null,
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            color: WarnaCapify.coklatGelap,
+            backgroundColor: WarnaCapify.krem,
+            onRefresh: segarkanBeranda,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: 9, bottom: 32),
+              children: [
+                if (home.isMemakaiDataCadangan)
+                  SpandukDataCadangan(
+                    isSedangMencoba: home.isSedangMenyegarkan,
+                    onCobaLagi: cobaHubungkanLagi,
+                  ),
+                ...buildBagianTerakhirDiputar(home),
+                const SizedBox(height: 28),
+                ...buildBagianRacikanUntukmu(
+                  home.daftarRacikanUntukmu,
+                  home.isSudahPilihGenre,
+                ),
+                const SizedBox(height: 28),
+                ...buildBagianLaguTemuan(home.laguBelumPernahDidengar),
+              ],
+            ),
           ),
-          const SizedBox(height: 28),
-          ...buildBagianLaguTemuan(home.laguBelumPernahDidengar),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
