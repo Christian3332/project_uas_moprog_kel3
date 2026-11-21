@@ -118,6 +118,50 @@ class SupabaseKoleksiService extends KoleksiService {
     return playlist.denganLaguTambahan(lagu);
   }
 
+  @override
+  Future<Playlist> hapusLaguDariPlaylist({
+    required Playlist playlist,
+    required Lagu lagu,
+  }) async {
+    SupabaseClient klienSupabase;
+    try {
+      klienSupabase = Supabase.instance.client;
+    } catch (_) {
+      throw Exception('Server Capify belum tersambung');
+    }
+
+    User? penggunaAktif = klienSupabase.auth.currentUser;
+    if (penggunaAktif == null) {
+      throw Exception('Masuk dulu supaya bisa menghapus lagu dari playlist');
+    }
+
+    String? idLagu = await _cariIdLaguDiKatalog(klienSupabase, lagu);
+    if (idLagu == null) {
+      throw Exception('Lagu "${lagu.judul}" belum ada di katalog Capify');
+    }
+
+    List<Map<String, dynamic>> barisTerhapus;
+    try {
+      barisTerhapus = await klienSupabase
+          .from(namaTabelIsiPlaylist)
+          .delete()
+          .eq('playlist_id', playlist.id)
+          .eq('track_id', idLagu)
+          .select('track_id')
+          .timeout(batasWaktuTunggu);
+    } on PostgrestException catch (error) {
+      throw Exception(pesanGagalHapusLagu(error.code));
+    } on TimeoutException {
+      throw Exception('Server terlalu lama merespons, coba lagi ya');
+    }
+
+    if (barisTerhapus.isEmpty) {
+      throw Exception('Lagu ini sudah tidak ada di playlist');
+    }
+
+    return playlist.denganLaguDihapus(lagu);
+  }
+
   Future<String?> _cariIdLaguDiKatalog(
     SupabaseClient klienSupabase,
     Lagu lagu,
@@ -143,6 +187,11 @@ class SupabaseKoleksiService extends KoleksiService {
     if (kodeError == '23503') return 'Playlist ini belum tersimpan di server';
     if (kodeError == '42501') return 'Kamu tidak punya akses ke playlist ini';
     return 'Lagu gagal ditambahkan, coba lagi sebentar';
+  }
+
+  static String pesanGagalHapusLagu(String? kodeError) {
+    if (kodeError == '42501') return 'Kamu tidak punya akses ke playlist ini';
+    return 'Lagu gagal dihapus, coba lagi sebentar';
   }
 
   static Lagu? ubahDataTrackKeLagu(dynamic dataTrack) {

@@ -76,3 +76,15 @@ create policy "Pengguna hanya menambah lagu ke playlistnya sendiri"
         and playlists.user_id = (select auth.uid())
     )
   );
+
+drop policy if exists "Pengguna hanya menghapus lagu dari playlistnya sendiri" on public.playlist_tracks;
+create policy "Pengguna hanya menghapus lagu dari playlistnya sendiri"
+  on public.playlist_tracks for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.playlists
+      where playlists.id = playlist_tracks.playlist_id
+        and playlists.user_id = (select auth.uid())
+    )
+  );

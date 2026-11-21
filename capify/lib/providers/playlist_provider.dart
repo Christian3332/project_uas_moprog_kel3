@@ -18,6 +18,7 @@ class PlaylistProvider extends ChangeNotifier {
   bool _isKoleksiSudahPernahDimuat = false;
   bool _isSedangMembuatPlaylist = false;
   bool _isSedangMenambahLagu = false;
+  bool _isSedangMenghapusLagu = false;
   bool _isProviderSudahDitutup = false;
   bool _isMemakaiDataCadangan = false;
   String? _pesanGagal;
@@ -33,6 +34,7 @@ class PlaylistProvider extends ChangeNotifier {
   bool get isKoleksiSudahPernahDimuat => _isKoleksiSudahPernahDimuat;
   bool get isSedangMembuatPlaylist => _isSedangMembuatPlaylist;
   bool get isSedangMenambahLagu => _isSedangMenambahLagu;
+  bool get isSedangMenghapusLagu => _isSedangMenghapusLagu;
   bool get isMemakaiDataCadangan => _isMemakaiDataCadangan;
   String? get pesanGagal => _pesanGagal;
 
@@ -180,6 +182,44 @@ class PlaylistProvider extends ChangeNotifier {
     _isSedangMenambahLagu = false;
     _kabariLayar();
     return pesanGagal;
+  }
+
+  Future<String?> hapusLaguDariPlaylist({
+    required String idPlaylist,
+    required Lagu lagu,
+  }) async {
+    if (_isSedangMenghapusLagu) return 'Lagu sebelumnya masih dihapus';
+    if (_isKoleksiSedangDimuat) return 'Tunggu koleksi selesai dimuat dulu';
+
+    Playlist? playlistAsal = cariPlaylist(idPlaylist);
+    if (playlistAsal == null) return 'Playlist tidak ditemukan';
+    if (!isLaguAdaDiPlaylist(idPlaylist, lagu)) {
+      return '"${lagu.judul}" sudah tidak ada di ${playlistAsal.nama}';
+    }
+
+    _isSedangMenghapusLagu = true;
+    _kabariLayar();
+
+    String? pesanGagalHapus;
+    try {
+      Playlist playlistTerbaru = await koleksiService.hapusLaguDariPlaylist(
+        playlist: playlistAsal,
+        lagu: lagu,
+      );
+      if (_isProviderSudahDitutup) return null;
+
+      _daftarPlaylistSaya = _daftarPlaylistSaya.map((playlist) {
+        return playlist.id == playlistTerbaru.id ? playlistTerbaru : playlist;
+      }).toList();
+    } catch (error) {
+      pesanGagalHapus = error is Exception
+          ? _rapikanPesanGagal(error)
+          : 'Lagu gagal dihapus, coba lagi sebentar';
+    }
+
+    _isSedangMenghapusLagu = false;
+    _kabariLayar();
+    return pesanGagalHapus;
   }
 
   @override

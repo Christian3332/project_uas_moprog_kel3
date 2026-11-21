@@ -80,6 +80,36 @@ class KoleksiService {
     return playlistTerbaru;
   }
 
+  Future<Playlist> hapusLaguDariPlaylist({
+    required Playlist playlist,
+    required Lagu lagu,
+  }) async {
+    await Future.delayed(lamaResponServer);
+
+    if (isSimulasiGagal) {
+      throw Exception('Server Capify sedang sibuk, lagu belum bisa dihapus');
+    }
+
+    int posisiPlaylist = _playlistDiServerPalsu.indexWhere(
+      (playlistDiServer) => playlistDiServer.id == playlist.id,
+    );
+    if (posisiPlaylist == -1) {
+      throw Exception('Playlist ini belum tersimpan di server');
+    }
+
+    Playlist playlistDiServer = _playlistDiServerPalsu[posisiPlaylist];
+    bool isLaguMasihAda = playlistDiServer.daftarLagu.any(
+      (laguLama) => buatKunciLagu(laguLama) == buatKunciLagu(lagu),
+    );
+    if (!isLaguMasihAda) {
+      throw Exception('Lagu ini sudah tidak ada di playlist');
+    }
+
+    Playlist playlistTerbaru = playlistDiServer.denganLaguDihapus(lagu);
+    _playlistDiServerPalsu[posisiPlaylist] = playlistTerbaru;
+    return playlistTerbaru;
+  }
+
   static String buatKunciLagu(Lagu lagu) {
     return '${lagu.judul}|${lagu.penyanyi}'.toLowerCase();
   }

@@ -26,4 +26,22 @@ class Playlist {
       daftarLagu: [...daftarLagu, laguBaru],
     );
   }
+
+  Playlist denganLaguDihapus(Lagu laguDihapus) {
+    String judulDihapus = laguDihapus.judul.toLowerCase();
+    String penyanyiDihapus = laguDihapus.penyanyi.toLowerCase();
+
+    List<Lagu> sisaLagu = daftarLagu.where((lagu) {
+      bool isJudulSama = lagu.judul.toLowerCase() == judulDihapus;
+      bool isPenyanyiSama = lagu.penyanyi.toLowerCase() == penyanyiDihapus;
+      return !(isJudulSama && isPenyanyiSama);
+    }).toList();
+
+    return Playlist(
+      id: id,
+      nama: nama,
+      deskripsi: deskripsi,
+      daftarLagu: sisaLagu,
+    );
+  }
 }
