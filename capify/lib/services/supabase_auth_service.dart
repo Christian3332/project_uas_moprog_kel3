@@ -1,9 +1,17 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../models/user.dart';
 import 'auth_service.dart';
 
 class SupabaseAuthService extends AuthService {
+  static const Duration batasTungguServer = Duration(seconds: 15);
+  static const AuthException galatServerLambat = AuthException(
+    AuthService.kodeServerLambat,
+    'Server terlalu lama merespons',
+  );
+
   bool _isPerluKonfirmasiEmail = false;
 
   supabase.GoTrueClient get _authSupabase {
@@ -49,37 +57,57 @@ class SupabaseAuthService extends AuthService {
     });
   }
 
+  AuthException terjemahkanGalatSupabase(supabase.AuthException galat) {
+    if (galat is supabase.AuthRetryableFetchException) {
+      bool isTidakSampaiKeServer = galat.statusCode == null;
+      return AuthException(
+        isTidakSampaiKeServer
+            ? AuthService.kodeTidakAdaInternet
+            : AuthService.kodeGagalTerhubung,
+        galat.message,
+      );
+    }
+
+    String kodeCapify = switch (galat.code ?? '') {
+      'invalid_credentials' => AuthService.kodeEmailAtauPasswordSalah,
+      'email_not_confirmed' => AuthService.kodeEmailBelumDikonfirmasi,
+      'user_already_exists' ||
+      'email_exists' => AuthService.kodeEmailSudahDipakai,
+      'weak_password' => AuthService.kodePasswordTerlaluLemah,
+      'email_address_invalid' ||
+      'email_address_not_authorized' => AuthService.kodeEmailTidakBisaDipakai,
+      'signup_disabled' => AuthService.kodePendaftaranDitutup,
+      'over_email_send_rate_limit' => AuthService.kodeBatasEmailTercapai,
+      'over_request_rate_limit' => AuthService.kodeTerlaluSering,
+      _ => AuthService.kodeGagalTerhubung,
+    };
+    return AuthException(kodeCapify, galat.message);
+  }
+
   @override
   Future<User> masuk({required String email, required String password}) async {
+    supabase.AuthResponse respons;
     try {
-      supabase.AuthResponse respons = await _authSupabase.signInWithPassword(
-        email: email.trim().toLowerCase(),
-        password: password,
-      );
-
-      supabase.User? penggunaSupabase = respons.user;
-      if (penggunaSupabase == null) {
-        throw const AuthException(
-          AuthService.kodeGagalTerhubung,
-          'Server tidak mengirim data akun',
-        );
-      }
-      return ubahKeUserCapify(penggunaSupabase);
+      respons = await _authSupabase
+          .signInWithPassword(
+            email: email.trim().toLowerCase(),
+            password: password,
+          )
+          .timeout(batasTungguServer);
     } on supabase.AuthException catch (galat) {
-      if (galat.code == 'invalid_credentials') {
-        throw const AuthException(
-          AuthService.kodeEmailAtauPasswordSalah,
-          'Email atau password salah',
-        );
-      }
-      if (galat.code == 'email_not_confirmed') {
-        throw const AuthException(
-          AuthService.kodeEmailBelumDikonfirmasi,
-          'Email belum dikonfirmasi',
-        );
-      }
-      throw AuthException(AuthService.kodeGagalTerhubung, galat.message);
+      throw terjemahkanGalatSupabase(galat);
+    } on TimeoutException {
+      throw galatServerLambat;
     }
+
+    supabase.User? penggunaSupabase = respons.user;
+    if (penggunaSupabase == null) {
+      throw const AuthException(
+        AuthService.kodeGagalTerhubung,
+        'Server tidak mengirim data akun',
+      );
+    }
+    return ubahKeUserCapify(penggunaSupabase);
   }
 
   @override
@@ -90,25 +118,17 @@ class SupabaseAuthService extends AuthService {
   }) async {
     supabase.AuthResponse respons;
     try {
-      respons = await _authSupabase.signUp(
-        email: email.trim().toLowerCase(),
-        password: password,
-        data: {'name': rapikanNama(nama)},
-      );
+      respons = await _authSupabase
+          .signUp(
+            email: email.trim().toLowerCase(),
+            password: password,
+            data: {'name': rapikanNama(nama)},
+          )
+          .timeout(batasTungguServer);
     } on supabase.AuthException catch (galat) {
-      if (galat.code == 'user_already_exists' || galat.code == 'email_exists') {
-        throw const AuthException(
-          AuthService.kodeEmailSudahDipakai,
-          'Email sudah dipakai akun lain',
-        );
-      }
-      if (galat.code == 'weak_password') {
-        throw const AuthException(
-          AuthService.kodePasswordTerlaluLemah,
-          'Password terlalu lemah',
-        );
-      }
-      throw AuthException(AuthService.kodeGagalTerhubung, galat.message);
+      throw terjemahkanGalatSupabase(galat);
+    } on TimeoutException {
+      throw galatServerLambat;
     }
 
     supabase.User? penggunaSupabase = respons.user;

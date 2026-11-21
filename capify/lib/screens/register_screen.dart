@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../utils/pesan_error_auth.dart';
 import '../utils/validasi_auth.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/komponen_auth.dart';
@@ -26,6 +27,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isSyaratBelumDicentang = false;
   int levelPassword = 0;
   String? emailDitolakServer;
+  String? pesanEmailDitolakServer;
+  String? passwordDitolakServer;
+  String? pesanErrorUmum;
   AutovalidateMode modeValidasi = AutovalidateMode.disabled;
 
   @override
@@ -71,8 +75,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     bool isPernahDitolakServer =
         (isian ?? '').trim().toLowerCase() == emailDitolakServer;
-    if (isPernahDitolakServer ||
-        context.read<AuthProvider>().isEmailSudahTerdaftar(isian ?? '')) {
+    if (isPernahDitolakServer) return pesanEmailDitolakServer;
+
+    if (context.read<AuthProvider>().isEmailSudahTerdaftar(isian ?? '')) {
       return 'Email ini sudah terdaftar, silakan masuk';
     }
     return null;
@@ -84,6 +89,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     String password = isian ?? '';
     if (password.contains(' ')) return 'Password tidak boleh pakai spasi';
+    if (password == passwordDitolakServer) {
+      return 'Password ditolak server, buat yang lebih kuat';
+    }
 
     String passwordKecil = password.toLowerCase();
     String depanEmail = emailController.text
@@ -125,12 +133,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() {
         modeValidasi = AutovalidateMode.onUserInteraction;
         isSyaratBelumDicentang = !isSetujuSyarat;
+        pesanErrorUmum = 'Masih ada isian yang belum benar. Periksa kolom yang ditandai merah.';
       });
-      tampilkanPesan('Periksa lagi isian yang ditandai merah');
       return;
     }
 
-    setState(() => isSedangMendaftar = true);
+    setState(() {
+      isSedangMendaftar = true;
+      pesanErrorUmum = null;
+    });
     KesalahanDaftar? kesalahan = await context.read<AuthProvider>().daftar(
       nama: namaController.text,
       email: emailController.text,
@@ -139,27 +150,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
     setState(() => isSedangMendaftar = false);
 
-    if (kesalahan == KesalahanDaftar.masihDiproses) {
-      tampilkanPesan('Masih diproses, tunggu sebentar ya');
-      return;
-    }
-    if (kesalahan == KesalahanDaftar.emailSudahTerdaftar) {
-      setState(() {
-        emailDitolakServer = emailController.text.trim().toLowerCase();
-      });
-      formDaftarKey.currentState?.validate();
-      return;
-    }
-    if (kesalahan == KesalahanDaftar.passwordTerlaluLemah) {
-      tampilkanPesan('Password ditolak server, coba yang lebih kuat');
-      return;
-    }
-    if (kesalahan == KesalahanDaftar.gagalTerhubung) {
-      tampilkanPesan('Gagal terhubung ke server, coba lagi nanti');
+    if (kesalahan == null) {
+      Navigator.pop(context, emailController.text.trim().toLowerCase());
       return;
     }
 
-    Navigator.pop(context, emailController.text.trim().toLowerCase());
+    String? pesanUmum = pesanUmumGagalDaftar(kesalahan);
+    if (pesanUmum != null) {
+      setState(() => pesanErrorUmum = pesanUmum);
+      return;
+    }
+
+    setState(() {
+      if (kesalahan == KesalahanDaftar.passwordTerlaluLemah) {
+        passwordDitolakServer = passwordController.text;
+      } else {
+        emailDitolakServer = emailController.text.trim().toLowerCase();
+        pesanEmailDitolakServer =
+            kesalahan == KesalahanDaftar.emailSudahTerdaftar
+            ? 'Email ini sudah terdaftar, silakan masuk'
+            : 'Email ini tidak bisa dipakai mendaftar, coba email lain';
+      }
+    });
+    formDaftarKey.currentState?.validate();
   }
 
   Widget buatBarisPersetujuan() {
@@ -320,6 +333,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 12),
                       buatBarisPersetujuan(),
                       const SizedBox(height: 24),
+                      if (pesanErrorUmum != null) ...[
+                        KotakPesanError(
+                          pesan: pesanErrorUmum!,
+                          onTutup: () => setState(() => pesanErrorUmum = null),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       TombolAuth(
                         teksTombol: 'Daftar',
                         isSedangLoading: isSedangMendaftar,
