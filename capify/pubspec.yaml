@@ -37,6 +37,8 @@ dependencies:
   provider: ^6.1.5+1
   just_audio: ^0.10.6
   supabase_flutter: ^2.18.3
+  just_audio_background: ^0.0.1-beta.17
+  audio_session: ^0.2.4
 
 dev_dependencies:
   flutter_test:
