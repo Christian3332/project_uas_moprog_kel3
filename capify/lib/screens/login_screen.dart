@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../utils/pesan_error_auth.dart';
 import '../utils/validasi_auth.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/komponen_auth.dart';
@@ -35,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? emailDenganPasswordSalah;
   String? passwordYangSalah;
   bool isSalahnyaBisaDiEmail = false;
+  String? pesanErrorUmum;
   int jumlahPasswordSalah = 0;
   int sisaDetikTerkunci = 0;
   Timer? timerPenguncian;
@@ -130,16 +132,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void catatKesalahanMasuk(KesalahanMasuk kesalahan) {
-    if (kesalahan == KesalahanMasuk.masihDiproses) {
-      tampilkanPesan('Masih diproses, tunggu sebentar ya');
-      return;
-    }
-    if (kesalahan == KesalahanMasuk.gagalTerhubung) {
-      tampilkanPesan('Gagal terhubung ke server, coba lagi nanti');
-      return;
-    }
-    if (kesalahan == KesalahanMasuk.emailBelumDikonfirmasi) {
-      tampilkanPesan('Email belum dikonfirmasi, cek kotak masuk emailmu dulu');
+    String? pesanUmum = pesanUmumGagalMasuk(kesalahan);
+    if (pesanUmum != null) {
+      setState(() => pesanErrorUmum = pesanUmum);
+      if (kesalahan == KesalahanMasuk.terlaluSeringMencoba) mulaiPenguncian();
       return;
     }
 
@@ -173,7 +169,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     AuthProvider authProvider = context.read<AuthProvider>();
 
-    setState(() => isSedangMasuk = true);
+    setState(() {
+      isSedangMasuk = true;
+      pesanErrorUmum = null;
+    });
     KesalahanMasuk? kesalahan = await authProvider.masuk(
       email: emailController.text,
       password: passwordController.text,
@@ -231,7 +230,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     emailController.text = emailAkunBaru;
     passwordController.clear();
-    bool isPerluKonfirmasi = context.read<AuthProvider>().isPerluKonfirmasiEmail;
+    bool isPerluKonfirmasi = context
+        .read<AuthProvider>()
+        .isPerluKonfirmasiEmail;
     tampilkanPesan(
       isPerluKonfirmasi
           ? 'Akun dibuat! Konfirmasi lewat email dulu, lalu masuk'
@@ -350,6 +351,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
+                    if (pesanErrorUmum != null) ...[
+                      KotakPesanError(
+                        pesan: pesanErrorUmum!,
+                        onTutup: () => setState(() => pesanErrorUmum = null),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     TombolAuth(
                       teksTombol: isSedangTerkunci
                           ? 'Coba lagi dalam $sisaDetikTerkunci detik'

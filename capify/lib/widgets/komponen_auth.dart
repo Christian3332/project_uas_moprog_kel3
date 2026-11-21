@@ -184,6 +184,68 @@ class TombolAuth extends StatelessWidget {
   }
 }
 
+class KotakPesanError extends StatelessWidget {
+  final String pesan;
+  final VoidCallback onTutup;
+
+  const KotakPesanError({
+    super.key,
+    required this.pesan,
+    required this.onTutup,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const Color merahPesan = Color(0xFFFF8A80);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+      decoration: BoxDecoration(
+        color: merahPesan.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: merahPesan.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.error_outline_rounded,
+              color: merahPesan,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                pesan,
+                style: const TextStyle(
+                  color: WarnaCapify.putih,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Tutup pesan',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: WarnaCapify.krem,
+            ),
+            onPressed: onTutup,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class PemisahAtau extends StatelessWidget {
   final String teksTengah;
 
