@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/album.dart';
@@ -8,7 +10,9 @@ import '../models/track.dart';
 import 'koleksi_service.dart';
 
 class SupabaseKoleksiService extends KoleksiService {
+  static const String namaTabelLagu = 'tracks';
   static const String namaTabelPlaylist = 'playlists';
+  static const String namaTabelIsiPlaylist = 'playlist_tracks';
   static const String namaTabelLaguDisukai = 'liked_tracks';
   static const String namaTabelAlbumTersimpan = 'saved_albums';
   static const String kolomLagu =
@@ -76,6 +80,69 @@ class SupabaseKoleksiService extends KoleksiService {
       KoleksiPengguna koleksiCadangan = await super.ambilKoleksiPengguna();
       return koleksiCadangan.tandaiSebagaiCadangan();
     }
+  }
+
+  @override
+  Future<Playlist> tambahLaguKePlaylist({
+    required Playlist playlist,
+    required Lagu lagu,
+  }) async {
+    SupabaseClient klienSupabase;
+    try {
+      klienSupabase = Supabase.instance.client;
+    } catch (_) {
+      throw Exception('Server Capify belum tersambung');
+    }
+
+    User? penggunaAktif = klienSupabase.auth.currentUser;
+    if (penggunaAktif == null) {
+      throw Exception('Masuk dulu supaya bisa menambah lagu ke playlist');
+    }
+
+    String? idLagu = await _cariIdLaguDiKatalog(klienSupabase, lagu);
+    if (idLagu == null) {
+      throw Exception('Lagu "${lagu.judul}" belum ada di katalog Capify');
+    }
+
+    try {
+      await klienSupabase
+          .from(namaTabelIsiPlaylist)
+          .insert({'playlist_id': playlist.id, 'track_id': idLagu})
+          .timeout(batasWaktuTunggu);
+    } on PostgrestException catch (error) {
+      throw Exception(pesanGagalTambahLagu(error.code));
+    } on TimeoutException {
+      throw Exception('Server terlalu lama merespons, coba lagi ya');
+    }
+
+    return playlist.denganLaguTambahan(lagu);
+  }
+
+  Future<String?> _cariIdLaguDiKatalog(
+    SupabaseClient klienSupabase,
+    Lagu lagu,
+  ) async {
+    try {
+      Map<String, dynamic>? barisLagu = await klienSupabase
+          .from(namaTabelLagu)
+          .select('id')
+          .eq('title', lagu.judul)
+          .eq('artist', lagu.penyanyi)
+          .limit(1)
+          .maybeSingle()
+          .timeout(batasWaktuTunggu);
+
+      return barisLagu?['id']?.toString();
+    } catch (_) {
+      throw Exception('Katalog lagu belum bisa dicek, coba lagi ya');
+    }
+  }
+
+  static String pesanGagalTambahLagu(String? kodeError) {
+    if (kodeError == '23505') return 'Lagu ini sudah ada di playlist';
+    if (kodeError == '23503') return 'Playlist ini belum tersimpan di server';
+    if (kodeError == '42501') return 'Kamu tidak punya akses ke playlist ini';
+    return 'Lagu gagal ditambahkan, coba lagi sebentar';
   }
 
   static Lagu? ubahDataTrackKeLagu(dynamic dataTrack) {
