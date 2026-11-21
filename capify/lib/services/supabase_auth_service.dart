@@ -154,6 +154,13 @@ class SupabaseAuthService extends AuthService {
   }
 
   @override
+  Future<User?> cocokkanSesiTersimpan(User penggunaTersimpan) async {
+    supabase.User? penggunaSupabase = _authSupabase.currentUser;
+    if (penggunaSupabase == null) return null;
+    return ubahKeUserCapify(penggunaSupabase);
+  }
+
+  @override
   Future<void> keluar() async {
     try {
       await _authSupabase.signOut().timeout(const Duration(seconds: 5));

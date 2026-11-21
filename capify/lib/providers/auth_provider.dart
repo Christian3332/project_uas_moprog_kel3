@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/sesi_lokal_service.dart';
 
 enum KesalahanMasuk {
   emailBelumTerdaftar,
@@ -30,9 +31,11 @@ enum KesalahanDaftar {
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
+  final SesiLokalService _sesiLokal;
 
-  AuthProvider({AuthService? authService})
-    : _authService = authService ?? AuthService();
+  AuthProvider({AuthService? authService, SesiLokalService? sesiLokal})
+    : _authService = authService ?? AuthService(),
+      _sesiLokal = sesiLokal ?? SesiLokalService();
 
   User? _penggunaAktif;
   bool _isIngatSaya = false;
@@ -94,11 +97,18 @@ class AuthProvider extends ChangeNotifier {
 
     KesalahanMasuk? kesalahan;
     try {
-      _penggunaAktif = await _authService.masuk(
+      User penggunaBaru = await _authService.masuk(
         email: email,
         password: password,
       );
+      _penggunaAktif = penggunaBaru;
       _isIngatSaya = isIngatSaya;
+
+      if (isIngatSaya) {
+        await _sesiLokal.simpanPengguna(penggunaBaru);
+      } else {
+        await _sesiLokal.hapusPengguna();
+      }
     } on AuthException catch (galat) {
       kesalahan = _ubahKeKesalahanMasuk(galat.kode);
     } catch (_) {
@@ -142,10 +152,39 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     await _authService.keluar();
+    await _sesiLokal.hapusPengguna();
 
     _penggunaAktif = null;
     _isIngatSaya = false;
     _isSedangMemproses = false;
+    notifyListeners();
+  }
+
+  Future<void> pulihkanSesi() async {
+    User? penggunaTersimpan = await _sesiLokal.ambilPengguna();
+
+    if (penggunaTersimpan == null) {
+      await _authService.keluar();
+      return;
+    }
+
+    User? penggunaCocok;
+    try {
+      penggunaCocok = await _authService.cocokkanSesiTersimpan(
+        penggunaTersimpan,
+      );
+    } catch (_) {
+      penggunaCocok = null;
+    }
+
+    if (penggunaCocok == null) {
+      await _sesiLokal.hapusPengguna();
+      return;
+    }
+
+    _penggunaAktif = penggunaCocok;
+    _isIngatSaya = true;
+    await _sesiLokal.simpanPengguna(penggunaCocok);
     notifyListeners();
   }
 }

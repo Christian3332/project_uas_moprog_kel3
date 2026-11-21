@@ -62,6 +62,10 @@ class AuthService {
     await Future.delayed(lamaMenunggu ~/ 4);
   }
 
+  Future<User?> cocokkanSesiTersimpan(User penggunaTersimpan) async {
+    return penggunaTersimpan;
+  }
+
   bool isEmailTerdaftar(String email) {
     return _tabelAkun.containsKey(_rapikanEmail(email));
   }
