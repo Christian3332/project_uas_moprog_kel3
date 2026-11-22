@@ -419,14 +419,18 @@ class KartuLanjutDengerin extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                           ],
-                          Text(
-                            isSedangDiputar
-                                ? 'Sedang diputar'
-                                : 'Lanjut dengerin',
-                            style: const TextStyle(
-                              color: WarnaCapify.krem,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w300,
+                          Flexible(
+                            child: Text(
+                              isSedangDiputar
+                                  ? 'Sedang diputar'
+                                  : 'Lanjut dengerin',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: WarnaCapify.krem,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w300,
+                              ),
                             ),
                           ),
                         ],
@@ -482,16 +486,49 @@ class KartuLaguKecil extends StatelessWidget {
   final Lagu lagu;
   final String keterangan;
   final VoidCallback onTekan;
+  final bool isSedangDiputar;
+  final bool isSedangDisiapkan;
 
   const KartuLaguKecil({
     super.key,
     required this.lagu,
     required this.keterangan,
     required this.onTekan,
+    this.isSedangDiputar = false,
+    this.isSedangDisiapkan = false,
   });
+
+  Widget? lapisanStatusPutar() {
+    if (!isSedangDiputar && !isSedangDisiapkan) return null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: WarnaCapify.hitam.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      alignment: Alignment.center,
+      child: isSedangDisiapkan
+          ? const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: WarnaCapify.krem,
+              ),
+            )
+          : const Icon(
+              Icons.graphic_eq_rounded,
+              size: 40,
+              color: WarnaCapify.krem,
+            ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    Widget? lapisanStatus = lapisanStatusPutar();
+    bool isLaguAktif = isSedangDiputar || isSedangDisiapkan;
+
     return SizedBox(
       width: 140,
       child: InkWell(
@@ -503,10 +540,18 @@ class KartuLaguKecil extends StatelessWidget {
             SizedBox(
               width: 140,
               height: 140,
-              child: CoverAlbum(
-                urlCover: lagu.urlCover,
-                lengkungSudut: 12,
-                isPakaiBayangan: false,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CoverAlbum(
+                      urlCover: lagu.urlCover,
+                      lengkungSudut: 12,
+                      isPakaiBayangan: false,
+                    ),
+                  ),
+                  if (lapisanStatus != null)
+                    Positioned.fill(child: lapisanStatus),
+                ],
               ),
             ),
             const SizedBox(height: 8),
@@ -514,8 +559,8 @@ class KartuLaguKecil extends StatelessWidget {
               lagu.judul,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: WarnaCapify.putih,
+              style: TextStyle(
+                color: isLaguAktif ? WarnaCapify.krem : WarnaCapify.putih,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -547,11 +592,15 @@ class KartuLaguKecil extends StatelessWidget {
 class KartuRacikanUntukmu extends StatelessWidget {
   final RacikanUntukmu racikan;
   final VoidCallback onTekan;
+  final VoidCallback? onTekanPutar;
+  final bool isSedangDiputar;
 
   const KartuRacikanUntukmu({
     super.key,
     required this.racikan,
     required this.onTekan,
+    this.onTekanPutar,
+    this.isSedangDiputar = false,
   });
 
   String? get teksLencana {
@@ -563,6 +612,8 @@ class KartuRacikanUntukmu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String? lencana = teksLencana;
+    VoidCallback? aksiPutar = onTekanPutar;
+    bool isAdaLagu = racikan.playlist.daftarLagu.isNotEmpty;
 
     return SizedBox(
       width: 150,
@@ -608,6 +659,33 @@ class KartuRacikanUntukmu extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (aksiPutar != null && isAdaLagu)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Material(
+                        color: WarnaCapify.krem,
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: aksiPutar,
+                          child: SizedBox(
+                            width: 34,
+                            height: 34,
+                            child: Icon(
+                              isSedangDiputar
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              size: 22,
+                              color: WarnaCapify.coklatGelap,
+                              semanticLabel: isSedangDiputar
+                                  ? 'Jeda ${racikan.playlist.nama}'
+                                  : 'Putar ${racikan.playlist.nama}',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   if (lencana != null)
                     Positioned(
                       top: 8,
