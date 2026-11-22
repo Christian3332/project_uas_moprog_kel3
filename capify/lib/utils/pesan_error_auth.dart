@@ -27,6 +27,20 @@ String? pesanUmumGagalMasuk(KesalahanMasuk kesalahan) {
   };
 }
 
+String pesanGagalPerbaruiProfil(KesalahanProfil kesalahan) {
+  return switch (kesalahan) {
+    KesalahanProfil.belumMasuk => 'Masuk dulu untuk mengubah profilmu.',
+    KesalahanProfil.masihDiproses =>
+      'Perubahan sebelumnya masih disimpan, tunggu sebentar ya.',
+    KesalahanProfil.sesiBerakhir =>
+      'Sesi kamu sudah berakhir. Keluar lalu masuk lagi untuk mengubah profil.',
+    KesalahanProfil.tidakAdaInternet => pesanTidakAdaInternet,
+    KesalahanProfil.serverTerlaluLama => pesanServerTerlaluLama,
+    KesalahanProfil.gagalTerhubung =>
+      'Nama gagal disimpan karena server sedang bermasalah. Coba lagi nanti.',
+  };
+}
+
 String? pesanUmumGagalDaftar(KesalahanDaftar kesalahan) {
   return switch (kesalahan) {
     KesalahanDaftar.pendaftaranDitutup =>

@@ -36,6 +36,16 @@ class User {
     };
   }
 
+  User salinDenganNamaBaru(String namaBaru) {
+    return User(
+      id: id,
+      nama: namaBaru,
+      email: email,
+      urlFoto: urlFoto,
+      tanggalBergabung: tanggalBergabung,
+    );
+  }
+
   bool get isPunyaFoto => urlFoto.trim().isNotEmpty;
 
   String get inisial {
