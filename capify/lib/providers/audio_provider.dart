@@ -113,11 +113,15 @@ class AudioProvider extends ChangeNotifier {
   Lagu? _laguYangSudahDimuat;
   int _nomorPermintaanMuat = 0;
   bool _isSudahDibuang = false;
+  bool _isPemutaranDiizinkan = true;
+  int _jumlahPutarDitolak = 0;
 
   List<Lagu> get antrianLagu => List.unmodifiable(_antrianLagu);
   int get indexLaguSekarang => _indexLaguSekarang;
   String get namaAntrian => _namaAntrian;
   bool get isLaguSedangDiputar => _isLaguSedangDiputar;
+  bool get isPemutaranDiizinkan => _isPemutaranDiizinkan;
+  int get jumlahPutarDitolak => _jumlahPutarDitolak;
   bool get isSedangMemuat => _isSedangMenyiapkanLagu || _isSedangBuffering;
   bool get isSedangMenyiapkanLagu => _isSedangMenyiapkanLagu;
   bool get isSedangBuffering => _isSedangBuffering && !_isSedangMenyiapkanLagu;
@@ -305,8 +309,22 @@ class AudioProvider extends ChangeNotifier {
     }
   }
 
+  void aturIzinPemutaran(bool isDiizinkan) {
+    if (_isPemutaranDiizinkan == isDiizinkan) return;
+    _isPemutaranDiizinkan = isDiizinkan;
+    if (!isDiizinkan) jeda();
+  }
+
+  bool mintaIzinPemutaran() {
+    if (_isPemutaranDiizinkan) return true;
+    _jumlahPutarDitolak++;
+    _kabariPendengar();
+    return false;
+  }
+
   void cobaLagi() {
     if (laguSekarang == null || _isSedangMenyiapkanLagu) return;
+    if (!mintaIzinPemutaran()) return;
     _laguYangSudahDimuat = null;
     _muatLaguSekarang(isLangsungDiputar: true);
   }
@@ -340,6 +358,7 @@ class AudioProvider extends ChangeNotifier {
       return;
     }
 
+    bool isBolehLangsungDiputar = isLangsungDiputar && mintaIzinPemutaran();
     int indexAman = indexMulai.clamp(0, daftarLagu.length - 1);
     Lagu laguYangDipilih = daftarLagu[indexAman];
     Lagu? laguSebelumnya = laguSekarang;
@@ -359,7 +378,7 @@ class AudioProvider extends ChangeNotifier {
 
     if (isLaguYangSama) {
       _kabariPendengar();
-      if (isLangsungDiputar && !isTadiSedangDiputar) {
+      if (isBolehLangsungDiputar && !isTadiSedangDiputar) {
         putar();
       }
       return;
@@ -371,7 +390,7 @@ class AudioProvider extends ChangeNotifier {
     _pesanError = null;
     _kabariPendengar();
 
-    if (isLangsungDiputar || isTadiSedangDiputar) {
+    if (isBolehLangsungDiputar || isTadiSedangDiputar) {
       _muatLaguSekarang(isLangsungDiputar: true);
     }
   }
@@ -390,6 +409,7 @@ class AudioProvider extends ChangeNotifier {
 
   Future<void> putar() async {
     if (laguSekarang == null || _isSedangMenyiapkanLagu) return;
+    if (!mintaIzinPemutaran()) return;
     _hapusStatusInterupsi();
 
     if (_isLaguSekarangSudahDimuat) {
