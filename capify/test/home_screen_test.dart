@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
 import 'package:capify/screens/home_screen.dart';
+import 'package:capify/screens/player_screen.dart';
 import 'package:capify/services/feed_service.dart';
 import 'package:capify/services/supabase_feed_service.dart';
 import 'package:capify/widgets/komponen_beranda.dart';
@@ -332,5 +333,128 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  group('Putar langsung dari feed', () {
+    Future<void> bukaBerandaSiap(
+      WidgetTester tester,
+      HomeProvider homeUji,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(bungkusHalamanBeranda(audio, homeUji));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    Finder kartuLagu(String judul) {
+      return find.widgetWithText(KartuLaguKecil, judul);
+    }
+
+    testWidgets('Ketuk lagu langsung memutar tanpa membuka player', (
+      tester,
+    ) async {
+      await bukaBerandaSiap(tester, home);
+      await tester.scrollUntilVisible(
+        kartuLagu('One Call Away'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(kartuLagu('One Call Away'));
+      await tester.pump();
+
+      await tester.tap(kartuLagu('One Call Away'));
+      await tester.pump();
+
+      expect(audio.laguSekarang?.judul, 'One Call Away');
+      expect(audio.namaAntrian, 'Temuan Baru dari Capy');
+      expect(find.byType(PlayerScreen), findsNothing);
+      expect(
+        find.descendant(
+          of: kartuLagu('One Call Away'),
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(audio.isLaguSedangDiputar, isTrue);
+      expect(home.laguUntukDilanjutkan?.lagu.judul, 'One Call Away');
+    });
+
+    testWidgets('Ketuk lagu yang sedang aktif membuka player layar penuh', (
+      tester,
+    ) async {
+      await bukaBerandaSiap(tester, home);
+
+      await tester.tap(find.byType(KartuLanjutDengerin));
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(find.byType(PlayerScreen), findsNothing);
+      expect(audio.laguSekarang?.judul, 'Evaluasi');
+
+      await tester.tap(find.byType(KartuLanjutDengerin));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(PlayerScreen), findsOneWidget);
+    });
+
+    testWidgets('Tamu hanya ditolak sekali dan antrian tidak berubah', (
+      tester,
+    ) async {
+      await bukaBerandaSiap(tester, home);
+      audio.aturIzinPemutaran(false);
+
+      await tester.tap(find.byType(KartuLanjutDengerin));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(audio.jumlahPutarDitolak, 1);
+      expect(audio.laguSekarang, isNull);
+      expect(find.byType(PlayerScreen), findsNothing);
+    });
+
+    testWidgets('Tombol putar racikan memutar lalu menjeda racikannya', (
+      tester,
+    ) async {
+      await bukaBerandaSiap(tester, home);
+      await tester.scrollUntilVisible(
+        find.bySemanticsLabel('Putar Racikan Pop'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      await tester.tap(find.bySemanticsLabel('Putar Racikan Pop'));
+      await tester.pump(const Duration(milliseconds: 800));
+
+      expect(audio.namaAntrian, 'Racikan Pop');
+      expect(audio.isLaguSedangDiputar, isTrue);
+      expect(find.bySemanticsLabel('Jeda Racikan Pop'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Jeda Racikan Pop'));
+      await tester.pump();
+
+      expect(audio.isLaguSedangDiputar, isFalse);
+      expect(find.bySemanticsLabel('Putar Racikan Pop'), findsOneWidget);
+    });
+
+    testWidgets('Memutar saat offline memberi peringatan singkat', (
+      tester,
+    ) async {
+      HomeProvider homeOffline = HomeProvider(
+        feedService: FeedServerPalsu([FeedServerPalsu.galatOffline()]),
+      );
+      addTearDown(homeOffline.dispose);
+      await bukaBerandaSiap(tester, homeOffline);
+
+      await tester.tap(find.byType(KartuLanjutDengerin));
+      await tester.pump();
+
+      expect(find.textContaining('lagu mungkin gagal diputar'), findsOneWidget);
+      expect(audio.laguSekarang?.judul, 'Evaluasi');
+
+      await tester.pump(const Duration(milliseconds: 800));
+    });
   });
 }
