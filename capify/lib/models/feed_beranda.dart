@@ -2,24 +2,59 @@ import 'lagu.dart';
 import 'riwayat_putar.dart';
 import 'track.dart';
 
+enum AsalFeed { server, simpananTerakhir, contoh }
+
 class FeedBeranda {
   final List<RiwayatPutar> riwayatPutar;
   final Map<String, List<Lagu>> laguPerGenre;
-  final bool isDariCadangan;
+  final AsalFeed asalFeed;
+  final bool isKarenaOffline;
+  final DateTime? waktuDisimpan;
 
   const FeedBeranda({
     required this.riwayatPutar,
     required this.laguPerGenre,
-    this.isDariCadangan = false,
+    this.asalFeed = AsalFeed.server,
+    this.isKarenaOffline = false,
+    this.waktuDisimpan,
   });
 
   bool get isKosong => riwayatPutar.isEmpty && laguPerGenre.isEmpty;
+  bool get isDariCadangan => asalFeed != AsalFeed.server;
 
-  FeedBeranda tandaiSebagaiCadangan() {
+  FeedBeranda tandaiAsal(
+    AsalFeed asalBaru, {
+    bool isKarenaOffline = false,
+    DateTime? waktuDisimpan,
+  }) {
     return FeedBeranda(
       riwayatPutar: riwayatPutar,
       laguPerGenre: laguPerGenre,
-      isDariCadangan: true,
+      asalFeed: asalBaru,
+      isKarenaOffline: isKarenaOffline,
+      waktuDisimpan: waktuDisimpan ?? this.waktuDisimpan,
+    );
+  }
+
+  FeedBeranda tandaiSebagaiCadangan() => tandaiAsal(AsalFeed.contoh);
+
+  FeedBeranda geserWaktuRiwayat(Duration waktuYangSudahLewat) {
+    if (waktuYangSudahLewat <= Duration.zero) return this;
+
+    return FeedBeranda(
+      riwayatPutar: riwayatPutar
+          .map(
+            (riwayat) => RiwayatPutar(
+              lagu: riwayat.lagu,
+              jarakSejakDiputar:
+                  riwayat.jarakSejakDiputar + waktuYangSudahLewat,
+            ),
+          )
+          .toList(),
+      laguPerGenre: laguPerGenre,
+      asalFeed: asalFeed,
+      isKarenaOffline: isKarenaOffline,
+      waktuDisimpan: waktuDisimpan,
     );
   }
 

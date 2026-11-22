@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:capify/models/feed_beranda.dart';
+import 'package:capify/services/feed_lokal_service.dart';
 import 'package:capify/services/supabase_feed_service.dart';
+
+import 'feed_server_palsu.dart';
 
 void main() {
   DateTime waktuPatokan = DateTime.utc(2026, 11, 20, 12, 0);
@@ -88,5 +94,98 @@ void main() {
     expect(feed.isDariCadangan, isTrue);
     expect(feed.jumlahLaguDiKatalog, 11);
     expect(feed.riwayatPutar, isNotEmpty);
+  });
+
+  group('Kondisi offline', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('Galat jaringan dikenali sebagai offline', () {
+      expect(
+        SupabaseFeedService.apakahMasalahKoneksi(TimeoutException('lama')),
+        isTrue,
+      );
+      expect(
+        SupabaseFeedService.apakahMasalahKoneksi(
+          Exception('ClientException: XMLHttpRequest error.'),
+        ),
+        isTrue,
+      );
+      expect(
+        SupabaseFeedService.apakahMasalahKoneksi(
+          Exception('SocketException: Failed host lookup: abc.supabase.co'),
+        ),
+        isTrue,
+      );
+      expect(
+        SupabaseFeedService.apakahMasalahKoneksi(
+          Exception('relation "public.tracks" does not exist'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('Feed dari server disimpan untuk dipakai saat offline', () async {
+      FeedServerPalsu server = FeedServerPalsu([
+        null,
+        FeedServerPalsu.galatOffline(),
+      ]);
+
+      FeedBeranda feedOnline = await server.ambilFeedBeranda();
+      FeedBeranda feedOffline = await server.ambilFeedBeranda();
+
+      expect(feedOnline.asalFeed, AsalFeed.server);
+      expect(feedOffline.asalFeed, AsalFeed.simpananTerakhir);
+      expect(feedOffline.isKarenaOffline, isTrue);
+      expect(feedOffline.waktuDisimpan, isNotNull);
+      expect(feedOffline.riwayatPutar.first.lagu.judul, 'Evaluasi');
+    });
+
+    test('Offline tanpa simpanan memakai lagu contoh', () async {
+      FeedServerPalsu server = FeedServerPalsu([
+        FeedServerPalsu.galatOffline(),
+      ]);
+
+      FeedBeranda feed = await server.ambilFeedBeranda();
+
+      expect(feed.asalFeed, AsalFeed.contoh);
+      expect(feed.isKarenaOffline, isTrue);
+      expect(feed.jumlahLaguDiKatalog, 11);
+    });
+
+    test('Server bermasalah tidak dianggap offline', () async {
+      FeedServerPalsu server = FeedServerPalsu([FeedServerPalsu.galatServer()]);
+
+      FeedBeranda feed = await server.ambilFeedBeranda();
+
+      expect(feed.isDariCadangan, isTrue);
+      expect(feed.isKarenaOffline, isFalse);
+    });
+
+    test('Simpanan akun lain tidak ikut terpakai', () async {
+      await FeedServerPalsu([
+        null,
+      ], idPenggunaPalsu: 'usr-a').ambilFeedBeranda();
+
+      FeedBeranda feedAkunB = await FeedServerPalsu([
+        FeedServerPalsu.galatOffline(),
+      ], idPenggunaPalsu: 'usr-b').ambilFeedBeranda();
+
+      expect(feedAkunB.asalFeed, AsalFeed.contoh);
+    });
+
+    test('Penyimpanan HP yang macet tidak membuat feed menggantung', () async {
+      FeedServerPalsu server = FeedServerPalsu(
+        [FeedServerPalsu.galatOffline()],
+        penyimpananLokal: const FeedLokalService(
+          batasTungguPenyimpanan: Duration.zero,
+        ),
+      );
+
+      FeedBeranda feed = await server.ambilFeedBeranda();
+
+      expect(feed.asalFeed, AsalFeed.contoh);
+    });
   });
 }

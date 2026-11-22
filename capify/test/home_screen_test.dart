@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
@@ -9,6 +10,7 @@ import 'package:capify/services/feed_service.dart';
 import 'package:capify/services/supabase_feed_service.dart';
 import 'package:capify/widgets/komponen_beranda.dart';
 
+import 'feed_server_palsu.dart';
 import 'pemutar_audio_palsu.dart';
 
 Widget bungkusHalamanBeranda(AudioProvider audio, HomeProvider home) {
@@ -26,6 +28,7 @@ void main() {
   late HomeProvider home;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     audio = AudioProvider(pemutarAudio: PemutarAudioPalsu());
     home = HomeProvider();
   });
@@ -198,5 +201,61 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.textContaining('masih belum bisa dihubungi'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsNothing);
+  });
+
+  testWidgets('Spanduk offline memberi tahu beranda terakhir tersimpan', (
+    tester,
+  ) async {
+    FeedServerPalsu server = FeedServerPalsu([
+      null,
+      FeedServerPalsu.galatOffline(),
+    ]);
+    HomeProvider homeOffline = HomeProvider(feedService: server);
+    addTearDown(homeOffline.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeOffline));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(SpandukDataCadangan), findsNothing);
+
+    await tester.runAsync(
+      () => homeOffline.muatIsiBeranda(isPaksaMuatUlang: true),
+    );
+    await tester.pump();
+
+    expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+    expect(find.textContaining('Kamu sedang offline'), findsOneWidget);
+    expect(find.textContaining('berandamu dari baru saja'), findsOneWidget);
+    expect(find.text('Evaluasi'), findsOneWidget);
+
+    await tester.tap(find.text('Coba lagi'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('Masih offline'), findsOneWidget);
+  });
+
+  testWidgets('Beranda mencoba lagi otomatis saat aplikasi dibuka kembali', (
+    tester,
+  ) async {
+    FeedServerPalsu server = FeedServerPalsu([
+      FeedServerPalsu.galatOffline(),
+      null,
+    ]);
+    HomeProvider homeOffline = HomeProvider(feedService: server);
+    addTearDown(homeOffline.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeOffline));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('lagu contoh'), findsOneWidget);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(server.jumlahPanggilanServer, 2);
+    expect(find.byType(SpandukDataCadangan), findsNothing);
+    expect(find.textContaining('kembali online'), findsOneWidget);
   });
 }

@@ -99,12 +99,27 @@ class KotakBelumAdaIsi extends StatelessWidget {
 class SpandukDataCadangan extends StatelessWidget {
   final bool isSedangMencoba;
   final VoidCallback? onCobaLagi;
+  final String? pesanKhusus;
+  final IconData ikon;
 
   const SpandukDataCadangan({
     super.key,
     this.isSedangMencoba = false,
     this.onCobaLagi,
+    this.pesanKhusus,
+    this.ikon = Icons.cloud_off_rounded,
   });
+
+  String teksSpanduk(bool isAdaTombolCobaLagi) {
+    String? pesan = pesanKhusus;
+    if (pesan != null && pesan.trim().isNotEmpty) return pesan;
+
+    if (isAdaTombolCobaLagi) {
+      return 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu.';
+    }
+    return 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu. '
+        'Tarik ke bawah untuk coba lagi.';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,18 +137,11 @@ class SpandukDataCadangan extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.cloud_off_rounded,
-            size: 20,
-            color: WarnaCapify.krem,
-          ),
+          Icon(ikon, size: 20, color: WarnaCapify.krem),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              isAdaTombolCobaLagi
-                  ? 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu.'
-                  : 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu. '
-                        'Tarik ke bawah untuk coba lagi.',
+              teksSpanduk(isAdaTombolCobaLagi),
               style: const TextStyle(
                 color: WarnaCapify.krem,
                 fontSize: 12,

@@ -32,7 +32,9 @@ class HomeProvider extends ChangeNotifier {
   bool _isSedangMemuat = false;
   bool _isSudahPernahDimuat = false;
   String? _pesanGagal;
-  bool _isMemakaiDataCadangan = false;
+  AsalFeed _asalFeed = AsalFeed.server;
+  bool _isSedangOffline = false;
+  DateTime? _waktuFeedDisimpan;
   bool _isMemuatTerlaluLama = false;
   Timer? _timerPenandaLambat;
   bool _isSudahDibuang = false;
@@ -50,7 +52,10 @@ class HomeProvider extends ChangeNotifier {
   bool get isSedangMemuat => _isSedangMemuat;
   bool get isSudahPernahDimuat => _isSudahPernahDimuat;
   String? get pesanGagal => _pesanGagal;
-  bool get isMemakaiDataCadangan => _isMemakaiDataCadangan;
+  AsalFeed get asalFeed => _asalFeed;
+  bool get isMemakaiDataCadangan => _asalFeed != AsalFeed.server;
+  bool get isSedangOffline => _isSedangOffline;
+  DateTime? get waktuFeedDisimpan => _waktuFeedDisimpan;
   bool get isMemuatTerlaluLama => _isMemuatTerlaluLama;
   bool get isSedangMenyegarkan => _isSedangMemuat && _isSudahPernahDimuat;
   bool get isMuatPertamaKali => !_isSudahPernahDimuat && _pesanGagal == null;
@@ -103,7 +108,9 @@ class HomeProvider extends ChangeNotifier {
       if (_isSudahDibuang) return;
 
       _laguPerGenre = feedDariServer.laguPerGenre;
-      _isMemakaiDataCadangan = feedDariServer.isDariCadangan;
+      _asalFeed = feedDariServer.asalFeed;
+      _isSedangOffline = feedDariServer.isKarenaOffline;
+      _waktuFeedDisimpan = feedDariServer.waktuDisimpan;
       _gabungkanDenganRiwayatServer(feedDariServer.riwayatPutar);
       _susunUlangRekomendasi();
       _isSudahPernahDimuat = true;

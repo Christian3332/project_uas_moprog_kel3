@@ -1,11 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:capify/models/feed_beranda.dart';
 import 'package:capify/models/lagu.dart';
 import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
 import 'package:capify/services/feed_service.dart';
 import 'package:capify/services/supabase_feed_service.dart';
 
+import 'feed_server_palsu.dart';
 import 'pemutar_audio_palsu.dart';
 
 const Lagu laguUjiCoba = Lagu(
@@ -410,5 +413,56 @@ void main() {
       await prosesMuat;
       await Future.delayed(const Duration(milliseconds: 100));
     });
+  });
+
+  group('Beranda saat offline', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('Offline memakai beranda terakhir lalu pulih saat online', () async {
+      FeedServerPalsu server = FeedServerPalsu([
+        null,
+        FeedServerPalsu.galatOffline(),
+        null,
+      ]);
+      HomeProvider homeOffline = HomeProvider(feedService: server);
+
+      await homeOffline.muatIsiBeranda();
+      expect(homeOffline.asalFeed, AsalFeed.server);
+      expect(homeOffline.isSedangOffline, isFalse);
+
+      await homeOffline.muatIsiBeranda(isPaksaMuatUlang: true);
+      expect(homeOffline.asalFeed, AsalFeed.simpananTerakhir);
+      expect(homeOffline.isSedangOffline, isTrue);
+      expect(homeOffline.isMemakaiDataCadangan, isTrue);
+      expect(homeOffline.waktuFeedDisimpan, isNotNull);
+      expect(homeOffline.pesanGagal, isNull);
+
+      await homeOffline.muatIsiBeranda(isPaksaMuatUlang: true);
+      expect(homeOffline.asalFeed, AsalFeed.server);
+      expect(homeOffline.isSedangOffline, isFalse);
+      expect(homeOffline.waktuFeedDisimpan, isNull);
+      homeOffline.dispose();
+    });
+
+    test(
+      'Lagu yang diputar saat offline tidak hilang setelah online',
+      () async {
+        FeedServerPalsu server = FeedServerPalsu([
+          FeedServerPalsu.galatOffline(),
+          null,
+        ]);
+        HomeProvider homeOffline = HomeProvider(feedService: server);
+
+        await homeOffline.muatIsiBeranda();
+        homeOffline.catatLaguDiputar(laguUjiCoba);
+        await homeOffline.muatIsiBeranda(isPaksaMuatUlang: true);
+
+        expect(homeOffline.isSedangOffline, isFalse);
+        expect(homeOffline.laguUntukDilanjutkan?.lagu.judul, 'Lagu Uji Coba');
+        homeOffline.dispose();
+      },
+    );
   });
 }
