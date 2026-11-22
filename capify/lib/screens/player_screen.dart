@@ -11,8 +11,7 @@ class PlayerScreen extends StatelessWidget {
   const PlayerScreen({super.key});
 
   static void bukaLayarPenuh(BuildContext context) {
-    Navigator.push(
-      context,
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (context) => const PlayerScreen(),
