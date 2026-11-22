@@ -5,9 +5,11 @@ import '../models/lagu.dart';
 import '../models/racikan_untukmu.dart';
 import '../models/riwayat_putar.dart';
 import '../providers/audio_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/home_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/komponen_beranda.dart';
+import '../widgets/tombol_avatar_profil.dart';
 import 'detail_playlist_screen.dart';
 import 'player_screen.dart';
 import 'preferensi_genre_screen.dart';
@@ -164,6 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     HomeProvider home = context.watch<HomeProvider>();
+    AuthProvider? authProvider = context.watch<AuthProvider?>();
+    String namaSapaan = (authProvider?.isSudahMasuk ?? false)
+        ? authProvider!.namaTampilan
+        : widget.namaPengguna;
 
     return Scaffold(
       appBar: AppBar(
@@ -183,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Text(
-              widget.namaPengguna,
+              namaSapaan,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 20,
@@ -198,6 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.notifications_none, color: WarnaCapify.krem),
             onPressed: () => tampilkanPesan('Fitur notifikasi segera hadir'),
           ),
+          const TombolAvatarProfil(),
           const SizedBox(width: 8),
         ],
       ),
