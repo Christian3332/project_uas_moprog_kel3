@@ -4,6 +4,7 @@ import '../data/kategori_dummy.dart';
 import '../data/lagu_per_kategori_dummy.dart';
 import '../models/kategori_musik.dart';
 import '../utils/warna_capify.dart';
+import '../widgets/sampul_kategori.dart';
 import 'detail_kategori_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -24,6 +25,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   List<KategoriMusik> semuaKategori = [];
   List<KategoriMusik> kategoriTampil = [];
+  Map<String, String?> urlSampulPerKategori = {};
+  final Set<String> sampulYangSudahDisiapkan = {};
 
   List<String> get daftarJenis {
     return {
@@ -68,12 +71,35 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     setState(() {
       semuaKategori = List.of(daftarKategoriDummy);
+      urlSampulPerKategori = {
+        for (KategoriMusik kategori in semuaKategori)
+          kategori.nama: ambilUrlSampulKategori(kategori.nama),
+      };
       if (!daftarJenis.contains(jenisDipilih)) {
         jenisDipilih = jenisSemua;
       }
       kategoriTampil = saringKategori();
       isKategoriSedangDimuat = false;
     });
+
+    siapkanSampulLebihAwal();
+  }
+
+  void siapkanSampulLebihAwal() {
+    double rasioPikselLayar = MediaQuery.devicePixelRatioOf(context);
+
+    for (String? urlSampul in urlSampulPerKategori.values) {
+      if (urlSampul == null) continue;
+      if (!sampulYangSudahDisiapkan.add(urlSampul)) continue;
+
+      precacheImage(
+        buatPenyediaSampul(urlSampul, rasioPikselLayar),
+        context,
+        onError: (error, jejakError) {
+          sampulYangSudahDisiapkan.remove(urlSampul);
+        },
+      );
+    }
   }
 
   Future<void> terapkanFilter({
@@ -272,8 +298,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
       itemBuilder: (context, urutan) {
         KategoriMusik kategoriIni = kategoriTampil[urutan];
         return KartuKategori(
+          key: ValueKey(kategoriIni.nama),
           kategori: kategoriIni,
           jumlahLagu: jumlahLaguDi(kategoriIni),
+          urlSampul: urlSampulPerKategori[kategoriIni.nama],
           onDitekan: () => bukaKategori(kategoriIni),
         );
       },
@@ -344,6 +372,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 class KartuKategori extends StatelessWidget {
   final KategoriMusik kategori;
   final int jumlahLagu;
+  final String? urlSampul;
   final VoidCallback onDitekan;
 
   const KartuKategori({
@@ -351,6 +380,7 @@ class KartuKategori extends StatelessWidget {
     required this.kategori,
     required this.jumlahLagu,
     required this.onDitekan,
+    this.urlSampul,
   });
 
   @override
@@ -378,12 +408,13 @@ class KartuKategori extends StatelessWidget {
                 Positioned(
                   right: -12,
                   bottom: -10,
+                  width: ukuranSampulKategori,
+                  height: ukuranSampulKategori,
                   child: Transform.rotate(
                     angle: 0.4,
-                    child: Icon(
-                      kategori.ikon,
-                      size: 64,
-                      color: WarnaCapify.krem.withValues(alpha: 0.35),
+                    child: SampulKategori(
+                      urlSampul: urlSampul,
+                      ikonCadangan: kategori.ikon,
                     ),
                   ),
                 ),
