@@ -258,4 +258,79 @@ void main() {
     expect(find.byType(SpandukDataCadangan), findsNothing);
     expect(find.textContaining('kembali online'), findsOneWidget);
   });
+
+  Finder areaGeserBeranda() {
+    return find
+        .descendant(
+          of: find.byType(RefreshIndicator),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+  }
+
+  testWidgets('Tarik ke bawah memberi tahu beranda sudah paling baru', (
+    tester,
+  ) async {
+    HomeProvider homeUji = HomeProvider(
+      feedService: const FeedService(lamaResponServer: Duration.zero),
+      jedaMinimalSegarkan: Duration.zero,
+    );
+    addTearDown(homeUji.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeUji));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('Diperbarui baru saja'), findsOneWidget);
+
+    await tester.drag(areaGeserBeranda(), const Offset(0, 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Berandamu sudah yang paling baru'), findsOneWidget);
+  });
+
+  testWidgets('Tarik dua kali cepat tidak memuat ulang lagi', (tester) async {
+    HomeProvider homeUji = HomeProvider(
+      feedService: const FeedService(lamaResponServer: Duration.zero),
+    );
+    addTearDown(homeUji.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeUji));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.drag(areaGeserBeranda(), const Offset(0, 400));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('baru saja diperbarui'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+  });
+
+  testWidgets('Layar gagal total juga bisa ditarik untuk mencoba lagi', (
+    tester,
+  ) async {
+    HomeProvider homeGagal = HomeProvider(
+      feedService: const FeedService(
+        lamaResponServer: Duration.zero,
+        isSimulasiGagal: true,
+      ),
+    );
+    addTearDown(homeGagal.dispose);
+
+    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeGagal));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('atau tarik layar ke bawah'), findsOneWidget);
+
+    await tester.drag(areaGeserBeranda(), const Offset(0, 400));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SnackBar),
+        matching: find.textContaining('feed belum bisa diambil'),
+      ),
+      findsOneWidget,
+    );
+  });
 }
