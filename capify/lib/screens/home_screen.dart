@@ -162,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
-  void putarAntrianDariBeranda(
+  void putarLangsungDariBeranda(
     List<Lagu> antrian,
     int indexLagu,
     String namaAntrian,
@@ -170,16 +170,74 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (indexLagu < 0 || indexLagu >= antrian.length) return;
 
     AudioProvider audio = context.read<AudioProvider>();
+    if (!audio.mintaIzinPemutaran()) return;
+
     if (isLaguIniYangAktif(audio, antrian[indexLagu])) {
-      if (!audio.isLaguSedangDiputar) audio.putar();
-    } else {
-      audio.mulaiAntrian(
-        antrian,
-        indexMulai: indexLagu,
-        namaAntrian: namaAntrian,
-      );
+      if (!audio.isLaguSedangDiputar && !audio.isSedangMemuat) audio.putar();
+      PlayerScreen.bukaLayarPenuh(context);
+      return;
     }
-    PlayerScreen.bukaLayarPenuh(context);
+
+    ingatkanJikaSedangOffline();
+    audio.mulaiAntrian(
+      antrian,
+      indexMulai: indexLagu,
+      namaAntrian: namaAntrian,
+    );
+  }
+
+  void ingatkanJikaSedangOffline() {
+    if (!context.read<HomeProvider>().isSedangOffline) return;
+    tampilkanPesan('Kamu sedang offline, lagu mungkin gagal diputar');
+  }
+
+  bool isRacikanIniYangDiputar(AudioProvider audio, RacikanUntukmu racikan) {
+    Lagu? laguDiPemutar = audio.laguSekarang;
+    if (laguDiPemutar == null) return false;
+    if (audio.namaAntrian != racikan.playlist.nama) return false;
+
+    HomeProvider home = context.read<HomeProvider>();
+    String kunciLaguDiPemutar = home.kunciLagu(laguDiPemutar);
+    return racikan.playlist.daftarLagu.any(
+      (lagu) => home.kunciLagu(lagu) == kunciLaguDiPemutar,
+    );
+  }
+
+  void putarRacikan(RacikanUntukmu racikan) {
+    List<Lagu> isiRacikan = racikan.playlist.daftarLagu;
+    if (isiRacikan.isEmpty) {
+      tampilkanPesan('Racikan ini belum punya lagu');
+      return;
+    }
+
+    AudioProvider audio = context.read<AudioProvider>();
+    if (!audio.mintaIzinPemutaran()) return;
+
+    if (isRacikanIniYangDiputar(audio, racikan)) {
+      audio.togglePutarJeda();
+      return;
+    }
+
+    ingatkanJikaSedangOffline();
+    audio.mulaiAntrian(isiRacikan, namaAntrian: racikan.playlist.nama);
+  }
+
+  StatusPemutarBeranda bacaStatusPemutar(HomeProvider home) {
+    return StatusPemutarBeranda(
+      kunciLaguAktif: context.select<AudioProvider, String?>((audio) {
+        Lagu? laguDiPemutar = audio.laguSekarang;
+        return laguDiPemutar == null ? null : home.kunciLagu(laguDiPemutar);
+      }),
+      namaAntrianAktif: context.select<AudioProvider, String>(
+        (audio) => audio.namaAntrian,
+      ),
+      isSedangDiputar: context.select<AudioProvider, bool>(
+        (audio) => audio.isLaguSedangDiputar,
+      ),
+      isSedangMemuat: context.select<AudioProvider, bool>(
+        (audio) => audio.isSedangMemuat,
+      ),
+    );
   }
 
   bool isLaguIniYangAktif(AudioProvider audio, Lagu lagu) {
@@ -192,33 +250,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void tekanTombolPutarLanjutan(Lagu laguLanjutan) {
     AudioProvider audio = context.read<AudioProvider>();
+    if (!audio.mintaIzinPemutaran()) return;
+
     if (isLaguIniYangAktif(audio, laguLanjutan)) {
       audio.togglePutarJeda();
       return;
     }
 
-    List<Lagu> antrianRiwayat = context
+    ingatkanJikaSedangOffline();
+    audio.mulaiAntrian(ambilAntrianRiwayat(), namaAntrian: 'Terakhir Diputar');
+  }
+
+  List<Lagu> ambilAntrianRiwayat() {
+    return context
         .read<HomeProvider>()
         .riwayatTerakhirDiputar
         .map((riwayat) => riwayat.lagu)
         .toList();
-    audio.mulaiAntrian(antrianRiwayat, namaAntrian: 'Terakhir Diputar');
   }
 
   void putarDariRiwayat(int indexRiwayat) {
-    List<Lagu> antrianRiwayat = context
-        .read<HomeProvider>()
-        .riwayatTerakhirDiputar
-        .map((riwayat) => riwayat.lagu)
-        .toList();
-    putarAntrianDariBeranda(antrianRiwayat, indexRiwayat, 'Terakhir Diputar');
+    putarLangsungDariBeranda(
+      ambilAntrianRiwayat(),
+      indexRiwayat,
+      'Terakhir Diputar',
+    );
   }
 
   void putarLaguTemuan(int indexLagu) {
     List<Lagu> antrianTemuan = List.of(
       context.read<HomeProvider>().laguBelumPernahDidengar,
     );
-    putarAntrianDariBeranda(antrianTemuan, indexLagu, 'Temuan Baru dari Capy');
+    putarLangsungDariBeranda(antrianTemuan, indexLagu, 'Temuan Baru dari Capy');
   }
 
   Future<void> bukaPengaturanGenre() async {
@@ -355,6 +418,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     bool isTampilkanGarisProgres =
         home.isSedangMenyegarkan && !isSedangTarikSegarkan;
     String? keteranganDiperbarui = teksTerakhirDiperbarui(home);
+    StatusPemutarBeranda statusPemutar = bacaStatusPemutar(home);
 
     return Column(
       children: [
@@ -397,14 +461,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                ...buildBagianTerakhirDiputar(home),
+                ...buildBagianTerakhirDiputar(home, statusPemutar),
                 const SizedBox(height: 28),
                 ...buildBagianRacikanUntukmu(
                   home.daftarRacikanUntukmu,
                   home.isSudahPilihGenre,
+                  statusPemutar,
                 ),
                 const SizedBox(height: 28),
-                ...buildBagianLaguTemuan(home.laguBelumPernahDidengar),
+                ...buildBagianLaguTemuan(
+                  home.laguBelumPernahDidengar,
+                  statusPemutar,
+                ),
               ],
             ),
           ),
@@ -413,7 +481,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  List<Widget> buildBagianTerakhirDiputar(HomeProvider home) {
+  List<Widget> buildBagianTerakhirDiputar(
+    HomeProvider home,
+    StatusPemutarBeranda statusPemutar,
+  ) {
     RiwayatPutar? laguUntukDilanjutkan = home.laguUntukDilanjutkan;
     List<RiwayatPutar> semuaRiwayat = home.riwayatTerakhirDiputar;
 
@@ -430,23 +501,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     int jumlahSisaRiwayat = semuaRiwayat.length - 1;
     String kunciLaguLanjutan = home.kunciLagu(laguUntukDilanjutkan.lagu);
 
-    bool isLaguLanjutanAktif = context.select<AudioProvider, bool>((audio) {
-      Lagu? laguDiPemutar = audio.laguSekarang;
-      return laguDiPemutar != null &&
-          home.kunciLagu(laguDiPemutar) == kunciLaguLanjutan;
-    });
-    bool isPemutarSedangJalan = context.select<AudioProvider, bool>(
-      (audio) => audio.isLaguSedangDiputar,
-    );
-    bool isPemutarSedangMenyiapkan = context.select<AudioProvider, bool>(
-      (audio) => audio.isSedangMemuat,
-    );
-
     return [
       KartuLanjutDengerin(
         riwayat: laguUntukDilanjutkan,
-        isSedangDiputar: isLaguLanjutanAktif && isPemutarSedangJalan,
-        isSedangDisiapkan: isLaguLanjutanAktif && isPemutarSedangMenyiapkan,
+        isSedangDiputar: statusPemutar.isLaguIniDiputar(kunciLaguLanjutan),
+        isSedangDisiapkan: statusPemutar.isLaguIniDisiapkan(kunciLaguLanjutan),
         onTekan: () => putarDariRiwayat(0),
         onTekanTombolPutar: () =>
             tekanTombolPutarLanjutan(laguUntukDilanjutkan.lagu),
@@ -460,9 +519,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           pembuatItem: (context, index) {
             int indexAsli = index + 1;
             RiwayatPutar riwayat = semuaRiwayat[indexAsli];
+            String kunciLaguIni = home.kunciLagu(riwayat.lagu);
             return KartuLaguKecil(
               lagu: riwayat.lagu,
               keterangan: riwayat.teksWaktuDiputar,
+              isSedangDiputar: statusPemutar.isLaguIniDiputar(kunciLaguIni),
+              isSedangDisiapkan: statusPemutar.isLaguIniDisiapkan(kunciLaguIni),
               onTekan: () => putarDariRiwayat(indexAsli),
             );
           },
@@ -474,7 +536,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Widget> buildBagianRacikanUntukmu(
     List<RacikanUntukmu> daftarRacikan,
     bool isSudahPilihGenre,
+    StatusPemutarBeranda statusPemutar,
   ) {
+    HomeProvider home = context.read<HomeProvider>();
+
     return [
       JudulBagianBeranda(
         judul: 'Racikan untukmu',
@@ -502,14 +567,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             RacikanUntukmu racikan = daftarRacikan[index];
             return KartuRacikanUntukmu(
               racikan: racikan,
+              isSedangDiputar: statusPemutar.isRacikanIniDiputar(
+                racikan,
+                home.kunciLagu,
+              ),
               onTekan: () => bukaRacikan(racikan),
+              onTekanPutar: () => putarRacikan(racikan),
             );
           },
         ),
     ];
   }
 
-  List<Widget> buildBagianLaguTemuan(List<Lagu> laguTemuan) {
+  List<Widget> buildBagianLaguTemuan(
+    List<Lagu> laguTemuan,
+    StatusPemutarBeranda statusPemutar,
+  ) {
+    HomeProvider home = context.read<HomeProvider>();
+
     return [
       const JudulBagianBeranda(
         judul: 'Belum pernah kamu dengar',
@@ -526,13 +601,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           jumlahItem: laguTemuan.length,
           pembuatItem: (context, index) {
             Lagu lagu = laguTemuan[index];
+            String kunciLaguIni = home.kunciLagu(lagu);
             return KartuLaguKecil(
               lagu: lagu,
               keterangan: teksDurasi(lagu.durasi),
+              isSedangDiputar: statusPemutar.isLaguIniDiputar(kunciLaguIni),
+              isSedangDisiapkan: statusPemutar.isLaguIniDisiapkan(kunciLaguIni),
               onTekan: () => putarLaguTemuan(index),
             );
           },
         ),
     ];
+  }
+}
+
+class StatusPemutarBeranda {
+  final String? kunciLaguAktif;
+  final String namaAntrianAktif;
+  final bool isSedangDiputar;
+  final bool isSedangMemuat;
+
+  const StatusPemutarBeranda({
+    required this.kunciLaguAktif,
+    required this.namaAntrianAktif,
+    required this.isSedangDiputar,
+    required this.isSedangMemuat,
+  });
+
+  bool isLaguIniDiputar(String kunciLagu) {
+    return kunciLaguAktif == kunciLagu && isSedangDiputar && !isSedangMemuat;
+  }
+
+  bool isLaguIniDisiapkan(String kunciLagu) {
+    return kunciLaguAktif == kunciLagu && isSedangMemuat;
+  }
+
+  bool isRacikanIniDiputar(
+    RacikanUntukmu racikan,
+    String Function(Lagu lagu) buatKunciLagu,
+  ) {
+    if (!isSedangDiputar && !isSedangMemuat) return false;
+    if (namaAntrianAktif != racikan.playlist.nama) return false;
+    return racikan.playlist.daftarLagu.any(
+      (lagu) => buatKunciLagu(lagu) == kunciLaguAktif,
+    );
   }
 }
