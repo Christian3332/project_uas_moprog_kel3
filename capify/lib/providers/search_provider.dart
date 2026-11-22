@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../data/album_dummy.dart';
 import '../data/lagu_dummy.dart';
 import '../data/lagu_per_kategori_dummy.dart';
 import '../models/album.dart';
 import '../models/hasil_pencarian.dart';
 import '../models/lagu.dart';
 import '../services/search_service.dart';
+import '../utils/saran_ejaan.dart';
 
 List<Lagu> kumpulkanSemuaLaguDummy() {
   List<Lagu> semuaLagu = [];
@@ -46,10 +48,13 @@ class SearchProvider extends ChangeNotifier {
   final int minimalHurufUntukCari = 2;
   final int batasIsiCache = 20;
 
+  final List<String> kamusSaranEjaan;
+
   SearchProvider({
     SearchService? searchService,
     this.jedaSetelahMengetik = const Duration(milliseconds: 450),
     List<String>? saranPencarian,
+    List<String>? kamusSaranEjaan,
   }) : searchService = searchService ?? SearchService(),
        saranPencarian =
            saranPencarian ??
@@ -57,8 +62,20 @@ class SearchProvider extends ChangeNotifier {
                .map((lagu) => lagu.penyanyi)
                .toSet()
                .take(8)
-               .toList();
+               .toList(),
+       kamusSaranEjaan = kamusSaranEjaan ?? susunKamusSaranDummy();
 
+  static List<String> susunKamusSaranDummy() {
+    return {
+      for (Lagu lagu in kumpulkanSemuaLaguDummy()) ...[
+        lagu.judul,
+        lagu.penyanyi,
+      ],
+      for (Album album in daftarAlbumTersimpanDummy) album.judul,
+    }.toList();
+  }
+
+  String? _saranEjaan;
   String _kataKunci = '';
   String _kataKunciHasilTampil = '';
   String _filterAktif = filterSemua;
@@ -94,8 +111,39 @@ class SearchProvider extends ChangeNotifier {
   }
 
   bool get isHasilKosong {
-    if (_isSedangMencari || isAdaError || isKataKunciKependekan) return false;
+    if (isKolomCariKosong || isKataKunciKependekan) return false;
+    if (_isSedangMencari || isAdaError) return false;
     return _laguTampil.isEmpty && _albumTampil.isEmpty;
+  }
+
+  String? get saranEjaan => isHasilKosong ? _saranEjaan : null;
+
+  int get jumlahHasilTanpaFilter {
+    HasilPencarian? hasil = _hasilDariServer;
+    if (hasil == null) return 0;
+    return hasil.jumlahSemuaHasil;
+  }
+
+  bool get isHasilTersembunyiOlehFilter {
+    return isHasilKosong && !isFilterSemua && jumlahHasilTanpaFilter > 0;
+  }
+
+  String? get kataTunggalUntukDicoba {
+    List<String> semuaKata = potonganKataKunci
+        .where((kata) => kata.length >= minimalHurufUntukCari)
+        .toList();
+    if (potonganKataKunci.length < 2 || semuaKata.isEmpty) return null;
+
+    List<String> kataYangDikenal = semuaKata.where((kata) {
+      return kamusSaranEjaan.any((frasa) => frasa.toLowerCase().contains(kata));
+    }).toList();
+    List<String> kandidat = kataYangDikenal.isEmpty
+        ? semuaKata
+        : kataYangDikenal;
+
+    return kandidat.reduce(
+      (kataJuara, kata) => kata.length > kataJuara.length ? kata : kataJuara,
+    );
   }
 
   List<String> get potonganKataKunci {
@@ -144,6 +192,9 @@ class SearchProvider extends ChangeNotifier {
   void _pasangHasil(String kataYangDicari, HasilPencarian? hasil) {
     _hasilDariServer = hasil;
     _kataKunciHasilTampil = hasil == null ? '' : kataYangDicari;
+    _saranEjaan = hasil != null && hasil.isKosong
+        ? cariSaranEjaan(kataYangDicari, kamusSaranEjaan)
+        : null;
     _jalankanFilter();
   }
 
@@ -175,6 +226,7 @@ class SearchProvider extends ChangeNotifier {
       _pesanError = null;
       if (isTidakPerluKeServer) {
         _pasangHasil('', null);
+        if (kataYangDicari.isEmpty) _filterAktif = filterSemua;
       } else if (!isHasilnyaSudahTampil) {
         _simpanKeCache(kataYangDicari, hasilDariCache!);
         _pasangHasil(kataYangDicari, hasilDariCache);
@@ -288,6 +340,12 @@ class SearchProvider extends ChangeNotifier {
   }
 
   void kosongkanPencarian() {
+    _siapkanPencarian('');
+  }
+
+  void bersihkanSemuaPencarian() {
+    _riwayatPencarian = [];
+    _cacheHasil.clear();
     _siapkanPencarian('');
   }
 

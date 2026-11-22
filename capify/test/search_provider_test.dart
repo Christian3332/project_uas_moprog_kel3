@@ -113,16 +113,118 @@ void main() {
     expect(judulHasil(pencarian), ['Starboy']);
   });
 
-  test('Mengosongkan kolom cari menghapus hasil dan error', () async {
-    SearchProvider pencarian = providerUntukTes();
-    await pencarian.cariSekarang('weeknd');
+  group('Mengosongkan kolom cari', () {
+    test('Hasil, album, dan jumlah tersembunyi ikut hilang', () async {
+      SearchProvider pencarian = providerUntukTes();
+      await pencarian.cariSekarang('weeknd');
 
-    pencarian.kosongkanPencarian();
+      pencarian.kosongkanPencarian();
 
-    expect(pencarian.isKolomCariKosong, isTrue);
-    expect(pencarian.hasilPencarian, isEmpty);
-    expect(pencarian.albumDitemukan, isEmpty);
-    expect(pencarian.isAdaError, isFalse);
+      expect(pencarian.isKolomCariKosong, isTrue);
+      expect(pencarian.hasilPencarian, isEmpty);
+      expect(pencarian.albumDitemukan, isEmpty);
+      expect(pencarian.jumlahHasilTanpaFilter, 0);
+      expect(pencarian.isHasilKosong, isFalse);
+    });
+
+    test('Ketikan berisi spasi saja dianggap kosong', () async {
+      SearchProvider pencarian = providerUntukTes();
+      await pencarian.cariSekarang('weeknd');
+
+      pencarian.ketikKataKunci('    ');
+
+      expect(pencarian.isKolomCariKosong, isTrue);
+      expect(pencarian.hasilPencarian, isEmpty);
+      expect(pencarian.isSedangMencari, isFalse);
+    });
+
+    test('Hasil yang datang telat setelah dikosongkan dibuang', () async {
+      SearchProvider pencarian = SearchProvider(
+        searchService: SearchService(
+          lamaMenunggu: const Duration(milliseconds: 60),
+          responsTrackKhusus: trackUntukTes,
+          responsAlbumServer: albumUntukTes,
+        ),
+        jedaSetelahMengetik: Duration.zero,
+      );
+
+      Future<void> pencarianYangBerjalan = pencarian.cariSekarang('weeknd');
+      expect(pencarian.isSedangMencari, isTrue);
+
+      pencarian.ketikKataKunci('');
+      await pencarianYangBerjalan;
+
+      expect(pencarian.jumlahPanggilanApi, 1);
+      expect(pencarian.hasilPencarian, isEmpty);
+      expect(pencarian.isSedangMencari, isFalse);
+    });
+
+    test('Mengosongkan saat masih menunggu jeda tidak memanggil API', () async {
+      SearchProvider pencarian = SearchProvider(
+        searchService: serviceUntukTes(),
+        jedaSetelahMengetik: const Duration(milliseconds: 60),
+      );
+
+      pencarian.ketikKataKunci('starboy');
+      pencarian.ketikKataKunci('');
+      await Future.delayed(const Duration(milliseconds: 150));
+
+      expect(pencarian.jumlahPanggilanApi, 0);
+      expect(pencarian.isSedangMencari, isFalse);
+    });
+
+    test('Error dan saran ejaan tidak tertinggal', () async {
+      SearchService service = serviceUntukTes()..isServerSedangGangguan = true;
+      SearchProvider pencarian = providerUntukTes(service);
+      await pencarian.cariSekarang('starboy');
+      expect(pencarian.isAdaError, isTrue);
+
+      pencarian.kosongkanPencarian();
+      expect(pencarian.isAdaError, isFalse);
+      expect(pencarian.pesanError, isNull);
+
+      service.isServerSedangGangguan = false;
+      await pencarian.cariSekarang('weekend');
+      expect(pencarian.saranEjaan, isNotNull);
+
+      pencarian.kosongkanPencarian();
+      expect(pencarian.saranEjaan, isNull);
+    });
+
+    test('Filter kembali ke Semua, tapi tidak saat cuma kependekan', () async {
+      SearchProvider pencarian = providerUntukTes();
+      await pencarian.cariSekarang('weeknd');
+      pencarian.gantiFilter(SearchProvider.filterJudul);
+
+      pencarian.ketikKataKunci('w');
+      expect(pencarian.filterAktif, SearchProvider.filterJudul);
+
+      pencarian.ketikKataKunci('');
+      expect(pencarian.filterAktif, SearchProvider.filterSemua);
+    });
+
+    test('Riwayat tetap ada setelah kolom dikosongkan', () async {
+      SearchProvider pencarian = providerUntukTes();
+      pencarian.simpanKeRiwayat('weeknd');
+      await pencarian.cariSekarang('weeknd');
+
+      pencarian.kosongkanPencarian();
+
+      expect(pencarian.riwayatPencarian, ['weeknd']);
+    });
+
+    test('Bersihkan semua menghapus riwayat dan cache', () async {
+      SearchProvider pencarian = providerUntukTes();
+      pencarian.simpanKeRiwayat('weeknd');
+      await pencarian.cariSekarang('weeknd');
+
+      pencarian.bersihkanSemuaPencarian();
+      expect(pencarian.riwayatPencarian, isEmpty);
+      expect(pencarian.isKolomCariKosong, isTrue);
+
+      await pencarian.cariSekarang('weeknd');
+      expect(pencarian.jumlahPanggilanApi, 2);
+    });
   });
 
   test('Data dummy digabung tanpa lagu dobel', () {
@@ -141,6 +243,63 @@ void main() {
     for (String penyanyi in pencarian.saranPencarian) {
       expect((await service.cari(penyanyi)).isKosong, isFalse);
     }
+  });
+
+  group('Hasil pencarian kosong', () {
+    test('Salah ketik memberi saran ejaan dari katalog', () async {
+      SearchProvider pencarian = providerUntukTes();
+
+      await pencarian.cariSekarang('weekend');
+
+      expect(pencarian.isHasilKosong, isTrue);
+      expect(pencarian.saranEjaan, 'The Weeknd');
+    });
+
+    test('Saran ejaan tidak muncul kalau hasilnya ada', () async {
+      SearchProvider pencarian = providerUntukTes();
+
+      await pencarian.cariSekarang('weeknd');
+
+      expect(pencarian.saranEjaan, isNull);
+      expect(pencarian.isHasilTersembunyiOlehFilter, isFalse);
+    });
+
+    test('Filter yang menyembunyikan hasil bisa dihitung', () async {
+      SearchProvider pencarian = providerUntukTes();
+      await pencarian.cariSekarang('lights');
+
+      pencarian.gantiFilter(SearchProvider.filterPenyanyi);
+
+      expect(pencarian.isHasilTersembunyiOlehFilter, isTrue);
+      expect(pencarian.jumlahHasilTanpaFilter, 2);
+      expect(pencarian.saranEjaan, isNull);
+    });
+
+    test('Kata yang dikenal katalog dipilih untuk dicoba sendirian', () async {
+      SearchProvider pencarian = providerUntukTes();
+
+      await pencarian.cariSekarang('capybara starboy');
+      expect(pencarian.kataTunggalUntukDicoba, 'starboy');
+
+      await pencarian.cariSekarang('qwerty zz');
+      expect(pencarian.kataTunggalUntukDicoba, 'qwerty');
+
+      await pencarian.cariSekarang('weeknd');
+      expect(pencarian.kataTunggalUntukDicoba, isNull);
+    });
+
+    test('Kamus kosong tidak bikin error', () async {
+      SearchProvider pencarian = SearchProvider(
+        searchService: serviceUntukTes(),
+        jedaSetelahMengetik: Duration.zero,
+        kamusSaranEjaan: [],
+      );
+
+      await pencarian.cariSekarang('weekend');
+
+      expect(pencarian.isHasilKosong, isTrue);
+      expect(pencarian.saranEjaan, isNull);
+    });
   });
 
   group('Debounce kolom pencarian', () {

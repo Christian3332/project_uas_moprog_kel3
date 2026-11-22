@@ -5,6 +5,7 @@ import '../data/playlist_dummy.dart';
 import '../data/riwayat_putar_dummy.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/search_provider.dart';
 import '../utils/pesan_error_auth.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/lembar_edit_nama.dart';
@@ -187,6 +188,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
     setState(() => isSedangKeluar = true);
     context.read<AudioProvider>().jeda();
+    context.read<SearchProvider>().bersihkanSemuaPencarian();
     await context.read<AuthProvider>().keluar();
     if (!mounted) return;
 
