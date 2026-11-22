@@ -5,7 +5,9 @@ import '../data/playlist_dummy.dart';
 import '../data/riwayat_putar_dummy.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
+import '../utils/pesan_error_auth.dart';
 import '../utils/warna_capify.dart';
+import '../widgets/lembar_edit_nama.dart';
 import 'login_screen.dart';
 
 const List<String> pilihanKualitasStreaming = ['Rendah', 'Normal', 'Tinggi'];
@@ -30,17 +32,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
   String kualitasStreaming = 'Normal';
   bool isSedangKeluar = false;
 
-  String ambilInisial(String namaLengkap) {
-    List<String> daftarKata = namaLengkap
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((kata) => kata.isNotEmpty)
-        .toList();
-
-    if (daftarKata.isEmpty) return 'C';
-    return daftarKata.take(2).map((kata) => kata[0]).join().toUpperCase();
-  }
-
   int get jumlahLaguDisimpan {
     return daftarPlaylistDummy.fold<int>(
       0,
@@ -52,6 +43,35 @@ class _ProfilScreenState extends State<ProfilScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(pesan)));
+  }
+
+  Future<void> bukaEditNama() async {
+    AuthProvider authProvider = context.read<AuthProvider>();
+    if (!authProvider.isSudahMasuk) {
+      tampilkanPesan(pesanGagalPerbaruiProfil(KesalahanProfil.belumMasuk));
+      return;
+    }
+
+    String? namaBaru = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: WarnaCapify.coklatGelap,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (konteksLembar) =>
+          LembarEditNama(namaSekarang: authProvider.namaTampilan),
+    );
+    if (!mounted || namaBaru == null) return;
+
+    KesalahanProfil? kesalahan = await authProvider.perbaruiNama(namaBaru);
+    if (!mounted) return;
+
+    tampilkanPesan(
+      kesalahan == null
+          ? 'Nama berhasil diperbarui'
+          : pesanGagalPerbaruiProfil(kesalahan),
+    );
   }
 
   void ubahModeHematData(bool isDinyalakan) {
@@ -170,8 +190,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
     await context.read<AuthProvider>().keluar();
     if (!mounted) return;
 
-    Navigator.pushAndRemoveUntil(
-      context,
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
       (halamanSebelumnya) => false,
     );
@@ -210,10 +229,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          buildKartuProfil(
-            authProvider.namaTampilan,
-            authProvider.emailTampilan,
-          ),
+          buildKartuProfil(authProvider),
           const SizedBox(height: 28),
           const JudulBagianPengaturan(judul: 'Pemutaran'),
           KartuGrupPengaturan(
@@ -329,7 +345,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
-  Widget buildKartuProfil(String namaPengguna, String emailPengguna) {
+  Widget buildKartuProfil(AuthProvider authProvider) {
+    String namaPengguna = authProvider.namaTampilan;
+    String emailPengguna = authProvider.emailTampilan;
+    String inisial = authProvider.penggunaAktif?.inisial ?? 'C';
+    bool isSedangMenyimpan = authProvider.isSedangMenyimpanProfil;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -349,7 +370,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 radius: 34,
                 backgroundColor: WarnaCapify.krem,
                 child: Text(
-                  ambilInisial(namaPengguna),
+                  inisial,
                   style: const TextStyle(
                     color: WarnaCapify.coklatGelap,
                     fontSize: 24,
@@ -420,11 +441,21 @@ class _ProfilScreenState extends State<ProfilScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => tampilkanPesan('Fitur edit profil segera hadir'),
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              label: const Text('Edit Profil'),
+              onPressed: isSedangMenyimpan ? null : bukaEditNama,
+              icon: isSedangMenyimpan
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: WarnaCapify.krem,
+                      ),
+                    )
+                  : const Icon(Icons.edit_outlined, size: 18),
+              label: Text(isSedangMenyimpan ? 'Menyimpan...' : 'Edit Profil'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: WarnaCapify.krem,
+                disabledForegroundColor: WarnaCapify.krem,
                 side: BorderSide(
                   color: WarnaCapify.krem.withValues(alpha: 0.5),
                 ),
