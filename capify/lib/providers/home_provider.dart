@@ -13,16 +13,27 @@ import '../services/feed_service.dart';
 import '../utils/warna_capify.dart';
 import 'audio_provider.dart';
 
+enum HasilSegarkan {
+  diperbarui,
+  tidakAdaPerubahan,
+  terlaluCepat,
+  masihOffline,
+  masihCadangan,
+  gagal,
+}
+
 class HomeProvider extends ChangeNotifier {
   static const int batasJumlahRiwayat = 10;
   static const int batasGenreFavorit = 5;
 
   final FeedService feedService;
   final Duration batasSabarMenunggu;
+  final Duration jedaMinimalSegarkan;
 
   HomeProvider({
     this.feedService = const FeedService(),
     this.batasSabarMenunggu = const Duration(seconds: 4),
+    this.jedaMinimalSegarkan = const Duration(seconds: 5),
   });
 
   Map<String, List<Lagu>> _laguPerGenre = {};
@@ -32,9 +43,13 @@ class HomeProvider extends ChangeNotifier {
   bool _isSedangMemuat = false;
   bool _isSudahPernahDimuat = false;
   String? _pesanGagal;
-  bool _isMemakaiDataCadangan = false;
+  AsalFeed _asalFeed = AsalFeed.server;
+  bool _isSedangOffline = false;
+  DateTime? _waktuFeedDisimpan;
   bool _isMemuatTerlaluLama = false;
   Timer? _timerPenandaLambat;
+  Future<void>? _prosesMuatYangBerjalan;
+  DateTime? _waktuTerakhirDiperbarui;
   bool _isSudahDibuang = false;
 
   AudioProvider? _pemutarYangDipantau;
@@ -50,8 +65,12 @@ class HomeProvider extends ChangeNotifier {
   bool get isSedangMemuat => _isSedangMemuat;
   bool get isSudahPernahDimuat => _isSudahPernahDimuat;
   String? get pesanGagal => _pesanGagal;
-  bool get isMemakaiDataCadangan => _isMemakaiDataCadangan;
+  AsalFeed get asalFeed => _asalFeed;
+  bool get isMemakaiDataCadangan => _asalFeed != AsalFeed.server;
+  bool get isSedangOffline => _isSedangOffline;
+  DateTime? get waktuFeedDisimpan => _waktuFeedDisimpan;
   bool get isMemuatTerlaluLama => _isMemuatTerlaluLama;
+  DateTime? get waktuTerakhirDiperbarui => _waktuTerakhirDiperbarui;
   bool get isSedangMenyegarkan => _isSedangMemuat && _isSudahPernahDimuat;
   bool get isMuatPertamaKali => !_isSudahPernahDimuat && _pesanGagal == null;
   List<String> get genreFavorit => List.unmodifiable(_genreFavorit);
@@ -89,10 +108,63 @@ class HomeProvider extends ChangeNotifier {
     catatLaguDiputar(laguYangDiputar);
   }
 
-  Future<void> muatIsiBeranda({bool isPaksaMuatUlang = false}) async {
-    if (_isSedangMemuat) return;
-    if (_isSudahPernahDimuat && !isPaksaMuatUlang) return;
+  Future<void> muatIsiBeranda({bool isPaksaMuatUlang = false}) {
+    Future<void>? prosesYangSedangJalan = _prosesMuatYangBerjalan;
+    if (prosesYangSedangJalan != null) return prosesYangSedangJalan;
+    if (_isSedangMemuat) return Future.value();
+    if (_isSudahPernahDimuat && !isPaksaMuatUlang) return Future.value();
 
+    Future<void> prosesBaru = _jalankanPemuatan().whenComplete(() {
+      _prosesMuatYangBerjalan = null;
+    });
+    _prosesMuatYangBerjalan = prosesBaru;
+    return prosesBaru;
+  }
+
+  Future<HasilSegarkan> segarkanBeranda({
+    bool isAbaikanJeda = false,
+    DateTime? waktuSekarang,
+  }) async {
+    DateTime? waktuTerakhir = _waktuTerakhirDiperbarui;
+    bool isBaruSajaDiperbarui =
+        waktuTerakhir != null &&
+        (waktuSekarang ?? DateTime.now()).difference(waktuTerakhir) <
+            jedaMinimalSegarkan;
+    bool isBolehDilewati =
+        !isAbaikanJeda &&
+        isBaruSajaDiperbarui &&
+        !isMemakaiDataCadangan &&
+        _prosesMuatYangBerjalan == null;
+    if (isBolehDilewati) return HasilSegarkan.terlaluCepat;
+
+    String sidikJariSebelum = _sidikJariFeed();
+    await muatIsiBeranda(isPaksaMuatUlang: true);
+
+    if (_pesanGagal != null) return HasilSegarkan.gagal;
+    if (_isSedangOffline) return HasilSegarkan.masihOffline;
+    if (isMemakaiDataCadangan) return HasilSegarkan.masihCadangan;
+    if (_sidikJariFeed() == sidikJariSebelum) {
+      return HasilSegarkan.tidakAdaPerubahan;
+    }
+    return HasilSegarkan.diperbarui;
+  }
+
+  String _sidikJariFeed() {
+    StringBuffer sidikJari = StringBuffer(_asalFeed.name);
+
+    for (RiwayatPutar riwayat in _riwayatTerakhirDiputar) {
+      sidikJari.write('|${kunciLagu(riwayat.lagu)}');
+    }
+    _laguPerGenre.forEach((namaGenre, isiGenre) {
+      sidikJari.write('#$namaGenre');
+      for (Lagu lagu in isiGenre) {
+        sidikJari.write(',${kunciLagu(lagu)}');
+      }
+    });
+    return sidikJari.toString();
+  }
+
+  Future<void> _jalankanPemuatan() async {
     _isSedangMemuat = true;
     _pesanGagal = null;
     _mulaiHitungKesabaran();
@@ -103,10 +175,15 @@ class HomeProvider extends ChangeNotifier {
       if (_isSudahDibuang) return;
 
       _laguPerGenre = feedDariServer.laguPerGenre;
-      _isMemakaiDataCadangan = feedDariServer.isDariCadangan;
+      _asalFeed = feedDariServer.asalFeed;
+      _isSedangOffline = feedDariServer.isKarenaOffline;
+      _waktuFeedDisimpan = feedDariServer.waktuDisimpan;
       _gabungkanDenganRiwayatServer(feedDariServer.riwayatPutar);
       _susunUlangRekomendasi();
       _isSudahPernahDimuat = true;
+      _waktuTerakhirDiperbarui = feedDariServer.isDariCadangan
+          ? null
+          : DateTime.now();
     } catch (error) {
       _pesanGagal = _rapikanPesanGagal(error);
     }

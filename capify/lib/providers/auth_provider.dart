@@ -29,6 +29,15 @@ enum KesalahanDaftar {
   gagalTerhubung,
 }
 
+enum KesalahanProfil {
+  belumMasuk,
+  masihDiproses,
+  sesiBerakhir,
+  tidakAdaInternet,
+  serverTerlaluLama,
+  gagalTerhubung,
+}
+
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
   final SesiLokalService _sesiLokal;
@@ -41,8 +50,10 @@ class AuthProvider extends ChangeNotifier {
   bool _isIngatSaya = false;
   bool _isSedangMemproses = false;
   bool _isPerluKonfirmasiEmail = false;
+  bool _isSedangMenyimpanProfil = false;
 
   User? get penggunaAktif => _penggunaAktif;
+  bool get isSedangMenyimpanProfil => _isSedangMenyimpanProfil;
   bool get isSudahMasuk => _penggunaAktif != null;
   bool get isIngatSaya => _isIngatSaya;
   bool get isSedangMemproses => _isSedangMemproses;
@@ -158,6 +169,53 @@ class AuthProvider extends ChangeNotifier {
     _isIngatSaya = false;
     _isSedangMemproses = false;
     notifyListeners();
+  }
+
+  KesalahanProfil _ubahKeKesalahanProfil(String kode) {
+    return switch (kode) {
+      AuthService.kodeSesiBerakhir => KesalahanProfil.sesiBerakhir,
+      AuthService.kodeTidakAdaInternet => KesalahanProfil.tidakAdaInternet,
+      AuthService.kodeServerLambat => KesalahanProfil.serverTerlaluLama,
+      _ => KesalahanProfil.gagalTerhubung,
+    };
+  }
+
+  Future<KesalahanProfil?> perbaruiNama(String namaBaru) async {
+    User? penggunaLama = _penggunaAktif;
+    if (penggunaLama == null) return KesalahanProfil.belumMasuk;
+    if (_isSedangMenyimpanProfil) return KesalahanProfil.masihDiproses;
+
+    String namaRapi = _authService.rapikanNama(namaBaru);
+    if (namaRapi.isEmpty || namaRapi == penggunaLama.nama) return null;
+
+    _penggunaAktif = penggunaLama.salinDenganNamaBaru(namaRapi);
+    _isSedangMenyimpanProfil = true;
+    notifyListeners();
+
+    KesalahanProfil? kesalahan;
+    try {
+      User penggunaDariServer = await _authService.perbaruiNama(
+        pengguna: penggunaLama,
+        namaBaru: namaRapi,
+      );
+      if (_penggunaAktif?.id == penggunaLama.id) {
+        _penggunaAktif = penggunaDariServer;
+        if (_isIngatSaya) await _sesiLokal.simpanPengguna(penggunaDariServer);
+      }
+    } on AuthException catch (galat) {
+      kesalahan = _ubahKeKesalahanProfil(galat.kode);
+    } catch (_) {
+      kesalahan = KesalahanProfil.gagalTerhubung;
+    }
+
+    bool isMasihAkunYangSama = _penggunaAktif?.id == penggunaLama.id;
+    if (kesalahan != null && isMasihAkunYangSama) {
+      _penggunaAktif = penggunaLama;
+    }
+
+    _isSedangMenyimpanProfil = false;
+    notifyListeners();
+    return kesalahan;
   }
 
   Future<void> pulihkanSesi() async {

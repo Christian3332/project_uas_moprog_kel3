@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/lagu.dart';
@@ -21,11 +22,36 @@ class HalamanUtamaScreen extends StatefulWidget {
 }
 
 class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
-  int indexTabAktif = 0;
+  static const int indexTabHome = 0;
+
+  int indexTabAktif = indexTabHome;
+  final List<GlobalKey<NavigatorState>> kunciNavigatorTab = List.generate(
+    4,
+    (_) => GlobalKey<NavigatorState>(),
+  );
+
+  NavigatorState? get navigatorTabAktif =>
+      kunciNavigatorTab[indexTabAktif].currentState;
 
   void pilihTab(int indexTab) {
-    if (indexTab == indexTabAktif) return;
+    if (indexTab == indexTabAktif) {
+      navigatorTabAktif?.popUntil((rute) => rute.isFirst);
+      return;
+    }
     setState(() => indexTabAktif = indexTab);
+  }
+
+  void tanganiTombolKembali() {
+    NavigatorState? navigatorTab = navigatorTabAktif;
+    if (navigatorTab != null && navigatorTab.canPop()) {
+      navigatorTab.pop();
+      return;
+    }
+    if (indexTabAktif != indexTabHome) {
+      setState(() => indexTabAktif = indexTabHome);
+      return;
+    }
+    SystemNavigator.pop();
   }
 
   void laguBerikutnyaDariMiniPlayer(AudioProvider audio) {
@@ -39,41 +65,58 @@ class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
       );
   }
 
+  Widget buatNavigatorTab(int indexTab, Widget halamanAwal) {
+    return Navigator(
+      key: kunciNavigatorTab[indexTab],
+      onGenerateRoute: (pengaturanRute) => MaterialPageRoute(
+        settings: pengaturanRute,
+        builder: (context) => halamanAwal,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     AudioProvider audio = context.watch<AudioProvider>();
     Lagu? lagu = audio.laguSekarang;
 
-    return Scaffold(
-      body: IndexedStack(
-        index: indexTabAktif,
-        children: [
-          HomeScreen(namaPengguna: widget.namaPengguna),
-          const SearchScreen(),
-          const ExploreScreen(),
-          const PlaylistScreen(),
-        ],
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (lagu != null)
-            Container(
-              color: WarnaCapify.coklatGelap,
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-              child: MiniPlayer(
-                lagu: lagu,
-                isLaguSedangDiputar: audio.isLaguSedangDiputar,
-                isSedangMemuat: audio.isSedangMemuat,
-                pesanError: audio.pesanError,
-                pesanInterupsi: audio.pesanInterupsi,
-                onTekanMiniPlayer: () => PlayerScreen.bukaLayarPenuh(context),
-                onTekanPlay: audio.togglePutarJeda,
-                onTekanNext: () => laguBerikutnyaDariMiniPlayer(audio),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (isSudahKembali, hasil) {
+        if (isSudahKembali) return;
+        tanganiTombolKembali();
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: indexTabAktif,
+          children: [
+            buatNavigatorTab(0, HomeScreen(namaPengguna: widget.namaPengguna)),
+            buatNavigatorTab(1, const SearchScreen()),
+            buatNavigatorTab(2, const ExploreScreen()),
+            buatNavigatorTab(3, const PlaylistScreen()),
+          ],
+        ),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (lagu != null)
+              Container(
+                color: WarnaCapify.coklatGelap,
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                child: MiniPlayer(
+                  lagu: lagu,
+                  isLaguSedangDiputar: audio.isLaguSedangDiputar,
+                  isSedangMemuat: audio.isSedangMemuat,
+                  pesanError: audio.pesanError,
+                  pesanInterupsi: audio.pesanInterupsi,
+                  onTekanMiniPlayer: () => PlayerScreen.bukaLayarPenuh(context),
+                  onTekanPlay: audio.togglePutarJeda,
+                  onTekanNext: () => laguBerikutnyaDariMiniPlayer(audio),
+                ),
               ),
-            ),
-          buildNavigasiBawah(),
-        ],
+            buildNavigasiBawah(),
+          ],
+        ),
       ),
     );
   }

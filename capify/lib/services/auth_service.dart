@@ -24,6 +24,7 @@ class AuthService {
   static const String kodeBatasEmailTercapai = 'EMAIL_RATE_LIMIT';
   static const String kodeEmailTidakBisaDipakai = 'EMAIL_NOT_ALLOWED';
   static const String kodePendaftaranDitutup = 'SIGNUP_DISABLED';
+  static const String kodeSesiBerakhir = 'SESSION_EXPIRED';
 
   final Duration lamaMenunggu;
 
@@ -64,6 +65,19 @@ class AuthService {
 
   Future<User?> cocokkanSesiTersimpan(User penggunaTersimpan) async {
     return penggunaTersimpan;
+  }
+
+  Future<User> perbaruiNama({
+    required User pengguna,
+    required String namaBaru,
+  }) async {
+    await Future.delayed(lamaMenunggu ~/ 2);
+
+    String namaRapi = rapikanNama(namaBaru);
+    Map<String, dynamic>? barisAkun = _tabelAkun[_rapikanEmail(pengguna.email)];
+    if (barisAkun != null) barisAkun['name'] = namaRapi;
+
+    return pengguna.salinDenganNamaBaru(namaRapi);
   }
 
   bool isEmailTerdaftar(String email) {

@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/search_provider.dart';
+import 'package:capify/screens/detail_album_screen.dart';
+import 'package:capify/screens/player_screen.dart';
 import 'package:capify/screens/search_screen.dart';
 import 'package:capify/services/search_service.dart';
+
+import 'pemutar_audio_palsu.dart';
 
 const String trackTanpaCover = '''
 [
@@ -13,8 +18,11 @@ const String trackTanpaCover = '''
 ]
 ''';
 
+late SearchProvider pencarianTes;
+late AudioProvider audioTes;
+
 Future<void> bukaLayarCari(WidgetTester tester) async {
-  SearchProvider pencarian = SearchProvider(
+  pencarianTes = SearchProvider(
     searchService: SearchService(
       lamaMenunggu: Duration.zero,
       responsTrackKhusus: trackTanpaCover,
@@ -23,10 +31,14 @@ Future<void> bukaLayarCari(WidgetTester tester) async {
     jedaSetelahMengetik: Duration.zero,
     kamusSaranEjaan: ['The Weeknd', 'Starboy', 'Harry Styles', 'Lights Up'],
   );
+  audioTes = AudioProvider(pemutarAudio: PemutarAudioPalsu());
 
   await tester.pumpWidget(
-    ChangeNotifierProvider.value(
-      value: pencarian,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: pencarianTes),
+        ChangeNotifierProvider.value(value: audioTes),
+      ],
       child: const MaterialApp(home: SearchScreen()),
     ),
   );
@@ -127,5 +139,91 @@ void main() {
     expect(find.text('Mungkin maksudmu'), findsNothing);
     expect(find.byIcon(Icons.close), findsNothing);
     expect(find.text('Cari lagu atau penyanyi favoritmu'), findsOneWidget);
+  });
+
+  group('Putar lagu dari hasil pencarian', () {
+    testWidgets('Ketuk lagu langsung memutar dengan antrian hasil pencarian', (
+      tester,
+    ) async {
+      await bukaLayarCari(tester);
+      await ketikLaluTunggu(tester, 'st');
+
+      await tester.tap(find.text('Lights Up'));
+      await tester.pump();
+      expect(audioTes.isSedangMemuat, isTrue);
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(audioTes.laguSekarang?.judul, 'Lights Up');
+      expect(audioTes.indexLaguSekarang, 1);
+      expect(audioTes.antrianLagu.map((lagu) => lagu.judul), [
+        'Starboy',
+        'Lights Up',
+      ]);
+      expect(audioTes.namaAntrian, 'Hasil cari "st"');
+      expect(audioTes.isLaguSedangDiputar, isTrue);
+      expect(find.byIcon(Icons.graphic_eq_rounded), findsOneWidget);
+      expect(pencarianTes.riwayatPencarian, ['st']);
+    });
+
+    testWidgets('Ketuk lagu yang sedang aktif membuka player layar penuh', (
+      tester,
+    ) async {
+      await bukaLayarCari(tester);
+      await ketikLaluTunggu(tester, 'starboy');
+      await tester.tap(find.text('Starboy'));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      await tester.tap(find.text('Starboy'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(PlayerScreen), findsOneWidget);
+      expect(audioTes.antrianLagu.length, 1);
+    });
+
+    testWidgets('Lagu yang dijeda ditandai dan dilanjutkan saat diketuk', (
+      tester,
+    ) async {
+      await bukaLayarCari(tester);
+      await ketikLaluTunggu(tester, 'starboy');
+      await tester.tap(find.text('Starboy'));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      audioTes.jeda();
+      await tester.pump();
+      expect(find.byIcon(Icons.pause_rounded), findsOneWidget);
+
+      await tester.tap(find.text('Starboy'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(audioTes.isLaguSedangDiputar, isTrue);
+    });
+
+    testWidgets('Belum login maka lagu tidak diputar', (tester) async {
+      await bukaLayarCari(tester);
+      audioTes.aturIzinPemutaran(false);
+      await ketikLaluTunggu(tester, 'starboy');
+
+      await tester.tap(find.text('Starboy'));
+      await tester.pump();
+
+      expect(audioTes.laguSekarang, isNull);
+      expect(audioTes.jumlahPutarDitolak, 1);
+      expect(pencarianTes.riwayatPencarian, isEmpty);
+    });
+
+    testWidgets('Tombol lihat album tetap membuka detail album', (
+      tester,
+    ) async {
+      await bukaLayarCari(tester);
+      await ketikLaluTunggu(tester, 'starboy');
+
+      await tester.tap(find.byTooltip('Lihat album'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.byType(DetailAlbumScreen), findsOneWidget);
+      expect(audioTes.laguSekarang, isNull);
+    });
   });
 }

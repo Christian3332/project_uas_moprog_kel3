@@ -242,7 +242,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isBisaKembali = Navigator.canPop(context);
+
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: isBisaKembali
+          ? AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              foregroundColor: WarnaCapify.putih,
+            )
+          : null,
       body: Container(
         decoration: latarGradienAuth,
         child: SafeArea(

@@ -18,43 +18,64 @@ class JudulBagianBeranda extends StatelessWidget {
     this.tombolAksi,
   });
 
+  static const double lebarEfektifMinimal = 300;
+
   @override
   Widget build(BuildContext context) {
     String? teksKeterangan = keterangan;
     Widget? aksi = tombolAksi;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 12, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  judul,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: WarnaCapify.putih,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (teksKeterangan != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    teksKeterangan,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: WarnaCapify.krem.withValues(alpha: 0.7),
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ],
-              ],
+    Widget isiJudul = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          judul,
+          style: const TextStyle(
+            fontSize: 18,
+            color: WarnaCapify.putih,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        if (teksKeterangan != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            teksKeterangan,
+            style: TextStyle(
+              fontSize: 12,
+              color: WarnaCapify.krem.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w300,
             ),
           ),
-          ?aksi,
         ],
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 12, 12),
+      child: LayoutBuilder(
+        builder: (context, batasUkuran) {
+          if (aksi == null) return isiJudul;
+
+          double skalaHuruf = MediaQuery.textScalerOf(context).scale(1);
+          double lebarEfektif = batasUkuran.maxWidth / skalaHuruf;
+
+          if (lebarEfektif < lebarEfektifMinimal) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                isiJudul,
+                Transform.translate(offset: const Offset(-12, 0), child: aksi),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: isiJudul),
+              aksi,
+            ],
+          );
+        },
       ),
     );
   }
@@ -99,12 +120,27 @@ class KotakBelumAdaIsi extends StatelessWidget {
 class SpandukDataCadangan extends StatelessWidget {
   final bool isSedangMencoba;
   final VoidCallback? onCobaLagi;
+  final String? pesanKhusus;
+  final IconData ikon;
 
   const SpandukDataCadangan({
     super.key,
     this.isSedangMencoba = false,
     this.onCobaLagi,
+    this.pesanKhusus,
+    this.ikon = Icons.cloud_off_rounded,
   });
+
+  String teksSpanduk(bool isAdaTombolCobaLagi) {
+    String? pesan = pesanKhusus;
+    if (pesan != null && pesan.trim().isNotEmpty) return pesan;
+
+    if (isAdaTombolCobaLagi) {
+      return 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu.';
+    }
+    return 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu. '
+        'Tarik ke bawah untuk coba lagi.';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,18 +158,11 @@ class SpandukDataCadangan extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.cloud_off_rounded,
-            size: 20,
-            color: WarnaCapify.krem,
-          ),
+          Icon(ikon, size: 20, color: WarnaCapify.krem),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              isAdaTombolCobaLagi
-                  ? 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu.'
-                  : 'Server belum bisa dihubungi, Capy menampilkan lagu contoh dulu. '
-                        'Tarik ke bawah untuk coba lagi.',
+              teksSpanduk(isAdaTombolCobaLagi),
               style: const TextStyle(
                 color: WarnaCapify.krem,
                 fontSize: 12,
@@ -312,21 +341,26 @@ class _KerangkaBerandaMemuatState extends State<KerangkaBerandaMemuat>
 }
 
 class RakGeserHorizontal extends StatelessWidget {
-  final double tinggiRak;
+  final double tinggiGambar;
+  final double tinggiTeks;
   final int jumlahItem;
   final Widget Function(BuildContext context, int index) pembuatItem;
 
   const RakGeserHorizontal({
     super.key,
-    required this.tinggiRak,
+    required this.tinggiGambar,
+    required this.tinggiTeks,
     required this.jumlahItem,
     required this.pembuatItem,
   });
 
   @override
   Widget build(BuildContext context) {
+    double tinggiTeksSesuaiHuruf = MediaQuery.textScalerOf(context)
+        .scale(tinggiTeks);
+
     return SizedBox(
-      height: tinggiRak,
+      height: tinggiGambar + tinggiTeksSesuaiHuruf,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -411,14 +445,18 @@ class KartuLanjutDengerin extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                           ],
-                          Text(
-                            isSedangDiputar
-                                ? 'Sedang diputar'
-                                : 'Lanjut dengerin',
-                            style: const TextStyle(
-                              color: WarnaCapify.krem,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w300,
+                          Flexible(
+                            child: Text(
+                              isSedangDiputar
+                                  ? 'Sedang diputar'
+                                  : 'Lanjut dengerin',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: WarnaCapify.krem,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w300,
+                              ),
                             ),
                           ),
                         ],
@@ -474,16 +512,49 @@ class KartuLaguKecil extends StatelessWidget {
   final Lagu lagu;
   final String keterangan;
   final VoidCallback onTekan;
+  final bool isSedangDiputar;
+  final bool isSedangDisiapkan;
 
   const KartuLaguKecil({
     super.key,
     required this.lagu,
     required this.keterangan,
     required this.onTekan,
+    this.isSedangDiputar = false,
+    this.isSedangDisiapkan = false,
   });
+
+  Widget? lapisanStatusPutar() {
+    if (!isSedangDiputar && !isSedangDisiapkan) return null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: WarnaCapify.hitam.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      alignment: Alignment.center,
+      child: isSedangDisiapkan
+          ? const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: WarnaCapify.krem,
+              ),
+            )
+          : const Icon(
+              Icons.graphic_eq_rounded,
+              size: 40,
+              color: WarnaCapify.krem,
+            ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    Widget? lapisanStatus = lapisanStatusPutar();
+    bool isLaguAktif = isSedangDiputar || isSedangDisiapkan;
+
     return SizedBox(
       width: 140,
       child: InkWell(
@@ -495,10 +566,18 @@ class KartuLaguKecil extends StatelessWidget {
             SizedBox(
               width: 140,
               height: 140,
-              child: CoverAlbum(
-                urlCover: lagu.urlCover,
-                lengkungSudut: 12,
-                isPakaiBayangan: false,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CoverAlbum(
+                      urlCover: lagu.urlCover,
+                      lengkungSudut: 12,
+                      isPakaiBayangan: false,
+                    ),
+                  ),
+                  if (lapisanStatus != null)
+                    Positioned.fill(child: lapisanStatus),
+                ],
               ),
             ),
             const SizedBox(height: 8),
@@ -506,8 +585,8 @@ class KartuLaguKecil extends StatelessWidget {
               lagu.judul,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: WarnaCapify.putih,
+              style: TextStyle(
+                color: isLaguAktif ? WarnaCapify.krem : WarnaCapify.putih,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -539,11 +618,15 @@ class KartuLaguKecil extends StatelessWidget {
 class KartuRacikanUntukmu extends StatelessWidget {
   final RacikanUntukmu racikan;
   final VoidCallback onTekan;
+  final VoidCallback? onTekanPutar;
+  final bool isSedangDiputar;
 
   const KartuRacikanUntukmu({
     super.key,
     required this.racikan,
     required this.onTekan,
+    this.onTekanPutar,
+    this.isSedangDiputar = false,
   });
 
   String? get teksLencana {
@@ -555,6 +638,8 @@ class KartuRacikanUntukmu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String? lencana = teksLencana;
+    VoidCallback? aksiPutar = onTekanPutar;
+    bool isAdaLagu = racikan.playlist.daftarLagu.isNotEmpty;
 
     return SizedBox(
       width: 150,
@@ -600,6 +685,33 @@ class KartuRacikanUntukmu extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (aksiPutar != null && isAdaLagu)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Material(
+                        color: WarnaCapify.krem,
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: aksiPutar,
+                          child: SizedBox(
+                            width: 34,
+                            height: 34,
+                            child: Icon(
+                              isSedangDiputar
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              size: 22,
+                              color: WarnaCapify.coklatGelap,
+                              semanticLabel: isSedangDiputar
+                                  ? 'Jeda ${racikan.playlist.nama}'
+                                  : 'Putar ${racikan.playlist.nama}',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   if (lencana != null)
                     Positioned(
                       top: 8,

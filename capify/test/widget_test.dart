@@ -10,6 +10,7 @@ import 'package:capify/providers/home_provider.dart';
 import 'package:capify/providers/playlist_provider.dart';
 import 'package:capify/providers/search_provider.dart';
 import 'package:capify/screens/halaman_utama_screen.dart';
+import 'package:capify/screens/home_screen.dart';
 import 'package:capify/screens/player_screen.dart';
 import 'package:capify/widgets/cover_album.dart';
 import 'package:capify/widgets/kontrol_player.dart';
@@ -262,5 +263,101 @@ void main() {
     await jari.up();
     await tester.pump();
     expect(audio.posisiSekarang, Duration.zero);
+  });
+
+  group('Mini player di semua halaman utama', () {
+    late AudioProvider audio;
+
+    Future<void> bukaHalamanDetailDariHome(WidgetTester tester) async {
+      Navigator.of(tester.element(find.byType(HomeScreen))).push(
+        MaterialPageRoute(
+          builder: (context) =>
+              const Scaffold(body: Text('Halaman Detail Uji')),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    int indexTabYangAktif(WidgetTester tester) {
+      return tester
+          .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
+          .currentIndex;
+    }
+
+    setUp(() {
+      audio = AudioProvider(pemutarAudio: PemutarAudioPalsu())
+        ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false);
+    });
+
+    testWidgets('Halaman detail dari tab tidak menutupi mini player', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        bungkusDenganAudio(audio, const HalamanUtamaScreen()),
+      );
+      await bukaHalamanDetailDariHome(tester);
+
+      expect(find.text('Halaman Detail Uji'), findsOneWidget);
+      expect(find.byType(MiniPlayer), findsOneWidget);
+      expect(find.byType(BottomNavigationBar), findsOneWidget);
+
+      await tester.tap(find.byType(MiniPlayer));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('SEDANG DIPUTAR DARI'), findsOneWidget);
+      expect(find.byType(BottomNavigationBar), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Halaman Detail Uji'), findsOneWidget);
+      expect(find.byType(MiniPlayer), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('Tombol kembali menutup halaman detail lalu pindah ke Home', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        bungkusDenganAudio(audio, const HalamanUtamaScreen()),
+      );
+      await bukaHalamanDetailDariHome(tester);
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Halaman Detail Uji'), findsNothing);
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      await tester.tap(find.text('Koleksi'));
+      await tester.pump();
+      expect(indexTabYangAktif(tester), 3);
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(indexTabYangAktif(tester), 0);
+
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('Mengetuk tab yang aktif kembali ke halaman awal tab', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        bungkusDenganAudio(audio, const HalamanUtamaScreen()),
+      );
+      await bukaHalamanDetailDariHome(tester);
+
+      await tester.tap(find.text('Home'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Halaman Detail Uji'), findsNothing);
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 3));
+    });
   });
 }

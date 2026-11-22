@@ -58,6 +58,9 @@ class SupabaseAuthService extends AuthService {
   }
 
   AuthException terjemahkanGalatSupabase(supabase.AuthException galat) {
+    if (galat is supabase.AuthSessionMissingException) {
+      return AuthException(AuthService.kodeSesiBerakhir, galat.message);
+    }
     if (galat is supabase.AuthRetryableFetchException) {
       bool isTidakSampaiKeServer = galat.statusCode == null;
       return AuthException(
@@ -150,6 +153,34 @@ class SupabaseAuthService extends AuthService {
     _isPerluKonfirmasiEmail = respons.session == null;
     if (respons.session != null) await keluar();
 
+    return ubahKeUserCapify(penggunaSupabase);
+  }
+
+  @override
+  Future<User> perbaruiNama({
+    required User pengguna,
+    required String namaBaru,
+  }) async {
+    supabase.UserResponse respons;
+    try {
+      respons = await _authSupabase
+          .updateUser(
+            supabase.UserAttributes(data: {'name': rapikanNama(namaBaru)}),
+          )
+          .timeout(batasTungguServer);
+    } on supabase.AuthException catch (galat) {
+      throw terjemahkanGalatSupabase(galat);
+    } on TimeoutException {
+      throw galatServerLambat;
+    }
+
+    supabase.User? penggunaSupabase = respons.user;
+    if (penggunaSupabase == null) {
+      throw const AuthException(
+        AuthService.kodeGagalTerhubung,
+        'Server tidak mengirim data akun',
+      );
+    }
     return ubahKeUserCapify(penggunaSupabase);
   }
 
