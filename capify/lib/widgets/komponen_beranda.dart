@@ -18,43 +18,64 @@ class JudulBagianBeranda extends StatelessWidget {
     this.tombolAksi,
   });
 
+  static const double lebarEfektifMinimal = 300;
+
   @override
   Widget build(BuildContext context) {
     String? teksKeterangan = keterangan;
     Widget? aksi = tombolAksi;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 12, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  judul,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: WarnaCapify.putih,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (teksKeterangan != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    teksKeterangan,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: WarnaCapify.krem.withValues(alpha: 0.7),
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ],
-              ],
+    Widget isiJudul = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          judul,
+          style: const TextStyle(
+            fontSize: 18,
+            color: WarnaCapify.putih,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        if (teksKeterangan != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            teksKeterangan,
+            style: TextStyle(
+              fontSize: 12,
+              color: WarnaCapify.krem.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w300,
             ),
           ),
-          ?aksi,
         ],
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 12, 12),
+      child: LayoutBuilder(
+        builder: (context, batasUkuran) {
+          if (aksi == null) return isiJudul;
+
+          double skalaHuruf = MediaQuery.textScalerOf(context).scale(1);
+          double lebarEfektif = batasUkuran.maxWidth / skalaHuruf;
+
+          if (lebarEfektif < lebarEfektifMinimal) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                isiJudul,
+                Transform.translate(offset: const Offset(-12, 0), child: aksi),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: isiJudul),
+              aksi,
+            ],
+          );
+        },
       ),
     );
   }
@@ -320,21 +341,26 @@ class _KerangkaBerandaMemuatState extends State<KerangkaBerandaMemuat>
 }
 
 class RakGeserHorizontal extends StatelessWidget {
-  final double tinggiRak;
+  final double tinggiGambar;
+  final double tinggiTeks;
   final int jumlahItem;
   final Widget Function(BuildContext context, int index) pembuatItem;
 
   const RakGeserHorizontal({
     super.key,
-    required this.tinggiRak,
+    required this.tinggiGambar,
+    required this.tinggiTeks,
     required this.jumlahItem,
     required this.pembuatItem,
   });
 
   @override
   Widget build(BuildContext context) {
+    double tinggiTeksSesuaiHuruf = MediaQuery.textScalerOf(context)
+        .scale(tinggiTeks);
+
     return SizedBox(
-      height: tinggiRak,
+      height: tinggiGambar + tinggiTeksSesuaiHuruf,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),

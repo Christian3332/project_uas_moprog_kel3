@@ -514,7 +514,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         const SizedBox(height: 28),
         const JudulBagianBeranda(judul: 'Terakhir diputar'),
         RakGeserHorizontal(
-          tinggiRak: 222,
+          tinggiGambar: 140,
+          tinggiTeks: 82,
           jumlahItem: jumlahSisaRiwayat,
           pembuatItem: (context, index) {
             int indexAsli = index + 1;
@@ -561,7 +562,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         )
       else
         RakGeserHorizontal(
-          tinggiRak: 210,
+          tinggiGambar: 150,
+          tinggiTeks: 60,
           jumlahItem: daftarRacikan.length,
           pembuatItem: (context, index) {
             RacikanUntukmu racikan = daftarRacikan[index];
@@ -597,7 +599,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         )
       else
         RakGeserHorizontal(
-          tinggiRak: 222,
+          tinggiGambar: 140,
+          tinggiTeks: 82,
           jumlahItem: laguTemuan.length,
           pembuatItem: (context, index) {
             Lagu lagu = laguTemuan[index];
