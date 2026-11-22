@@ -115,15 +115,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 8, 12, 0),
                 child: Row(
                   children: [
-                    const Text(
-                      'Capify',
-                      style: TextStyle(
-                        color: WarnaCapify.krem,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                    const Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Capify',
+                          style: TextStyle(
+                            color: WarnaCapify.krem,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     Visibility(
                       visible: !isDiSlideTerakhir,
                       maintainSize: true,

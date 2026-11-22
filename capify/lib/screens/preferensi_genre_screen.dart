@@ -17,6 +17,8 @@ class PreferensiGenreScreen extends StatefulWidget {
 }
 
 class _PreferensiGenreScreenState extends State<PreferensiGenreScreen> {
+  static const double batasTinggiLayarPendek = 480;
+
   List<String> genreDipilih = [];
   bool isSedangMenyimpan = false;
 
@@ -96,6 +98,7 @@ class _PreferensiGenreScreenState extends State<PreferensiGenreScreen> {
   @override
   Widget build(BuildContext context) {
     bool isBelumAdaYangDipilih = genreDipilih.isEmpty;
+    double tinggiKartuGenre = 32 + MediaQuery.textScalerOf(context).scale(26);
 
     return Scaffold(
       appBar: AppBar(
@@ -105,68 +108,30 @@ class _PreferensiGenreScreenState extends State<PreferensiGenreScreen> {
         scrolledUnderElevation: 0,
         actions: [
           if (widget.isDariOnboarding)
-            TextButton(
-              onPressed: lewatiPilihan,
-              child: const Text(
-                'Lewati dulu',
-                style: TextStyle(color: WarnaCapify.krem),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.5,
+              ),
+              child: TextButton(
+                onPressed: lewatiPilihan,
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Lewati dulu',
+                    style: TextStyle(color: WarnaCapify.krem),
+                  ),
+                ),
               ),
             ),
           const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Genre apa yang kamu suka?',
-                    style: TextStyle(
-                      color: WarnaCapify.putih,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Pilih 1 sampai ${HomeProvider.batasGenreFavorit} genre. '
-                    'Yang kamu pilih duluan bakal jadi prioritas racikan Capy.',
-                    style: TextStyle(
-                      color: WarnaCapify.krem.withValues(alpha: 0.85),
-                      fontSize: 14,
-                      height: 1.4,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 2.6,
-                ),
-                itemCount: daftarKategoriDummy.length,
-                itemBuilder: (context, index) {
-                  KategoriMusik kategori = daftarKategoriDummy[index];
-                  return KartuPilihanGenre(
-                    kategori: kategori,
-                    nomorUrut: nomorUrutGenre(kategori.nama),
-                    onTekan: () => pilihAtauBatalkanGenre(kategori.nama),
-                  );
-                },
-              ),
-            ),
-            Padding(
+        child: LayoutBuilder(
+          builder: (context, batasUkuran) {
+            bool isLayarPendek = batasUkuran.maxHeight < batasTinggiLayarPendek;
+
+            Widget bagianTombolSimpan = Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
               child: Column(
                 children: [
@@ -174,6 +139,7 @@ class _PreferensiGenreScreenState extends State<PreferensiGenreScreen> {
                     isBelumAdaYangDipilih
                         ? 'Belum ada genre yang dipilih'
                         : '${genreDipilih.length} dari ${HomeProvider.batasGenreFavorit} genre dipilih',
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: WarnaCapify.krem,
                       fontSize: 13,
@@ -181,35 +147,104 @@ class _PreferensiGenreScreenState extends State<PreferensiGenreScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: isBelumAdaYangDipilih ? null : simpanPilihan,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: WarnaCapify.krem,
-                        foregroundColor: WarnaCapify.coklatGelap,
-                        disabledBackgroundColor: WarnaCapify.coklatTua,
-                        disabledForegroundColor: Colors.white38,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(26),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 52),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isBelumAdaYangDipilih ? null : simpanPilihan,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: WarnaCapify.krem,
+                          foregroundColor: WarnaCapify.coklatGelap,
+                          disabledBackgroundColor: WarnaCapify.coklatTua,
+                          disabledForegroundColor: Colors.white38,
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(26),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        widget.isDariOnboarding
-                            ? 'Simpan & Mulai'
-                            : 'Simpan Preferensi',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        child: Text(
+                          widget.isDariOnboarding
+                              ? 'Simpan & Mulai'
+                              : 'Simpan Preferensi',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+            );
+
+            Widget areaGulir = CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Genre apa yang kamu suka?',
+                          style: TextStyle(
+                            color: WarnaCapify.putih,
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Pilih 1 sampai ${HomeProvider.batasGenreFavorit} genre. '
+                          'Yang kamu pilih duluan bakal jadi prioritas racikan Capy.',
+                          style: TextStyle(
+                            color: WarnaCapify.krem.withValues(alpha: 0.85),
+                            fontSize: 14,
+                            height: 1.4,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                  sliver: SliverGrid.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      mainAxisExtent: tinggiKartuGenre,
+                    ),
+                    itemCount: daftarKategoriDummy.length,
+                    itemBuilder: (context, index) {
+                      KategoriMusik kategori = daftarKategoriDummy[index];
+                      return KartuPilihanGenre(
+                        kategori: kategori,
+                        nomorUrut: nomorUrutGenre(kategori.nama),
+                        onTekan: () => pilihAtauBatalkanGenre(kategori.nama),
+                      );
+                    },
+                  ),
+                ),
+                if (isLayarPendek)
+                  SliverToBoxAdapter(child: bagianTombolSimpan),
+              ],
+            );
+
+            if (isLayarPendek) return areaGulir;
+
+            return Column(
+              children: [
+                Expanded(child: areaGulir),
+                bagianTombolSimpan,
+              ],
+            );
+          },
         ),
       ),
     );
