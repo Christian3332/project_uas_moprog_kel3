@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/feed_beranda.dart';
@@ -41,13 +42,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> segarkanBeranda() async {
     HomeProvider home = context.read<HomeProvider>();
+    HapticFeedback.mediumImpact();
     setState(() => isSedangTarikSegarkan = true);
-    await home.muatIsiBeranda(isPaksaMuatUlang: true);
+
+    HasilSegarkan hasil = await home.segarkanBeranda();
     if (!mounted) return;
     setState(() => isSedangTarikSegarkan = false);
 
-    String? pesanGagal = home.pesanGagal;
-    if (pesanGagal != null) tampilkanPesan(pesanGagal);
+    tampilkanPesan(pesanDariHasilSegarkan(hasil, home));
+  }
+
+  String pesanDariHasilSegarkan(HasilSegarkan hasil, HomeProvider home) {
+    return switch (hasil) {
+      HasilSegarkan.diperbarui => 'Beranda sudah diperbarui',
+      HasilSegarkan.tidakAdaPerubahan => 'Berandamu sudah yang paling baru',
+      HasilSegarkan.terlaluCepat =>
+        'Beranda baru saja diperbarui, coba lagi sebentar lagi ya',
+      HasilSegarkan.masihOffline =>
+        'Masih offline, cek Wi-Fi atau data selulermu dulu ya',
+      HasilSegarkan.masihCadangan =>
+        'Server masih belum bisa dihubungi, coba lagi nanti ya',
+      HasilSegarkan.gagal =>
+        home.pesanGagal ?? 'Beranda gagal dimuat, coba lagi sebentar ya',
+    };
+  }
+
+  bool isHasilBerhasilTerhubung(HasilSegarkan hasil) {
+    return hasil == HasilSegarkan.diperbarui ||
+        hasil == HasilSegarkan.tidakAdaPerubahan;
   }
 
   @override
@@ -70,31 +92,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         !home.isSedangMemuat;
     if (!isPerluDicobaLagi) return;
 
-    await home.muatIsiBeranda(isPaksaMuatUlang: true);
+    HasilSegarkan hasil = await home.segarkanBeranda(isAbaikanJeda: true);
     if (!mounted) return;
 
-    if (!home.isMemakaiDataCadangan) {
+    if (isHasilBerhasilTerhubung(hasil)) {
       tampilkanPesan('Kamu kembali online, beranda sudah diperbarui');
     }
   }
 
   Future<void> cobaHubungkanLagi() async {
     HomeProvider home = context.read<HomeProvider>();
-    if (home.isSedangMemuat) return;
-
-    await home.muatIsiBeranda(isPaksaMuatUlang: true);
+    HasilSegarkan hasil = await home.segarkanBeranda(isAbaikanJeda: true);
     if (!mounted) return;
 
-    String? pesanGagal = home.pesanGagal;
-    if (pesanGagal != null) {
-      tampilkanPesan(pesanGagal);
-    } else if (home.isSedangOffline) {
-      tampilkanPesan('Masih offline, cek Wi-Fi atau data selulermu dulu ya');
-    } else if (home.isMemakaiDataCadangan) {
-      tampilkanPesan('Server masih belum bisa dihubungi, coba lagi nanti ya');
-    } else {
+    if (isHasilBerhasilTerhubung(hasil)) {
       tampilkanPesan('Berhasil terhubung, beranda sudah diperbarui');
+    } else {
+      tampilkanPesan(pesanDariHasilSegarkan(hasil, home));
     }
+  }
+
+  String? teksTerakhirDiperbarui(HomeProvider home) {
+    DateTime? waktuTerakhir = home.waktuTerakhirDiperbarui;
+    if (waktuTerakhir == null || home.isMemakaiDataCadangan) return null;
+
+    String sejakKapan = ubahJarakWaktuJadiTeks(
+      DateTime.now().difference(waktuTerakhir),
+    ).toLowerCase();
+    return 'Diperbarui $sejakKapan · tarik ke bawah untuk menyegarkan';
   }
 
   String teksSpandukBeranda(HomeProvider home) {
@@ -268,34 +293,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     String? pesanGagal = home.pesanGagal;
 
     if (!home.isSudahPernahDimuat && pesanGagal != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.cloud_off_rounded,
-                size: 48,
-                color: WarnaCapify.krem,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                pesanGagal,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: WarnaCapify.krem),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: home.muatIsiBeranda,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: WarnaCapify.krem,
-                  foregroundColor: WarnaCapify.coklatGelap,
+      return RefreshIndicator(
+        color: WarnaCapify.coklatGelap,
+        backgroundColor: WarnaCapify.krem,
+        onRefresh: segarkanBeranda,
+        child: LayoutBuilder(
+          builder: (context, ukuranLayar) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: ukuranLayar.maxHeight),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_rounded,
+                          size: 48,
+                          color: WarnaCapify.krem,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          pesanGagal,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: WarnaCapify.krem),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: home.muatIsiBeranda,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: WarnaCapify.krem,
+                            foregroundColor: WarnaCapify.coklatGelap,
+                          ),
+                          child: const Text('Coba lagi'),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'atau tarik layar ke bawah',
+                          style: TextStyle(
+                            color: WarnaCapify.krem.withValues(alpha: 0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                child: const Text('Coba lagi'),
               ),
-            ],
-          ),
+            );
+          },
         ),
       );
     }
@@ -306,6 +354,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     bool isTampilkanGarisProgres =
         home.isSedangMenyegarkan && !isSedangTarikSegarkan;
+    String? keteranganDiperbarui = teksTerakhirDiperbarui(home);
 
     return Column(
       children: [
@@ -335,6 +384,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ikon: home.isSedangOffline
                         ? Icons.wifi_off_rounded
                         : Icons.cloud_off_rounded,
+                  ),
+                if (keteranganDiperbarui != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: Text(
+                      keteranganDiperbarui,
+                      style: TextStyle(
+                        color: WarnaCapify.krem.withValues(alpha: 0.6),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
                   ),
                 ...buildBagianTerakhirDiputar(home),
                 const SizedBox(height: 28),
