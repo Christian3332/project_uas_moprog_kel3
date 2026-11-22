@@ -3,9 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:capify/models/playlist.dart';
+import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/playlist_provider.dart';
 import 'package:capify/screens/playlist_screen.dart';
 import 'package:capify/services/koleksi_service.dart';
+
+import 'pemutar_audio_palsu.dart';
 
 class KoleksiServiceSimpanBisaGagal extends KoleksiService {
   bool isSimpanGagal = false;
@@ -98,9 +101,17 @@ void main() {
     KoleksiServiceSimpanBisaGagal service = KoleksiServiceSimpanBisaGagal();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (context) =>
-            PlaylistProvider(koleksiService: service)..muatKoleksi(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (context) =>
+                AudioProvider(pemutarAudio: PemutarAudioPalsu()),
+          ),
+          ChangeNotifierProvider(
+            create: (context) =>
+                PlaylistProvider(koleksiService: service)..muatKoleksi(),
+          ),
+        ],
         child: const MaterialApp(home: PlaylistScreen()),
       ),
     );
@@ -132,5 +143,7 @@ void main() {
 
     expect(find.text('Buat Playlist Baru'), findsNothing);
     expect(find.byType(BarisPlaylistSaya), findsNWidgets(jumlahAwal + 1));
+
+    await tester.pump(const Duration(seconds: 2));
   });
 }
