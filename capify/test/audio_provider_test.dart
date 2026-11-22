@@ -1,5 +1,6 @@
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:just_audio/just_audio.dart';
 
 import 'package:capify/models/lagu.dart';
 import 'package:capify/models/mode_ulang.dart';
@@ -342,6 +343,127 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(audioUji.posisiSekarang, const Duration(seconds: 75));
+      audioUji.dispose();
+    });
+  });
+
+  group('Antrian lanjut ke lagu berikutnya', () {
+    List<Lagu> buatAntrian(int jumlahLagu) {
+      return List.generate(
+        jumlahLagu,
+        (urutan) => Lagu(
+          judul: 'Lagu ${urutan + 1}',
+          penyanyi: 'Penyanyi Tes',
+          urlCover: '',
+          durasi: const Duration(minutes: 3),
+        ),
+      );
+    }
+
+    List<String> putarSampaiHabis(AudioProvider audioUji, int batasPutar) {
+      List<String> laguYangDiputar = [audioUji.laguSekarang!.judul];
+      for (int putaran = 0; putaran < batasPutar; putaran++) {
+        if (!audioUji.laguBerikutnya()) break;
+        laguYangDiputar.add(audioUji.laguSekarang!.judul);
+      }
+      return laguYangDiputar;
+    }
+
+    test('Mode acak memutar semua lagu tepat sekali lalu berhenti', () {
+      AudioProvider audioUji = AudioProvider()
+        ..mulaiAntrian(buatAntrian(5), indexMulai: 2, isLangsungDiputar: false)
+        ..toggleAcak();
+
+      expect(audioUji.laguSekarang?.judul, 'Lagu 3');
+
+      List<String> laguYangDiputar = putarSampaiHabis(audioUji, 20);
+      expect(laguYangDiputar.length, 5);
+      expect(laguYangDiputar.toSet().length, 5);
+      expect(laguYangDiputar.first, 'Lagu 3');
+      audioUji.dispose();
+    });
+
+    test('Previous saat acak kembali ke lagu yang tadi diputar', () {
+      AudioProvider audioUji = AudioProvider()
+        ..mulaiAntrian(buatAntrian(5), isLangsungDiputar: false)
+        ..toggleAcak();
+
+      String laguPertama = audioUji.laguSekarang!.judul;
+      audioUji.laguBerikutnya();
+      String laguKedua = audioUji.laguSekarang!.judul;
+      audioUji.laguBerikutnya();
+
+      audioUji.laguSebelumnya();
+      expect(audioUji.laguSekarang?.judul, laguKedua);
+      audioUji.laguSebelumnya();
+      expect(audioUji.laguSekarang?.judul, laguPertama);
+      audioUji.dispose();
+    });
+
+    test('Acak dengan ulang semua memulai putaran baru tanpa lagu dobel', () {
+      AudioProvider audioUji = AudioProvider()
+        ..mulaiAntrian(buatAntrian(4), isLangsungDiputar: false)
+        ..toggleAcak()
+        ..gantiModeUlang();
+
+      List<String> laguYangDiputar = putarSampaiHabis(audioUji, 7);
+      expect(laguYangDiputar.length, 8);
+      expect(laguYangDiputar.sublist(0, 4).toSet().length, 4);
+      expect(laguYangDiputar.sublist(4, 8).toSet().length, 4);
+      expect(laguYangDiputar[4], isNot(laguYangDiputar[3]));
+      audioUji.dispose();
+    });
+
+    test('Mematikan acak melanjutkan urutan dari lagu sekarang', () {
+      AudioProvider audioUji = AudioProvider()
+        ..mulaiAntrian(buatAntrian(5), isLangsungDiputar: false)
+        ..toggleAcak();
+      audioUji.laguBerikutnya();
+      int indexSaatAcakDimatikan = audioUji.indexLaguSekarang;
+
+      audioUji.toggleAcak();
+      bool isMasihAdaLagu = audioUji.laguBerikutnya();
+
+      if (indexSaatAcakDimatikan == 4) {
+        expect(isMasihAdaLagu, isFalse);
+      } else {
+        expect(audioUji.indexLaguSekarang, indexSaatAcakDimatikan + 1);
+      }
+      audioUji.dispose();
+    });
+
+    test('Sinyal selesai dari lagu lama tidak melompati lagu', () async {
+      PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(
+        lamaMemuat: const Duration(milliseconds: 50),
+      );
+      AudioProvider audioUji = AudioProvider(pemutarAudio: pemutarPalsu)
+        ..mulaiAntrian(buatAntrian(3), isLangsungDiputar: false);
+      await audioUji.putar();
+      await Future<void>.delayed(Duration.zero);
+
+      audioUji.laguBerikutnya();
+      pemutarPalsu.selesaikanLagu();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(audioUji.laguSekarang?.judul, 'Lagu 2');
+      audioUji.dispose();
+    });
+
+    test('Sinyal selesai saat lagu dijeda tidak dianggap lagu habis', () async {
+      PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(
+        lamaMemuat: Duration.zero,
+      );
+      AudioProvider audioUji = AudioProvider(pemutarAudio: pemutarPalsu)
+        ..mulaiAntrian(buatAntrian(3), isLangsungDiputar: false);
+      await audioUji.putar();
+      await Future<void>.delayed(Duration.zero);
+
+      pemutarPalsu.pengirimStatus.add(
+        PlayerState(false, ProcessingState.completed),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(audioUji.laguSekarang?.judul, 'Lagu 1');
       audioUji.dispose();
     });
   });

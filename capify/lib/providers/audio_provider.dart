@@ -95,6 +95,9 @@ class AudioProvider extends ChangeNotifier {
 
   List<Lagu> _antrianLagu = [];
   int _indexLaguSekarang = 0;
+  List<int> _urutanPutar = [];
+  int _posisiDiUrutan = 0;
+  final Random _pengacak = Random();
   String _namaAntrian = 'Lagu Pilihanmu';
   bool _isLaguSedangDiputar = false;
   bool _isSedangMenyiapkanLagu = false;
@@ -209,7 +212,13 @@ class AudioProvider extends ChangeNotifier {
 
   void _saatStatusPemutarBerubah(PlayerState status) {
     if (status.processingState == ProcessingState.completed) {
-      _laguSudahHabis();
+      bool isLaguIniBenarSelesai =
+          status.playing &&
+          _isLaguSekarangSudahDimuat &&
+          !_isSedangMenyiapkanLagu;
+      if (isLaguIniBenarSelesai) {
+        _laguSudahHabis();
+      }
       return;
     }
 
@@ -326,6 +335,7 @@ class AudioProvider extends ChangeNotifier {
       _berhentiDanKembaliKeAwal();
       _antrianLagu = [];
       _indexLaguSekarang = 0;
+      _susunUrutanPutar();
       _kabariPendengar();
       return;
     }
@@ -345,6 +355,7 @@ class AudioProvider extends ChangeNotifier {
     _antrianLagu = List.of(daftarLagu);
     _indexLaguSekarang = indexAman;
     _namaAntrian = namaAntrian;
+    _susunUrutanPutar();
 
     if (isLaguYangSama) {
       _kabariPendengar();
@@ -431,34 +442,56 @@ class AudioProvider extends ChangeNotifier {
     laguBerikutnya();
   }
 
-  int? _cariIndexBerikutnya() {
+  void _susunUrutanPutar() {
     int jumlahLagu = _antrianLagu.length;
-    if (jumlahLagu == 0) return null;
+    List<int> semuaIndex = List.generate(jumlahLagu, (index) => index);
 
-    if (_isAcak && jumlahLagu > 1) {
-      int indexAcak = _indexLaguSekarang;
-      while (indexAcak == _indexLaguSekarang) {
-        indexAcak = Random().nextInt(jumlahLagu);
-      }
-      return indexAcak;
+    if (!_isAcak) {
+      _urutanPutar = semuaIndex;
+      _posisiDiUrutan = _indexLaguSekarang;
+      return;
     }
 
-    if (_indexLaguSekarang + 1 < jumlahLagu) return _indexLaguSekarang + 1;
-    if (_modeUlang == ModeUlang.semua) return 0;
-    return null;
+    List<int> sisaLagu = semuaIndex
+      ..remove(_indexLaguSekarang)
+      ..shuffle(_pengacak);
+    _urutanPutar = [_indexLaguSekarang, ...sisaLagu];
+    _posisiDiUrutan = 0;
+  }
+
+  void _acakUlangUntukPutaranBaru() {
+    List<int> urutanBaru = List.generate(_antrianLagu.length, (index) => index)
+      ..shuffle(_pengacak);
+
+    bool isLaguSamaDiAwal =
+        urutanBaru.length > 1 && urutanBaru.first == _indexLaguSekarang;
+    if (isLaguSamaDiAwal) {
+      urutanBaru[0] = urutanBaru.last;
+      urutanBaru[urutanBaru.length - 1] = _indexLaguSekarang;
+    }
+    _urutanPutar = urutanBaru;
   }
 
   bool laguBerikutnya() {
     if (laguSekarang == null) return false;
 
-    int? indexBerikutnya = _cariIndexBerikutnya();
-    if (indexBerikutnya == null) {
-      _berhentiDanKembaliKeAwal();
-      _kabariPendengar();
-      return false;
+    int posisiBerikutnya = _posisiDiUrutan + 1;
+    bool isAntrianHabis = posisiBerikutnya >= _urutanPutar.length;
+
+    if (isAntrianHabis) {
+      if (_modeUlang != ModeUlang.semua) {
+        _berhentiDanKembaliKeAwal();
+        _kabariPendengar();
+        return false;
+      }
+      if (_isAcak) {
+        _acakUlangUntukPutaranBaru();
+      }
+      posisiBerikutnya = 0;
     }
 
-    _gantiLagu(indexBerikutnya);
+    _posisiDiUrutan = posisiBerikutnya;
+    _gantiLagu(_urutanPutar[posisiBerikutnya]);
     return true;
   }
 
@@ -466,11 +499,13 @@ class AudioProvider extends ChangeNotifier {
     if (laguSekarang == null) return;
 
     bool sudahLewatTigaDetik = _posisiSekarang.inSeconds > 3;
-    if (sudahLewatTigaDetik || _indexLaguSekarang == 0) {
+    if (sudahLewatTigaDetik || _posisiDiUrutan == 0) {
       geserKe(Duration.zero);
       return;
     }
-    _gantiLagu(_indexLaguSekarang - 1);
+
+    _posisiDiUrutan--;
+    _gantiLagu(_urutanPutar[_posisiDiUrutan]);
   }
 
   void _gantiLagu(int indexBaru) {
@@ -510,6 +545,7 @@ class AudioProvider extends ChangeNotifier {
 
   void toggleAcak() {
     _isAcak = !_isAcak;
+    _susunUrutanPutar();
     _kabariPendengar();
   }
 
