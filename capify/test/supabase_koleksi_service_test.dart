@@ -6,11 +6,26 @@ import 'package:capify/models/album.dart';
 import 'package:capify/models/koleksi_pengguna.dart';
 import 'package:capify/models/lagu.dart';
 import 'package:capify/models/playlist.dart';
+import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/playlist_provider.dart';
 import 'package:capify/screens/playlist_screen.dart';
 import 'package:capify/services/koleksi_service.dart';
 import 'package:capify/services/supabase_koleksi_service.dart';
 import 'package:capify/widgets/komponen_beranda.dart';
+
+import 'pemutar_audio_palsu.dart';
+
+Widget bungkusLayarKoleksi(PlaylistProvider Function() buatKoleksi) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider(
+        create: (context) => AudioProvider(pemutarAudio: PemutarAudioPalsu()),
+      ),
+      ChangeNotifierProvider(create: (context) => buatKoleksi()),
+    ],
+    child: const MaterialApp(home: PlaylistScreen()),
+  );
+}
 
 class KoleksiServiceBisaGagal extends KoleksiService {
   bool isHarusGagal = false;
@@ -157,10 +172,8 @@ void main() {
         ..isHarusGagal = true;
 
       await tester.pumpWidget(
-        ChangeNotifierProvider(
-          create: (context) =>
-              PlaylistProvider(koleksiService: service)..muatKoleksi(),
-          child: const MaterialApp(home: PlaylistScreen()),
+        bungkusLayarKoleksi(
+          () => PlaylistProvider(koleksiService: service)..muatKoleksi(),
         ),
       );
       await tester.pump();
@@ -179,11 +192,10 @@ void main() {
 
     testWidgets('Data cadangan menampilkan spanduk peringatan', (tester) async {
       await tester.pumpWidget(
-        ChangeNotifierProvider(
-          create: (context) =>
+        bungkusLayarKoleksi(
+          () =>
               PlaylistProvider(koleksiService: const SupabaseKoleksiService())
                 ..muatKoleksi(),
-          child: const MaterialApp(home: PlaylistScreen()),
         ),
       );
       await tester.pump();
@@ -199,10 +211,8 @@ void main() {
       KoleksiServiceBisaGagal service = KoleksiServiceBisaGagal();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider(
-          create: (context) =>
-              PlaylistProvider(koleksiService: service)..muatKoleksi(),
-          child: const MaterialApp(home: PlaylistScreen()),
+        bungkusLayarKoleksi(
+          () => PlaylistProvider(koleksiService: service)..muatKoleksi(),
         ),
       );
       await tester.pump();

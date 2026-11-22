@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../models/album.dart';
 import '../models/lagu.dart';
 import '../models/playlist.dart';
+import '../providers/audio_provider.dart';
 import '../providers/playlist_provider.dart';
+import '../services/koleksi_service.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import '../widgets/form_buat_playlist.dart';
@@ -129,6 +131,47 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       );
   }
 
+  void tampilkanPesan(String pesan) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(pesan)));
+  }
+
+  bool isPlaylistSedangAktif(
+    Playlist playlist,
+    String namaAntrianAktif,
+    String? kunciLaguAktif,
+  ) {
+    if (kunciLaguAktif == null) return false;
+    if (namaAntrianAktif != playlist.nama) return false;
+
+    return playlist.daftarLagu.any(
+      (lagu) => KoleksiService.buatKunciLagu(lagu) == kunciLaguAktif,
+    );
+  }
+
+  void putarPlaylist(Playlist playlist) {
+    if (playlist.daftarLagu.isEmpty) {
+      tampilkanPesan('Playlist ini belum punya lagu');
+      return;
+    }
+
+    AudioProvider audio = context.read<AudioProvider>();
+    if (!audio.mintaIzinPemutaran()) return;
+
+    Lagu? laguDiPemutar = audio.laguSekarang;
+    String? kunciLaguAktif = laguDiPemutar == null
+        ? null
+        : KoleksiService.buatKunciLagu(laguDiPemutar);
+
+    if (isPlaylistSedangAktif(playlist, audio.namaAntrian, kunciLaguAktif)) {
+      audio.togglePutarJeda();
+      return;
+    }
+
+    audio.mulaiAntrian(playlist.daftarLagu, namaAntrian: playlist.nama);
+  }
+
   void tampilkanInfoSegeraHadir(String namaFitur) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -141,15 +184,38 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     List<Lagu> daftarLaguDisukai = koleksi.daftarLaguDisukai;
 
     if (kategoriTerpilih == 'Playlist' && daftarPlaylistSaya.isNotEmpty) {
+      String namaAntrianAktif = context.select<AudioProvider, String>(
+        (audio) => audio.namaAntrian,
+      );
+      bool isAudioSedangDiputar = context.select<AudioProvider, bool>(
+        (audio) => audio.isLaguSedangDiputar,
+      );
+      String? kunciLaguAktif = context.select<AudioProvider, String?>((audio) {
+        Lagu? laguDiPemutar = audio.laguSekarang;
+        return laguDiPemutar == null
+            ? null
+            : KoleksiService.buatKunciLagu(laguDiPemutar);
+      });
+
       return ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 32),
         itemCount: daftarPlaylistSaya.length,
         itemBuilder: (context, urutan) {
           Playlist playlistIni = daftarPlaylistSaya[urutan];
+          bool isPlaylistIniDiputar =
+              isAudioSedangDiputar &&
+              isPlaylistSedangAktif(
+                playlistIni,
+                namaAntrianAktif,
+                kunciLaguAktif,
+              );
+
           return BarisPlaylistSaya(
             playlist: playlistIni,
+            isSedangDiputar: isPlaylistIniDiputar,
             onDitekan: () => bukaDetailPlaylist(playlistIni),
+            onTekanPutar: () => putarPlaylist(playlistIni),
           );
         },
       );
@@ -416,16 +482,25 @@ class KartuGridKoleksi extends StatelessWidget {
 
 class BarisPlaylistSaya extends StatelessWidget {
   final Playlist playlist;
+  final bool isSedangDiputar;
   final VoidCallback onDitekan;
+  final VoidCallback onTekanPutar;
 
   const BarisPlaylistSaya({
     super.key,
     required this.playlist,
+    required this.isSedangDiputar,
     required this.onDitekan,
+    required this.onTekanPutar,
   });
 
   @override
   Widget build(BuildContext context) {
+    bool isPlaylistKosong = playlist.daftarLagu.isEmpty;
+    String keteranganPlaylist = isSedangDiputar
+        ? 'Sedang diputar • ${playlist.daftarLagu.length} lagu'
+        : 'Playlist • ${playlist.daftarLagu.length} lagu';
+
     return ListTile(
       onTap: onDitekan,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -449,17 +524,28 @@ class BarisPlaylistSaya extends StatelessWidget {
         ),
       ),
       subtitle: Text(
-        'Playlist • ${playlist.daftarLagu.length} lagu',
+        keteranganPlaylist,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           color: WarnaCapify.krem,
-          fontWeight: FontWeight.w300,
+          fontWeight: isSedangDiputar ? FontWeight.w600 : FontWeight.w300,
         ),
       ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: WarnaCapify.krem,
+      trailing: IconButton(
+        tooltip: isSedangDiputar
+            ? 'Jeda ${playlist.nama}'
+            : 'Putar ${playlist.nama}',
+        onPressed: onTekanPutar,
+        iconSize: 36,
+        icon: Icon(
+          isSedangDiputar
+              ? Icons.pause_circle_filled_rounded
+              : Icons.play_circle_fill_rounded,
+          color: isPlaylistKosong
+              ? WarnaCapify.krem.withValues(alpha: 0.35)
+              : WarnaCapify.krem,
+        ),
       ),
     );
   }
