@@ -143,5 +143,7 @@ void main() {
 
     expect(find.text('Buat Playlist Baru'), findsNothing);
     expect(find.byType(BarisPlaylistSaya), findsNWidgets(jumlahAwal + 1));
+
+    await tester.pump(const Duration(seconds: 2));
   });
 }

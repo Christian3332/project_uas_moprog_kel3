@@ -22,6 +22,16 @@ class PlaylistScreen extends StatefulWidget {
 
 class _PlaylistScreenState extends State<PlaylistScreen> {
   String kategoriTerpilih = 'Playlist';
+  String? idPlaylistBaruDisorot;
+
+  final pengendaliGulirPlaylist = ScrollController();
+  final Duration lamaSorotanPlaylistBaru = const Duration(seconds: 2);
+
+  @override
+  void dispose() {
+    pengendaliGulirPlaylist.dispose();
+    super.dispose();
+  }
 
   final List<String> pilihanKategori = ['Playlist', 'Album', 'Lagu Disukai'];
 
@@ -123,12 +133,43 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
     if (!mounted || namaPlaylistBaru == null) return;
 
-    setState(() => kategoriTerpilih = 'Playlist');
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text('Playlist "$namaPlaylistBaru" berhasil dibuat')),
-      );
+    String? idPlaylistBaru = cariIdPlaylistDariNama(namaPlaylistBaru);
+    setState(() {
+      kategoriTerpilih = 'Playlist';
+      idPlaylistBaruDisorot = idPlaylistBaru;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => gulirKePalingAtas());
+    hapusSorotanSetelahJeda(idPlaylistBaru);
+
+    tampilkanPesan('Playlist "$namaPlaylistBaru" berhasil dibuat');
+  }
+
+  String? cariIdPlaylistDariNama(String namaPlaylist) {
+    String namaDicari = namaPlaylist.trim().toLowerCase();
+    for (Playlist playlist
+        in context.read<PlaylistProvider>().daftarPlaylistSaya) {
+      if (playlist.nama.toLowerCase() == namaDicari) return playlist.id;
+    }
+    return null;
+  }
+
+  void gulirKePalingAtas() {
+    if (!mounted || !pengendaliGulirPlaylist.hasClients) return;
+    pengendaliGulirPlaylist.animateTo(
+      0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
+    );
+  }
+
+  Future<void> hapusSorotanSetelahJeda(String? idYangDisorot) async {
+    if (idYangDisorot == null) return;
+
+    await Future.delayed(lamaSorotanPlaylistBaru);
+    if (!mounted || idPlaylistBaruDisorot != idYangDisorot) return;
+
+    setState(() => idPlaylistBaruDisorot = null);
   }
 
   void tampilkanPesan(String pesan) {
@@ -198,6 +239,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       });
 
       return ListView.builder(
+        controller: pengendaliGulirPlaylist,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 32),
         itemCount: daftarPlaylistSaya.length,
@@ -214,6 +256,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           return BarisPlaylistSaya(
             playlist: playlistIni,
             isSedangDiputar: isPlaylistIniDiputar,
+            isBaruDibuat: playlistIni.id == idPlaylistBaruDisorot,
             onDitekan: () => bukaDetailPlaylist(playlistIni),
             onTekanPutar: () => putarPlaylist(playlistIni),
           );
@@ -483,6 +526,7 @@ class KartuGridKoleksi extends StatelessWidget {
 class BarisPlaylistSaya extends StatelessWidget {
   final Playlist playlist;
   final bool isSedangDiputar;
+  final bool isBaruDibuat;
   final VoidCallback onDitekan;
   final VoidCallback onTekanPutar;
 
@@ -490,6 +534,7 @@ class BarisPlaylistSaya extends StatelessWidget {
     super.key,
     required this.playlist,
     required this.isSedangDiputar,
+    this.isBaruDibuat = false,
     required this.onDitekan,
     required this.onTekanPutar,
   });
@@ -505,6 +550,9 @@ class BarisPlaylistSaya extends StatelessWidget {
       onTap: onDitekan,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      tileColor: isBaruDibuat
+          ? WarnaCapify.coklatTua.withValues(alpha: 0.8)
+          : null,
       leading: SizedBox(
         width: 56,
         height: 56,
