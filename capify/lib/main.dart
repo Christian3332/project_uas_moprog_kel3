@@ -18,6 +18,7 @@ import 'services/supabase_feed_service.dart';
 import 'services/supabase_koleksi_service.dart';
 import 'services/supabase_search_service.dart';
 import 'utils/warna_capify.dart';
+import 'widgets/penjaga_pemutar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,6 +74,9 @@ class CapifyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Capify',
       debugShowCheckedModeBanner: false,
+      navigatorKey: kunciNavigatorUtama,
+      builder: (context, halaman) =>
+          PenjagaPemutar(child: halaman ?? const SizedBox.shrink()),
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: WarnaCapify.coklatGelap,
