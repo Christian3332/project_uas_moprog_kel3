@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/feed_beranda.dart';
 import '../models/lagu.dart';
 import '../models/racikan_untukmu.dart';
 import '../models/riwayat_putar.dart';
@@ -23,12 +24,13 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool isSedangTarikSegarkan = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       HomeProvider home = context.read<HomeProvider>();
@@ -48,6 +50,34 @@ class _HomeScreenState extends State<HomeScreen> {
     if (pesanGagal != null) tampilkanPesan(pesanGagal);
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    cobaLagiSaatAplikasiDibukaKembali();
+  }
+
+  Future<void> cobaLagiSaatAplikasiDibukaKembali() async {
+    HomeProvider home = context.read<HomeProvider>();
+    bool isPerluDicobaLagi =
+        home.isSudahPernahDimuat &&
+        home.isMemakaiDataCadangan &&
+        !home.isSedangMemuat;
+    if (!isPerluDicobaLagi) return;
+
+    await home.muatIsiBeranda(isPaksaMuatUlang: true);
+    if (!mounted) return;
+
+    if (!home.isMemakaiDataCadangan) {
+      tampilkanPesan('Kamu kembali online, beranda sudah diperbarui');
+    }
+  }
+
   Future<void> cobaHubungkanLagi() async {
     HomeProvider home = context.read<HomeProvider>();
     if (home.isSedangMemuat) return;
@@ -58,11 +88,33 @@ class _HomeScreenState extends State<HomeScreen> {
     String? pesanGagal = home.pesanGagal;
     if (pesanGagal != null) {
       tampilkanPesan(pesanGagal);
+    } else if (home.isSedangOffline) {
+      tampilkanPesan('Masih offline, cek Wi-Fi atau data selulermu dulu ya');
     } else if (home.isMemakaiDataCadangan) {
       tampilkanPesan('Server masih belum bisa dihubungi, coba lagi nanti ya');
     } else {
       tampilkanPesan('Berhasil terhubung, beranda sudah diperbarui');
     }
+  }
+
+  String teksSpandukBeranda(HomeProvider home) {
+    String awalanPesan = home.isSedangOffline
+        ? 'Kamu sedang offline.'
+        : 'Server belum bisa dihubungi.';
+
+    if (home.asalFeed == AsalFeed.contoh) {
+      return '$awalanPesan Capy menampilkan lagu contoh dulu.';
+    }
+
+    DateTime? waktuDisimpan = home.waktuFeedDisimpan;
+    if (waktuDisimpan == null) {
+      return '$awalanPesan Ini berandamu yang terakhir tersimpan.';
+    }
+
+    String sejakKapan = ubahJarakWaktuJadiTeks(
+      DateTime.now().difference(waktuDisimpan),
+    ).toLowerCase();
+    return '$awalanPesan Ini berandamu dari $sejakKapan.';
   }
 
   String teksDurasi(Duration durasi) {
@@ -279,6 +331,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   SpandukDataCadangan(
                     isSedangMencoba: home.isSedangMenyegarkan,
                     onCobaLagi: cobaHubungkanLagi,
+                    pesanKhusus: teksSpandukBeranda(home),
+                    ikon: home.isSedangOffline
+                        ? Icons.wifi_off_rounded
+                        : Icons.cloud_off_rounded,
                   ),
                 ...buildBagianTerakhirDiputar(home),
                 const SizedBox(height: 28),

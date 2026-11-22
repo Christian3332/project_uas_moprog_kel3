@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/feed_beranda.dart';
+import 'feed_lokal_service.dart';
 import 'feed_service.dart';
 
 class SupabaseFeedService extends FeedService {
@@ -8,40 +11,95 @@ class SupabaseFeedService extends FeedService {
   static const String namaTabelRiwayat = 'recently_played';
   static const int batasRiwayatDiambil = 30;
 
+  static const List<String> cirinyaTidakAdaInternet = [
+    'socketexception',
+    'failed host lookup',
+    'network is unreachable',
+    'connection refused',
+    'connection reset',
+    'connection closed',
+    'connection failed',
+    'clientexception',
+    'xmlhttprequest error',
+    'failed to fetch',
+    'no address associated',
+  ];
+
   final Duration batasWaktuTunggu;
+  final FeedLokalService penyimpananLokal;
 
   const SupabaseFeedService({
     this.batasWaktuTunggu = const Duration(seconds: 10),
+    this.penyimpananLokal = const FeedLokalService(),
     super.lamaResponServer = Duration.zero,
   });
 
+  static bool apakahMasalahKoneksi(Object galat) {
+    if (galat is TimeoutException) return true;
+    if (galat is AuthRetryableFetchException && galat.statusCode == null) {
+      return true;
+    }
+
+    String teksGalat = galat.toString().toLowerCase();
+    return cirinyaTidakAdaInternet.any((ciri) => teksGalat.contains(ciri));
+  }
+
+  String idPenggunaAktif() {
+    try {
+      return Supabase.instance.client.auth.currentUser?.id ?? 'tamu';
+    } catch (_) {
+      return 'tamu';
+    }
+  }
+
   @override
   Future<FeedBeranda> ambilFeedBeranda() async {
+    String idPengguna = idPenggunaAktif();
+
     try {
-      SupabaseClient klienSupabase = Supabase.instance.client;
-
-      List<Map<String, dynamic>> barisLagu = await klienSupabase
-          .from(namaTabelLagu)
-          .select('id, title, artist, cover_url, audio_url, duration_ms, genre')
-          .order('title')
-          .timeout(batasWaktuTunggu);
-
-      List<Map<String, dynamic>> barisRiwayat = await _ambilRiwayatPengguna(
-        klienSupabase,
-      );
-
-      FeedBeranda feedDariServer = FeedBeranda.fromJson(
-        susunJsonFeed(barisLagu, barisRiwayat, DateTime.now()),
-      );
-
-      if (feedDariServer.jumlahLaguDiKatalog == 0) {
-        throw Exception('Katalog lagu di server masih kosong');
-      }
+      FeedBeranda feedDariServer = await ambilDariServer();
+      await penyimpananLokal.simpanFeed(idPengguna, feedDariServer);
       return feedDariServer;
-    } catch (_) {
-      FeedBeranda feedCadangan = await super.ambilFeedBeranda();
-      return feedCadangan.tandaiSebagaiCadangan();
+    } catch (galat) {
+      bool isKarenaOffline = apakahMasalahKoneksi(galat);
+
+      FeedBeranda? feedTerakhir = await penyimpananLokal.ambilFeed(idPengguna);
+      if (feedTerakhir != null) {
+        return feedTerakhir.tandaiAsal(
+          AsalFeed.simpananTerakhir,
+          isKarenaOffline: isKarenaOffline,
+        );
+      }
+
+      FeedBeranda feedContoh = await super.ambilFeedBeranda();
+      return feedContoh.tandaiAsal(
+        AsalFeed.contoh,
+        isKarenaOffline: isKarenaOffline,
+      );
     }
+  }
+
+  Future<FeedBeranda> ambilDariServer() async {
+    SupabaseClient klienSupabase = Supabase.instance.client;
+
+    List<Map<String, dynamic>> barisLagu = await klienSupabase
+        .from(namaTabelLagu)
+        .select('id, title, artist, cover_url, audio_url, duration_ms, genre')
+        .order('title')
+        .timeout(batasWaktuTunggu);
+
+    List<Map<String, dynamic>> barisRiwayat = await _ambilRiwayatPengguna(
+      klienSupabase,
+    );
+
+    FeedBeranda feedDariServer = FeedBeranda.fromJson(
+      susunJsonFeed(barisLagu, barisRiwayat, DateTime.now()),
+    );
+
+    if (feedDariServer.jumlahLaguDiKatalog == 0) {
+      throw Exception('Katalog lagu di server masih kosong');
+    }
+    return feedDariServer;
   }
 
   Future<List<Map<String, dynamic>>> _ambilRiwayatPengguna(
