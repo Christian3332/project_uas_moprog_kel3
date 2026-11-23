@@ -7,6 +7,7 @@ import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/pesan_error_auth.dart';
 import '../utils/warna_capify.dart';
+import '../widgets/komponen_auth.dart';
 import '../widgets/lembar_edit_nama.dart';
 import 'login_screen.dart';
 
@@ -39,16 +40,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
-  void tampilkanPesan(String pesan) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(pesan)));
-  }
-
   Future<void> bukaEditNama() async {
     AuthProvider authProvider = context.read<AuthProvider>();
     if (!authProvider.isSudahMasuk) {
-      tampilkanPesan(pesanGagalPerbaruiProfil(KesalahanProfil.belumMasuk));
+      tampilkanPesan(
+        context,
+        pesanGagalPerbaruiProfil(KesalahanProfil.belumMasuk),
+      );
       return;
     }
 
@@ -68,6 +66,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
     if (!mounted) return;
 
     tampilkanPesan(
+      context,
       kesalahan == null
           ? 'Nama berhasil diperbarui'
           : pesanGagalPerbaruiProfil(kesalahan),
@@ -84,6 +83,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
     if (isKualitasHarusTurun) {
       tampilkanPesan(
+        context,
         'Kualitas streaming diturunkan ke Rendah biar hemat kuota',
       );
     }
@@ -173,7 +173,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
               child: const Text(
                 'Keluar',
                 style: TextStyle(
-                  color: Color(0xFFFF8A80),
+                  color: warnaPeringatan,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -283,7 +283,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 title: const Text('Bahasa'),
                 subtitle: const Text('Indonesia'),
                 trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => tampilkanPesan('Pilihan bahasa lain segera hadir'),
+                onTap: () =>
+                    tampilkanPesan(context, 'Pilihan bahasa lain segera hadir'),
               ),
             ],
           ),
@@ -298,7 +299,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 ),
                 title: const Text('Ubah password'),
                 trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => tampilkanPesan('Fitur ubah password segera hadir'),
+                onTap: () =>
+                    tampilkanPesan(context, 'Fitur ubah password segera hadir'),
               ),
               ListTile(
                 leading: const Icon(
@@ -322,7 +324,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Color(0xFFFF8A80),
+                        color: warnaPeringatan,
                       ),
                     )
                   : const Icon(Icons.logout_rounded),
@@ -331,9 +333,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFFF8A80),
-                disabledForegroundColor: const Color(0xFFFF8A80),
-                side: const BorderSide(color: Color(0xFFFF8A80)),
+                foregroundColor: warnaPeringatan,
+                disabledForegroundColor: warnaPeringatan,
+                side: const BorderSide(color: warnaPeringatan),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25),
                 ),

@@ -3,6 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../utils/warna_capify.dart';
 
+const Color warnaPeringatan = Color(0xFFFF8A80);
+
+void tampilkanPesan(BuildContext context, String pesan) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(pesan)));
+}
+
 const BoxDecoration latarGradienAuth = BoxDecoration(
   gradient: LinearGradient(
     begin: Alignment.topCenter,
@@ -125,7 +133,7 @@ class KolomInputAuth extends StatelessWidget {
         focusedBorder: garisKolom.copyWith(
           borderSide: const BorderSide(color: WarnaCapify.krem, width: 2),
         ),
-        errorStyle: const TextStyle(color: Color(0xFFFF8A80)),
+        errorStyle: const TextStyle(color: warnaPeringatan),
       ),
     );
   }
@@ -196,14 +204,12 @@ class KotakPesanError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color merahPesan = Color(0xFFFF8A80);
-
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
       decoration: BoxDecoration(
-        color: merahPesan.withValues(alpha: 0.12),
+        color: warnaPeringatan.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: merahPesan.withValues(alpha: 0.6)),
+        border: Border.all(color: warnaPeringatan.withValues(alpha: 0.6)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +218,7 @@ class KotakPesanError extends StatelessWidget {
             padding: EdgeInsets.only(top: 2),
             child: Icon(
               Icons.error_outline_rounded,
-              color: merahPesan,
+              color: warnaPeringatan,
               size: 22,
             ),
           ),
@@ -242,6 +248,132 @@ class KotakPesanError extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class TombolLihatPassword extends StatelessWidget {
+  final bool isTersembunyi;
+  final VoidCallback onTekan;
+
+  const TombolLihatPassword({
+    super.key,
+    required this.isTersembunyi,
+    required this.onTekan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: isTersembunyi ? 'Tampilkan password' : 'Sembunyikan password',
+      icon: Icon(
+        isTersembunyi
+            ? Icons.visibility_off_outlined
+            : Icons.visibility_outlined,
+        color: WarnaCapify.coklatTua,
+      ),
+      onPressed: onTekan,
+    );
+  }
+}
+
+class KotakCentangAuth extends StatelessWidget {
+  final bool isDicentang;
+  final ValueChanged<bool?>? onUbah;
+  final bool isAdaError;
+
+  const KotakCentangAuth({
+    super.key,
+    required this.isDicentang,
+    required this.onUbah,
+    this.isAdaError = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Checkbox(
+      value: isDicentang,
+      onChanged: onUbah,
+      activeColor: WarnaCapify.krem,
+      checkColor: WarnaCapify.coklatGelap,
+      side: BorderSide(
+        color: isAdaError ? warnaPeringatan : WarnaCapify.krem,
+        width: 1.5,
+      ),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+class BarisTombolSosial extends StatelessWidget {
+  final bool isNonaktif;
+  final ValueChanged<String> onPilihLayanan;
+
+  const BarisTombolSosial({
+    super.key,
+    required this.isNonaktif,
+    required this.onPilihLayanan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: TombolSosialAuth(
+            ikonLayanan: Icons.g_mobiledata_rounded,
+            namaLayanan: 'Google',
+            onTekan: isNonaktif ? null : () => onPilihLayanan('Google'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TombolSosialAuth(
+            ikonLayanan: Icons.facebook_rounded,
+            namaLayanan: 'Facebook',
+            onTekan: isNonaktif ? null : () => onPilihLayanan('Facebook'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class BarisPindahAuth extends StatelessWidget {
+  final String teksPertanyaan;
+  final String teksTombol;
+  final VoidCallback? onTekan;
+
+  const BarisPindahAuth({
+    super.key,
+    required this.teksPertanyaan,
+    required this.teksTombol,
+    required this.onTekan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          teksPertanyaan,
+          style: const TextStyle(
+            color: WarnaCapify.putih,
+            fontWeight: FontWeight.w300,
+          ),
+        ),
+        TextButton(
+          onPressed: onTekan,
+          child: Text(
+            teksTombol,
+            style: const TextStyle(
+              color: WarnaCapify.krem,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -288,7 +420,7 @@ class IndikatorKekuatanPassword extends StatelessWidget {
     const List<String> namaLevel = ['', 'Lemah', 'Sedang', 'Kuat'];
     const List<Color> warnaLevel = [
       Colors.transparent,
-      Color(0xFFFF8A80),
+      warnaPeringatan,
       Color(0xFFFFD180),
       Color(0xFFB9F6CA),
     ];

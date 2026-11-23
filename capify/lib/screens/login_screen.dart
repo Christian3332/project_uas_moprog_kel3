@@ -70,12 +70,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isIngatSaya = !isIngatSaya);
   }
 
-  void tampilkanPesan(String pesan) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(pesan)));
-  }
-
   String rapikanEmail(String? email) => (email ?? '').trim().toLowerCase();
 
   String? validasiEmailLogin(String? isian) {
@@ -234,6 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
         .read<AuthProvider>()
         .isPerluKonfirmasiEmail;
     tampilkanPesan(
+      context,
       isPerluKonfirmasi
           ? 'Akun dibuat! Konfirmasi lewat email dulu, lalu masuk'
           : 'Akun berhasil dibuat, silakan masuk',
@@ -302,19 +297,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             cekIsian: validasiPasswordLogin,
                             saatSelesaiKetik: (_) => prosesMasuk(),
                             isBisaDiketik: !isSedangMasuk,
-                            tombolBelakang: IconButton(
-                              icon: Icon(
-                                isPasswordTersembunyi
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: WarnaCapify.coklatTua,
+                            tombolBelakang: TombolLihatPassword(
+                              isTersembunyi: isPasswordTersembunyi,
+                              onTekan: () => setState(
+                                () => isPasswordTersembunyi =
+                                    !isPasswordTersembunyi,
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  isPasswordTersembunyi =
-                                      !isPasswordTersembunyi;
-                                });
-                              },
                             ),
                           ),
                         ],
@@ -323,18 +311,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Checkbox(
-                          value: isIngatSaya,
-                          onChanged: isSedangMasuk
-                              ? null
-                              : (_) => ubahIngatSaya(),
-                          activeColor: WarnaCapify.krem,
-                          checkColor: WarnaCapify.coklatGelap,
-                          side: const BorderSide(
-                            color: WarnaCapify.krem,
-                            width: 1.5,
-                          ),
-                          visualDensity: VisualDensity.compact,
+                        KotakCentangAuth(
+                          isDicentang: isIngatSaya,
+                          onUbah: isSedangMasuk ? null : (_) => ubahIngatSaya(),
                         ),
                         GestureDetector(
                           onTap: ubahIngatSaya,
@@ -351,6 +330,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: isSedangMasuk
                               ? null
                               : () => tampilkanPesan(
+                                  context,
                                   'Fitur lupa password segera hadir',
                                 ),
                           child: const Text(
@@ -379,55 +359,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 28),
                     const PemisahAtau(teksTengah: 'atau masuk dengan'),
                     const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TombolSosialAuth(
-                            ikonLayanan: Icons.g_mobiledata_rounded,
-                            namaLayanan: 'Google',
-                            onTekan: isSedangMasuk
-                                ? null
-                                : () => tampilkanPesan(
-                                    'Masuk lewat Google segera hadir',
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TombolSosialAuth(
-                            ikonLayanan: Icons.facebook_rounded,
-                            namaLayanan: 'Facebook',
-                            onTekan: isSedangMasuk
-                                ? null
-                                : () => tampilkanPesan(
-                                    'Masuk lewat Facebook segera hadir',
-                                  ),
-                          ),
-                        ),
-                      ],
+                    BarisTombolSosial(
+                      isNonaktif: isSedangMasuk,
+                      onPilihLayanan: (namaLayanan) => tampilkanPesan(
+                        context,
+                        'Masuk lewat $namaLayanan segera hadir',
+                      ),
                     ),
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'Belum punya akun?',
-                          style: TextStyle(
-                            color: WarnaCapify.putih,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: isSedangMasuk ? null : bukaHalamanDaftar,
-                          child: const Text(
-                            'Daftar',
-                            style: TextStyle(
-                              color: WarnaCapify.krem,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+                    BarisPindahAuth(
+                      teksPertanyaan: 'Belum punya akun?',
+                      teksTombol: 'Daftar',
+                      onTekan: isSedangMasuk ? null : bukaHalamanDaftar,
                     ),
                   ],
                 ),

@@ -63,12 +63,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  void tampilkanPesan(String pesan) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(pesan)));
-  }
-
   String? validasiEmailDaftar(String? isian) {
     String? errorFormat = cekEmail(isian);
     if (errorFormat != null) return errorFormat;
@@ -181,20 +175,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Row(
           children: [
-            Checkbox(
-              value: isSetujuSyarat,
-              onChanged: isSedangMendaftar
-                  ? null
-                  : (_) => ubahPersetujuanSyarat(),
-              activeColor: WarnaCapify.krem,
-              checkColor: WarnaCapify.coklatGelap,
-              side: BorderSide(
-                color: isSyaratBelumDicentang
-                    ? const Color(0xFFFF8A80)
-                    : WarnaCapify.krem,
-                width: 1.5,
-              ),
-              visualDensity: VisualDensity.compact,
+            KotakCentangAuth(
+              isDicentang: isSetujuSyarat,
+              isAdaError: isSyaratBelumDicentang,
+              onUbah: isSedangMendaftar ? null : (_) => ubahPersetujuanSyarat(),
             ),
             Expanded(
               child: GestureDetector(
@@ -227,7 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: EdgeInsets.only(left: 12),
             child: Text(
               'Centang dulu persetujuannya ya',
-              style: TextStyle(color: Color(0xFFFF8A80), fontSize: 12),
+              style: TextStyle(color: warnaPeringatan, fontSize: 12),
             ),
           ),
       ],
@@ -297,19 +281,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               jenisAutofill: const [AutofillHints.newPassword],
                               cekIsian: validasiPasswordDaftar,
                               isBisaDiketik: !isSedangMendaftar,
-                              tombolBelakang: IconButton(
-                                icon: Icon(
-                                  isPasswordTersembunyi
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: WarnaCapify.coklatTua,
+                              tombolBelakang: TombolLihatPassword(
+                                isTersembunyi: isPasswordTersembunyi,
+                                onTekan: () => setState(
+                                  () => isPasswordTersembunyi =
+                                      !isPasswordTersembunyi,
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    isPasswordTersembunyi =
-                                        !isPasswordTersembunyi;
-                                  });
-                                },
                               ),
                             ),
                             IndikatorKekuatanPassword(
@@ -348,57 +325,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 28),
                       const PemisahAtau(teksTengah: 'atau daftar dengan'),
                       const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TombolSosialAuth(
-                              ikonLayanan: Icons.g_mobiledata_rounded,
-                              namaLayanan: 'Google',
-                              onTekan: isSedangMendaftar
-                                  ? null
-                                  : () => tampilkanPesan(
-                                      'Daftar lewat Google segera hadir',
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TombolSosialAuth(
-                              ikonLayanan: Icons.facebook_rounded,
-                              namaLayanan: 'Facebook',
-                              onTekan: isSedangMendaftar
-                                  ? null
-                                  : () => tampilkanPesan(
-                                      'Daftar lewat Facebook segera hadir',
-                                    ),
-                            ),
-                          ),
-                        ],
+                      BarisTombolSosial(
+                        isNonaktif: isSedangMendaftar,
+                        onPilihLayanan: (namaLayanan) => tampilkanPesan(
+                          context,
+                          'Daftar lewat $namaLayanan segera hadir',
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'Sudah punya akun?',
-                            style: TextStyle(
-                              color: WarnaCapify.putih,
-                              fontWeight: FontWeight.w300,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: isSedangMendaftar
-                                ? null
-                                : () => Navigator.pop(context),
-                            child: const Text(
-                              'Masuk',
-                              style: TextStyle(
-                                color: WarnaCapify.krem,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+                      BarisPindahAuth(
+                        teksPertanyaan: 'Sudah punya akun?',
+                        teksTombol: 'Masuk',
+                        onTekan: isSedangMendaftar
+                            ? null
+                            : () => Navigator.pop(context),
                       ),
                     ],
                   ),
