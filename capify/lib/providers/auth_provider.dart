@@ -56,7 +56,6 @@ class AuthProvider extends ChangeNotifier {
   bool get isSedangMenyimpanProfil => _isSedangMenyimpanProfil;
   bool get isSudahMasuk => _penggunaAktif != null;
   bool get isIngatSaya => _isIngatSaya;
-  bool get isSedangMemproses => _isSedangMemproses;
   bool get isPerluKonfirmasiEmail => _isPerluKonfirmasiEmail;
   String get namaTampilan => _penggunaAktif?.nama ?? 'Capy Lovers';
   String get emailTampilan => _penggunaAktif?.email ?? 'Belum masuk ke akun';
