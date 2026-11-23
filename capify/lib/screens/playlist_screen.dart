@@ -7,6 +7,7 @@ import '../models/playlist.dart';
 import '../providers/audio_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../services/koleksi_service.dart';
+import '../utils/format_waktu.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import '../widgets/form_buat_playlist.dart';
@@ -27,12 +28,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   final pengendaliGulirPlaylist = ScrollController();
   final Duration lamaSorotanPlaylistBaru = const Duration(seconds: 2);
 
-  @override
-  void dispose() {
-    pengendaliGulirPlaylist.dispose();
-    super.dispose();
-  }
-
   final List<String> pilihanKategori = ['Playlist', 'Album', 'Lagu Disukai'];
 
   final aturanGridKoleksi = const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -42,10 +37,20 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     childAspectRatio: 0.72,
   );
 
-  String formatDurasiLagu(Duration durasi) {
-    String menit = durasi.inMinutes.toString();
-    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
-    return '$menit:$detik';
+  @override
+  void dispose() {
+    pengendaliGulirPlaylist.dispose();
+    super.dispose();
+  }
+
+  void tampilkanPesan(String pesan) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(pesan)));
+  }
+
+  void tampilkanInfoSegeraHadir(String namaFitur) {
+    tampilkanPesan('$namaFitur segera hadir');
   }
 
   Future<void> muatUlangKoleksi() async {
@@ -54,11 +59,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (!mounted) return;
 
     String? pesanGagal = koleksi.pesanGagal;
-    if (pesanGagal == null) return;
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(pesanGagal)));
+    if (pesanGagal != null) tampilkanPesan(pesanGagal);
   }
 
   Widget bangunAreaKoleksi(PlaylistProvider koleksi) {
@@ -172,12 +173,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     setState(() => idPlaylistBaruDisorot = null);
   }
 
-  void tampilkanPesan(String pesan) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(pesan)));
-  }
-
   bool isPlaylistSedangAktif(
     Playlist playlist,
     String namaAntrianAktif,
@@ -211,12 +206,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
 
     audio.mulaiAntrian(playlist.daftarLagu, namaAntrian: playlist.nama);
-  }
-
-  void tampilkanInfoSegeraHadir(String namaFitur) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$namaFitur segera hadir')));
   }
 
   Widget bangunIsiKoleksi(PlaylistProvider koleksi) {
@@ -295,7 +284,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             urlCover: laguIni.urlCover,
             judul: laguIni.judul,
             keterangan:
-                '${laguIni.penyanyi} • ${formatDurasiLagu(laguIni.durasi)}',
+                '${laguIni.penyanyi} • ${FormatWaktu.durasiLagu(laguIni.durasi)}',
             onDitekan: () =>
                 tampilkanInfoSegeraHadir('Memutar lagu ${laguIni.judul}'),
           );
