@@ -2,33 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../data/album_dummy.dart';
-import '../data/lagu_dummy.dart';
-import '../data/lagu_per_kategori_dummy.dart';
+import '../data/katalog_pencarian_dummy.dart';
 import '../models/album.dart';
 import '../models/hasil_pencarian.dart';
 import '../models/lagu.dart';
 import '../services/search_service.dart';
 import '../utils/saran_ejaan.dart';
-
-List<Lagu> kumpulkanSemuaLaguDummy() {
-  List<Lagu> semuaLagu = [];
-  Set<String> laguYangSudahMasuk = {};
-
-  List<Lagu> laguMentah = [
-    ...daftarLaguDummy,
-    for (List<Lagu> laguSatuKategori in laguPerKategoriDummy.values)
-      ...laguSatuKategori,
-  ];
-
-  for (Lagu lagu in laguMentah) {
-    String tandaLagu = '${lagu.judul}|${lagu.penyanyi}'.toLowerCase();
-    if (laguYangSudahMasuk.add(tandaLagu)) {
-      semuaLagu.add(lagu);
-    }
-  }
-  return semuaLagu;
-}
 
 class SearchProvider extends ChangeNotifier {
   static const String filterSemua = 'Semua';
@@ -39,16 +18,17 @@ class SearchProvider extends ChangeNotifier {
     filterJudul,
     filterPenyanyi,
   ];
+  static const String pesanGagalTanpaAlasan =
+      'Pencarian gagal, periksa koneksi internetmu lalu coba lagi';
 
   final SearchService searchService;
   final Duration jedaSetelahMengetik;
   final List<String> saranPencarian;
+  final List<String> kamusSaranEjaan;
   final int batasRiwayat = 5;
   final int batasHasilDariServer = 20;
   final int minimalHurufUntukCari = 2;
   final int batasIsiCache = 20;
-
-  final List<String> kamusSaranEjaan;
 
   SearchProvider({
     SearchService? searchService,
@@ -56,37 +36,23 @@ class SearchProvider extends ChangeNotifier {
     List<String>? saranPencarian,
     List<String>? kamusSaranEjaan,
   }) : searchService = searchService ?? SearchService(),
-       saranPencarian =
-           saranPencarian ??
-           kumpulkanSemuaLaguDummy()
-               .map((lagu) => lagu.penyanyi)
-               .toSet()
-               .take(8)
-               .toList(),
+       saranPencarian = saranPencarian ?? susunSaranPenyanyiDummy(),
        kamusSaranEjaan = kamusSaranEjaan ?? susunKamusSaranDummy();
 
-  static List<String> susunKamusSaranDummy() {
-    return {
-      for (Lagu lagu in kumpulkanSemuaLaguDummy()) ...[
-        lagu.judul,
-        lagu.penyanyi,
-      ],
-      for (Album album in daftarAlbumTersimpanDummy) album.judul,
-    }.toList();
-  }
-
-  String? _saranEjaan;
   String _kataKunci = '';
   String _kataKunciHasilTampil = '';
   String _filterAktif = filterSemua;
   HasilPencarian? _hasilDariServer;
   List<Lagu> _laguTampil = [];
   List<Album> _albumTampil = [];
-  List<String> _riwayatPencarian = [];
-  final Map<String, HasilPencarian> _cacheHasil = {};
-  Timer? _timerTungguKetikan;
+  String? _saranEjaan;
   String? _pesanError;
   bool _isSedangMencari = false;
+
+  List<String> _riwayatPencarian = [];
+  final Map<String, HasilPencarian> _cacheHasil = {};
+
+  Timer? _timerTungguKetikan;
   bool _isProviderSudahDitutup = false;
   int _urutanPermintaan = 0;
   int _jumlahPanggilanApi = 0;
@@ -101,13 +67,20 @@ class SearchProvider extends ChangeNotifier {
   bool get isAdaError => _pesanError != null;
   bool get isHasilDariCadangan => _hasilDariServer?.isDariCadangan ?? false;
   int get jumlahPanggilanApi => _jumlahPanggilanApi;
+  int get jumlahHasilTanpaFilter => _hasilDariServer?.jumlahSemuaHasil ?? 0;
   List<Lagu> get hasilPencarian => List.unmodifiable(_laguTampil);
   List<Album> get albumDitemukan => List.unmodifiable(_albumTampil);
   List<String> get riwayatPencarian => List.unmodifiable(_riwayatPencarian);
 
+  List<String> get potonganKataKunci {
+    return SearchService.pecahKataKunci(kataKunciBersih);
+  }
+
+  String get _kataKunciUntukServer => potonganKataKunci.join(' ');
+
   bool get isKataKunciKependekan {
     if (isKolomCariKosong) return false;
-    return potonganKataKunci.join(' ').length < minimalHurufUntukCari;
+    return _kataKunciUntukServer.length < minimalHurufUntukCari;
   }
 
   bool get isHasilKosong {
@@ -116,38 +89,30 @@ class SearchProvider extends ChangeNotifier {
     return _laguTampil.isEmpty && _albumTampil.isEmpty;
   }
 
-  String? get saranEjaan => isHasilKosong ? _saranEjaan : null;
-
-  int get jumlahHasilTanpaFilter {
-    HasilPencarian? hasil = _hasilDariServer;
-    if (hasil == null) return 0;
-    return hasil.jumlahSemuaHasil;
-  }
-
   bool get isHasilTersembunyiOlehFilter {
     return isHasilKosong && !isFilterSemua && jumlahHasilTanpaFilter > 0;
   }
 
+  String? get saranEjaan => isHasilKosong ? _saranEjaan : null;
+
   String? get kataTunggalUntukDicoba {
-    List<String> semuaKata = potonganKataKunci
+    List<String> kataYangCukupPanjang = potonganKataKunci
         .where((kata) => kata.length >= minimalHurufUntukCari)
         .toList();
-    if (potonganKataKunci.length < 2 || semuaKata.isEmpty) return null;
+    if (potonganKataKunci.length < 2 || kataYangCukupPanjang.isEmpty) {
+      return null;
+    }
 
-    List<String> kataYangDikenal = semuaKata.where((kata) {
+    List<String> kataYangDikenal = kataYangCukupPanjang.where((kata) {
       return kamusSaranEjaan.any((frasa) => frasa.toLowerCase().contains(kata));
     }).toList();
     List<String> kandidat = kataYangDikenal.isEmpty
-        ? semuaKata
+        ? kataYangCukupPanjang
         : kataYangDikenal;
 
     return kandidat.reduce(
       (kataJuara, kata) => kata.length > kataJuara.length ? kata : kataJuara,
     );
-  }
-
-  List<String> get potonganKataKunci {
-    return SearchService.pecahKataKunci(kataKunciBersih);
   }
 
   List<String> get kataSorotanJudul {
@@ -208,29 +173,44 @@ class SearchProvider extends ChangeNotifier {
     }
   }
 
+  void _batalkanPencarianYangBerjalan() {
+    _urutanPermintaan++;
+    _isSedangMencari = false;
+    _pesanError = null;
+  }
+
+  int _tandaiMulaiMencari() {
+    _urutanPermintaan++;
+    _isSedangMencari = true;
+    _pesanError = null;
+    _kabariLayar();
+    return _urutanPermintaan;
+  }
+
   String? _siapkanPencarian(String ketikanUser) {
     _kataKunci = ketikanUser;
     _timerTungguKetikan?.cancel();
-    String kataYangDicari = potonganKataKunci.join(' ');
+    String kataYangDicari = _kataKunciUntukServer;
 
-    bool isHasilnyaSudahTampil =
-        kataYangDicari == _kataKunciHasilTampil && !isAdaError;
-    bool isTidakPerluKeServer = kataYangDicari.isEmpty || isKataKunciKependekan;
+    if (kataYangDicari.isEmpty || isKataKunciKependekan) {
+      _batalkanPencarianYangBerjalan();
+      _pasangHasil('', null);
+      if (kataYangDicari.isEmpty) _filterAktif = filterSemua;
+      _kabariLayar();
+      return null;
+    }
+
+    if (kataYangDicari == _kataKunciHasilTampil && !isAdaError) {
+      _batalkanPencarianYangBerjalan();
+      _kabariLayar();
+      return null;
+    }
+
     HasilPencarian? hasilDariCache = _cacheHasil[kataYangDicari];
-
-    if (isHasilnyaSudahTampil ||
-        isTidakPerluKeServer ||
-        hasilDariCache != null) {
-      _urutanPermintaan++;
-      _isSedangMencari = false;
-      _pesanError = null;
-      if (isTidakPerluKeServer) {
-        _pasangHasil('', null);
-        if (kataYangDicari.isEmpty) _filterAktif = filterSemua;
-      } else if (!isHasilnyaSudahTampil) {
-        _simpanKeCache(kataYangDicari, hasilDariCache!);
-        _pasangHasil(kataYangDicari, hasilDariCache);
-      }
+    if (hasilDariCache != null) {
+      _batalkanPencarianYangBerjalan();
+      _simpanKeCache(kataYangDicari, hasilDariCache);
+      _pasangHasil(kataYangDicari, hasilDariCache);
       _kabariLayar();
       return null;
     }
@@ -242,11 +222,7 @@ class SearchProvider extends ChangeNotifier {
     String? kataYangDicari = _siapkanPencarian(ketikanUser);
     if (kataYangDicari == null) return;
 
-    _urutanPermintaan++;
-    _isSedangMencari = true;
-    _pesanError = null;
-    _kabariLayar();
-
+    _tandaiMulaiMencari();
     _timerTungguKetikan = Timer(
       jedaSetelahMengetik,
       () => _ambilDariServer(kataYangDicari),
@@ -262,7 +238,7 @@ class SearchProvider extends ChangeNotifier {
 
   Future<void> cobaLagi() async {
     _timerTungguKetikan?.cancel();
-    String kataYangDicari = potonganKataKunci.join(' ');
+    String kataYangDicari = _kataKunciUntukServer;
     if (kataYangDicari.isEmpty || isKataKunciKependekan) return;
 
     await _ambilDariServer(kataYangDicari);
@@ -271,13 +247,9 @@ class SearchProvider extends ChangeNotifier {
   Future<void> _ambilDariServer(String kataYangDicari) async {
     if (_isProviderSudahDitutup) return;
 
-    _urutanPermintaan++;
-    int permintaanIniKe = _urutanPermintaan;
-    _isSedangMencari = true;
-    _pesanError = null;
-    _kabariLayar();
-
+    int permintaanIniKe = _tandaiMulaiMencari();
     _jumlahPanggilanApi++;
+
     HasilPencarian? hasilBaru;
     String? pesanGagal;
     try {
@@ -288,16 +260,14 @@ class SearchProvider extends ChangeNotifier {
     } on SearchException catch (masalah) {
       pesanGagal = masalah.pesan;
     } catch (_) {
-      pesanGagal = 'Pencarian gagal, periksa koneksi internetmu lalu coba lagi';
+      pesanGagal = pesanGagalTanpaAlasan;
     }
 
-    if (_isProviderSudahDitutup || permintaanIniKe != _urutanPermintaan) {
-      return;
-    }
+    bool isSudahTidakDibutuhkan =
+        _isProviderSudahDitutup || permintaanIniKe != _urutanPermintaan;
+    if (isSudahTidakDibutuhkan) return;
 
-    if (hasilBaru != null) {
-      _simpanKeCache(kataYangDicari, hasilBaru);
-    }
+    if (hasilBaru != null) _simpanKeCache(kataYangDicari, hasilBaru);
     _pasangHasil(kataYangDicari, hasilBaru);
     _pesanError = pesanGagal;
     _isSedangMencari = false;
