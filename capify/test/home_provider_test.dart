@@ -388,11 +388,12 @@ void main() {
 
       await Future.delayed(const Duration(milliseconds: 100));
       expect(homeLambat.isMemuatTerlaluLama, isTrue);
-      expect(homeLambat.isMuatPertamaKali, isTrue);
+      expect(homeLambat.isSudahPernahDimuat, isFalse);
+      expect(homeLambat.pesanGagal, isNull);
 
       await prosesMuat;
       expect(homeLambat.isMemuatTerlaluLama, isFalse);
-      expect(homeLambat.isMuatPertamaKali, isFalse);
+      expect(homeLambat.isSudahPernahDimuat, isTrue);
       homeLambat.dispose();
     });
 
@@ -413,13 +414,13 @@ void main() {
     });
 
     test('Muat ulang dianggap menyegarkan, bukan muat pertama', () async {
-      expect(home.isMuatPertamaKali, isTrue);
+      expect(home.isSudahPernahDimuat, isFalse);
       expect(home.isSedangMenyegarkan, isFalse);
       await home.muatIsiBeranda();
 
       Future<void> prosesSegarkan = home.muatIsiBeranda(isPaksaMuatUlang: true);
       expect(home.isSedangMenyegarkan, isTrue);
-      expect(home.isMuatPertamaKali, isFalse);
+      expect(home.isSudahPernahDimuat, isTrue);
 
       await prosesSegarkan;
       expect(home.isSedangMenyegarkan, isFalse);
