@@ -46,8 +46,6 @@ class User {
     );
   }
 
-  bool get isPunyaFoto => urlFoto.trim().isNotEmpty;
-
   String get inisial {
     List<String> daftarKata = nama
         .split(RegExp(r'\s+'))
