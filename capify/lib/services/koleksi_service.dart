@@ -62,18 +62,11 @@ class KoleksiService {
       );
     }
 
-    int posisiPlaylist = _playlistDiServerPalsu.indexWhere(
-      (playlistDiServer) => playlistDiServer.id == playlist.id,
-    );
-    if (posisiPlaylist == -1) {
-      throw Exception('Playlist ini belum tersimpan di server');
-    }
-
+    int posisiPlaylist = _cariPosisiPlaylistDiServer(playlist.id);
     Playlist playlistDiServer = _playlistDiServerPalsu[posisiPlaylist];
-    bool isLaguSudahAda = playlistDiServer.daftarLagu.any(
-      (laguLama) => buatKunciLagu(laguLama) == buatKunciLagu(lagu),
-    );
-    if (isLaguSudahAda) throw Exception('Lagu ini sudah ada di playlist');
+    if (playlistDiServer.isPunyaLagu(lagu)) {
+      throw Exception('Lagu ini sudah ada di playlist');
+    }
 
     Playlist playlistTerbaru = playlistDiServer.denganLaguTambahan(lagu);
     _playlistDiServerPalsu[posisiPlaylist] = playlistTerbaru;
@@ -90,18 +83,9 @@ class KoleksiService {
       throw Exception('Server Capify sedang sibuk, lagu belum bisa dihapus');
     }
 
-    int posisiPlaylist = _playlistDiServerPalsu.indexWhere(
-      (playlistDiServer) => playlistDiServer.id == playlist.id,
-    );
-    if (posisiPlaylist == -1) {
-      throw Exception('Playlist ini belum tersimpan di server');
-    }
-
+    int posisiPlaylist = _cariPosisiPlaylistDiServer(playlist.id);
     Playlist playlistDiServer = _playlistDiServerPalsu[posisiPlaylist];
-    bool isLaguMasihAda = playlistDiServer.daftarLagu.any(
-      (laguLama) => buatKunciLagu(laguLama) == buatKunciLagu(lagu),
-    );
-    if (!isLaguMasihAda) {
+    if (!playlistDiServer.isPunyaLagu(lagu)) {
       throw Exception('Lagu ini sudah tidak ada di playlist');
     }
 
@@ -110,7 +94,15 @@ class KoleksiService {
     return playlistTerbaru;
   }
 
-  static String buatKunciLagu(Lagu lagu) {
-    return '${lagu.judul}|${lagu.penyanyi}'.toLowerCase();
+  int _cariPosisiPlaylistDiServer(String idPlaylist) {
+    int posisiPlaylist = _playlistDiServerPalsu.indexWhere(
+      (playlistDiServer) => playlistDiServer.id == idPlaylist,
+    );
+    if (posisiPlaylist == -1) {
+      throw Exception('Playlist ini belum tersimpan di server');
+    }
+    return posisiPlaylist;
   }
+
+  static String buatKunciLagu(Lagu lagu) => Playlist.kunciLagu(lagu);
 }
