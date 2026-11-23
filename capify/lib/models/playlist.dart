@@ -18,30 +18,32 @@ class Playlist {
     return daftarLagu.first.urlCover;
   }
 
+  static String kunciLagu(Lagu lagu) {
+    return '${lagu.judul}|${lagu.penyanyi}'.toLowerCase();
+  }
+
+  bool isPunyaLagu(Lagu laguDicari) {
+    String kunciDicari = kunciLagu(laguDicari);
+    return daftarLagu.any((lagu) => kunciLagu(lagu) == kunciDicari);
+  }
+
   Playlist denganLaguTambahan(Lagu laguBaru) {
-    return Playlist(
-      id: id,
-      nama: nama,
-      deskripsi: deskripsi,
-      daftarLagu: [...daftarLagu, laguBaru],
-    );
+    return _salinDenganDaftarLagu([...daftarLagu, laguBaru]);
   }
 
   Playlist denganLaguDihapus(Lagu laguDihapus) {
-    String judulDihapus = laguDihapus.judul.toLowerCase();
-    String penyanyiDihapus = laguDihapus.penyanyi.toLowerCase();
+    String kunciDihapus = kunciLagu(laguDihapus);
+    return _salinDenganDaftarLagu(
+      daftarLagu.where((lagu) => kunciLagu(lagu) != kunciDihapus).toList(),
+    );
+  }
 
-    List<Lagu> sisaLagu = daftarLagu.where((lagu) {
-      bool isJudulSama = lagu.judul.toLowerCase() == judulDihapus;
-      bool isPenyanyiSama = lagu.penyanyi.toLowerCase() == penyanyiDihapus;
-      return !(isJudulSama && isPenyanyiSama);
-    }).toList();
-
+  Playlist _salinDenganDaftarLagu(List<Lagu> daftarLaguBaru) {
     return Playlist(
       id: id,
       nama: nama,
       deskripsi: deskripsi,
-      daftarLagu: sisaLagu,
+      daftarLagu: daftarLaguBaru,
     );
   }
 }

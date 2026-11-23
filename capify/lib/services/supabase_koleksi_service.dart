@@ -87,22 +87,10 @@ class SupabaseKoleksiService extends KoleksiService {
     required Playlist playlist,
     required Lagu lagu,
   }) async {
-    SupabaseClient klienSupabase;
-    try {
-      klienSupabase = Supabase.instance.client;
-    } catch (_) {
-      throw Exception('Server Capify belum tersambung');
-    }
-
-    User? penggunaAktif = klienSupabase.auth.currentUser;
-    if (penggunaAktif == null) {
-      throw Exception('Masuk dulu supaya bisa menambah lagu ke playlist');
-    }
-
-    String? idLagu = await _cariIdLaguDiKatalog(klienSupabase, lagu);
-    if (idLagu == null) {
-      throw Exception('Lagu "${lagu.judul}" belum ada di katalog Capify');
-    }
+    SupabaseClient klienSupabase = _ambilKlienPenggunaAktif(
+      'Masuk dulu supaya bisa menambah lagu ke playlist',
+    );
+    String idLagu = await _ambilIdLaguDiKatalog(klienSupabase, lagu);
 
     try {
       await klienSupabase
@@ -123,22 +111,10 @@ class SupabaseKoleksiService extends KoleksiService {
     required Playlist playlist,
     required Lagu lagu,
   }) async {
-    SupabaseClient klienSupabase;
-    try {
-      klienSupabase = Supabase.instance.client;
-    } catch (_) {
-      throw Exception('Server Capify belum tersambung');
-    }
-
-    User? penggunaAktif = klienSupabase.auth.currentUser;
-    if (penggunaAktif == null) {
-      throw Exception('Masuk dulu supaya bisa menghapus lagu dari playlist');
-    }
-
-    String? idLagu = await _cariIdLaguDiKatalog(klienSupabase, lagu);
-    if (idLagu == null) {
-      throw Exception('Lagu "${lagu.judul}" belum ada di katalog Capify');
-    }
+    SupabaseClient klienSupabase = _ambilKlienPenggunaAktif(
+      'Masuk dulu supaya bisa menghapus lagu dari playlist',
+    );
+    String idLagu = await _ambilIdLaguDiKatalog(klienSupabase, lagu);
 
     List<Map<String, dynamic>> barisTerhapus;
     try {
@@ -162,12 +138,27 @@ class SupabaseKoleksiService extends KoleksiService {
     return playlist.denganLaguDihapus(lagu);
   }
 
-  Future<String?> _cariIdLaguDiKatalog(
+  SupabaseClient _ambilKlienPenggunaAktif(String pesanBelumMasuk) {
+    SupabaseClient klienSupabase;
+    try {
+      klienSupabase = Supabase.instance.client;
+    } catch (_) {
+      throw Exception('Server Capify belum tersambung');
+    }
+
+    if (klienSupabase.auth.currentUser == null) {
+      throw Exception(pesanBelumMasuk);
+    }
+    return klienSupabase;
+  }
+
+  Future<String> _ambilIdLaguDiKatalog(
     SupabaseClient klienSupabase,
     Lagu lagu,
   ) async {
+    Map<String, dynamic>? barisLagu;
     try {
-      Map<String, dynamic>? barisLagu = await klienSupabase
+      barisLagu = await klienSupabase
           .from(namaTabelLagu)
           .select('id')
           .eq('title', lagu.judul)
@@ -175,11 +166,15 @@ class SupabaseKoleksiService extends KoleksiService {
           .limit(1)
           .maybeSingle()
           .timeout(batasWaktuTunggu);
-
-      return barisLagu?['id']?.toString();
     } catch (_) {
       throw Exception('Katalog lagu belum bisa dicek, coba lagi ya');
     }
+
+    String idLagu = barisLagu?['id']?.toString() ?? '';
+    if (idLagu.isEmpty) {
+      throw Exception('Lagu "${lagu.judul}" belum ada di katalog Capify');
+    }
+    return idLagu;
   }
 
   static String pesanGagalTambahLagu(String? kodeError) {

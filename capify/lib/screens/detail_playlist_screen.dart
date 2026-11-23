@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/lagu.dart';
 import '../models/playlist.dart';
+import '../utils/format_waktu.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 
@@ -215,12 +216,6 @@ class BarisLaguTracklist extends StatelessWidget {
     required this.onTekanPilihanLain,
   });
 
-  String formatDurasiLagu(Duration durasi) {
-    String menit = durasi.inMinutes.toString();
-    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
-    return '$menit:$detik';
-  }
-
   @override
   Widget build(BuildContext context) {
     Color warnaJudul = isSedangDipilih ? WarnaCapify.krem : WarnaCapify.putih;
@@ -297,7 +292,7 @@ class BarisLaguTracklist extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  formatDurasiLagu(lagu.durasi),
+                  FormatWaktu.durasiLagu(lagu.durasi),
                   style: const TextStyle(fontSize: 12, color: WarnaCapify.krem),
                 ),
                 IconButton(

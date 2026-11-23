@@ -38,13 +38,22 @@ class PlaylistProvider extends ChangeNotifier {
   bool get isMemakaiDataCadangan => _isMemakaiDataCadangan;
   String? get pesanGagal => _pesanGagal;
 
-  bool get isMasihMuatPertamaKali {
-    return _isKoleksiSedangDimuat && !_isKoleksiSudahPernahDimuat;
-  }
-
   void _kabariLayar() {
     if (_isProviderSudahDitutup) return;
     notifyListeners();
+  }
+
+  String _rapikanPesanGagal(Object error, {required String pesanBawaan}) {
+    if (error is! Exception) return pesanBawaan;
+
+    String pesanAsli = error.toString().replaceFirst('Exception: ', '').trim();
+    return pesanAsli.isEmpty ? pesanBawaan : pesanAsli;
+  }
+
+  void _gantiPlaylistDiDaftar(Playlist playlistTerbaru) {
+    _daftarPlaylistSaya = _daftarPlaylistSaya.map((playlist) {
+      return playlist.id == playlistTerbaru.id ? playlistTerbaru : playlist;
+    }).toList();
   }
 
   Future<void> muatKoleksi() async {
@@ -65,17 +74,14 @@ class PlaylistProvider extends ChangeNotifier {
       _isMemakaiDataCadangan = koleksiDariServer.isDariCadangan;
       _isKoleksiSudahPernahDimuat = true;
     } catch (error) {
-      _pesanGagal = _rapikanPesanGagal(error);
+      _pesanGagal = _rapikanPesanGagal(
+        error,
+        pesanBawaan: 'Koleksi gagal dimuat, coba lagi sebentar ya',
+      );
     }
 
     _isKoleksiSedangDimuat = false;
     _kabariLayar();
-  }
-
-  String _rapikanPesanGagal(Object error) {
-    String pesanAsli = error.toString().replaceFirst('Exception: ', '').trim();
-    if (pesanAsli.isEmpty) return 'Koleksi gagal dimuat, coba lagi sebentar ya';
-    return pesanAsli;
   }
 
   String? cekNamaPlaylistBaru(String? namaYangDiketik) {
@@ -119,9 +125,10 @@ class PlaylistProvider extends ChangeNotifier {
 
       _daftarPlaylistSaya = [playlistBaru, ..._daftarPlaylistSaya];
     } catch (error) {
-      pesanGagalSimpan = error is Exception
-          ? _rapikanPesanGagal(error)
-          : 'Playlist gagal dibuat, coba lagi sebentar';
+      pesanGagalSimpan = _rapikanPesanGagal(
+        error,
+        pesanBawaan: 'Playlist gagal dibuat, coba lagi sebentar',
+      );
     }
 
     _isSedangMembuatPlaylist = false;
@@ -138,12 +145,7 @@ class PlaylistProvider extends ChangeNotifier {
 
   bool isLaguAdaDiPlaylist(String idPlaylist, Lagu lagu) {
     Playlist? playlist = cariPlaylist(idPlaylist);
-    if (playlist == null) return false;
-
-    String kunciLaguDicari = KoleksiService.buatKunciLagu(lagu);
-    return playlist.daftarLagu.any(
-      (laguLama) => KoleksiService.buatKunciLagu(laguLama) == kunciLaguDicari,
-    );
+    return playlist?.isPunyaLagu(lagu) ?? false;
   }
 
   Future<String?> tambahLaguKePlaylist({
@@ -170,13 +172,12 @@ class PlaylistProvider extends ChangeNotifier {
       );
       if (_isProviderSudahDitutup) return null;
 
-      _daftarPlaylistSaya = _daftarPlaylistSaya.map((playlist) {
-        return playlist.id == playlistTerbaru.id ? playlistTerbaru : playlist;
-      }).toList();
+      _gantiPlaylistDiDaftar(playlistTerbaru);
     } catch (error) {
-      pesanGagal = error is Exception
-          ? _rapikanPesanGagal(error)
-          : 'Lagu gagal ditambahkan, coba lagi sebentar';
+      pesanGagal = _rapikanPesanGagal(
+        error,
+        pesanBawaan: 'Lagu gagal ditambahkan, coba lagi sebentar',
+      );
     }
 
     _isSedangMenambahLagu = false;
@@ -208,13 +209,12 @@ class PlaylistProvider extends ChangeNotifier {
       );
       if (_isProviderSudahDitutup) return null;
 
-      _daftarPlaylistSaya = _daftarPlaylistSaya.map((playlist) {
-        return playlist.id == playlistTerbaru.id ? playlistTerbaru : playlist;
-      }).toList();
+      _gantiPlaylistDiDaftar(playlistTerbaru);
     } catch (error) {
-      pesanGagalHapus = error is Exception
-          ? _rapikanPesanGagal(error)
-          : 'Lagu gagal dihapus, coba lagi sebentar';
+      pesanGagalHapus = _rapikanPesanGagal(
+        error,
+        pesanBawaan: 'Lagu gagal dihapus, coba lagi sebentar',
+      );
     }
 
     _isSedangMenghapusLagu = false;
