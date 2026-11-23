@@ -17,7 +17,7 @@ void main() {
     expect(track.id, 'trk-001');
     expect(track.judul, 'One Call Away');
     expect(track.durasi, const Duration(minutes: 3, seconds: 14));
-    expect(track.isBisaDiputar, isTrue);
+    expect(track.urlAudio, 'https://contoh.com/lagu.mp3');
   });
 
   test('Track tetap aman walau data dari server tidak lengkap', () {
@@ -31,7 +31,7 @@ void main() {
     expect(track.judul, 'Tanpa Judul');
     expect(track.penyanyi, 'Penyanyi tidak diketahui');
     expect(track.durasi, Duration.zero);
-    expect(track.isBisaDiputar, isFalse);
+    expect(track.urlAudio, isEmpty);
   });
 
   test('Track bisa diubah jadi Lagu dan kembali jadi JSON', () {

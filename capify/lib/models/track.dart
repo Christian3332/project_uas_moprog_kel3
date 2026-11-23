@@ -49,8 +49,6 @@ class Track {
     };
   }
 
-  bool get isBisaDiputar => urlAudio.trim().isNotEmpty;
-
   Lagu keLagu() {
     return Lagu(
       judul: judul,
