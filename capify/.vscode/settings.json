@@ -1,3 +1,4 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic"
+    "java.compile.nullAnalysis.mode": "automatic",
+    "cmake.sourceDirectory": "C:/Users/Nicholas Jordan/Documents/Kuliah/Semester 3/Mobile Programming/UAS/capify/linux"
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:capify/data/katalog_pencarian_dummy.dart';
 import 'package:capify/models/lagu.dart';
 import 'package:capify/providers/search_provider.dart';
 import 'package:capify/services/search_service.dart';
