@@ -25,6 +25,67 @@ class AudioProvider extends ChangeNotifier {
   bool _isDijedaKarenaInterupsi = false;
   String? _pesanInterupsi;
 
+  List<Lagu> _antrianLagu = [];
+  int _indexLaguSekarang = 0;
+  List<int> _urutanPutar = [];
+  int _posisiDiUrutan = 0;
+  final Random _pengacak = Random();
+  String _namaAntrian = 'Lagu Pilihanmu';
+  bool _isLaguSedangDiputar = false;
+  bool _isSedangMenyiapkanLagu = false;
+  bool _isSedangBuffering = false;
+  bool _isAcak = false;
+  ModeUlang _modeUlang = ModeUlang.mati;
+  Duration _posisiSekarang = Duration.zero;
+  Duration _posisiTerbuffer = Duration.zero;
+  Duration? _durasiDariAudio;
+  String? _pesanError;
+  final Set<String> _kunciLaguDisukai = {};
+
+  Lagu? _laguYangSudahDimuat;
+  int _nomorPermintaanMuat = 0;
+  bool _isSudahDibuang = false;
+  bool _isPemutaranDiizinkan = true;
+  int _jumlahPutarDitolak = 0;
+
+  List<Lagu> get antrianLagu => List.unmodifiable(_antrianLagu);
+  int get indexLaguSekarang => _indexLaguSekarang;
+  String get namaAntrian => _namaAntrian;
+  bool get isLaguSedangDiputar => _isLaguSedangDiputar;
+  bool get isPemutaranDiizinkan => _isPemutaranDiizinkan;
+  int get jumlahPutarDitolak => _jumlahPutarDitolak;
+  bool get isSedangMemuat => _isSedangMenyiapkanLagu || _isSedangBuffering;
+  bool get isSedangMenyiapkanLagu => _isSedangMenyiapkanLagu;
+  bool get isSedangBuffering => _isSedangBuffering && !_isSedangMenyiapkanLagu;
+  bool get isAcak => _isAcak;
+  ModeUlang get modeUlang => _modeUlang;
+  Duration get posisiSekarang => _posisiSekarang;
+  Duration get posisiTerbuffer => _posisiTerbuffer;
+  String? get pesanError => _pesanError;
+  String? get pesanInterupsi => _pesanInterupsi;
+
+  Lagu? get laguSekarang {
+    if (_antrianLagu.isEmpty) return null;
+    return _antrianLagu[_indexLaguSekarang];
+  }
+
+  Duration get durasiLaguSekarang {
+    Lagu? lagu = laguSekarang;
+    if (lagu == null) return Duration.zero;
+    return _durasiDariAudio ?? lagu.durasi;
+  }
+
+  bool get isLaguSekarangDisukai {
+    Lagu? lagu = laguSekarang;
+    if (lagu == null) return false;
+    return _kunciLaguDisukai.contains(_buatKunciLagu(lagu));
+  }
+
+  bool get _isLaguSekarangSudahDimuat {
+    Lagu? lagu = laguSekarang;
+    return lagu != null && identical(lagu, _laguYangSudahDimuat);
+  }
+
   static Future<void> siapkanPemutaranBackground() async {
     try {
       await JustAudioBackground.init(
@@ -91,67 +152,6 @@ class AudioProvider extends ChangeNotifier {
   void _hapusStatusInterupsi() {
     _isDijedaKarenaInterupsi = false;
     _pesanInterupsi = null;
-  }
-
-  List<Lagu> _antrianLagu = [];
-  int _indexLaguSekarang = 0;
-  List<int> _urutanPutar = [];
-  int _posisiDiUrutan = 0;
-  final Random _pengacak = Random();
-  String _namaAntrian = 'Lagu Pilihanmu';
-  bool _isLaguSedangDiputar = false;
-  bool _isSedangMenyiapkanLagu = false;
-  bool _isSedangBuffering = false;
-  bool _isAcak = false;
-  ModeUlang _modeUlang = ModeUlang.mati;
-  Duration _posisiSekarang = Duration.zero;
-  Duration _posisiTerbuffer = Duration.zero;
-  Duration? _durasiDariAudio;
-  String? _pesanError;
-  final Set<String> _kunciLaguDisukai = {};
-
-  Lagu? _laguYangSudahDimuat;
-  int _nomorPermintaanMuat = 0;
-  bool _isSudahDibuang = false;
-  bool _isPemutaranDiizinkan = true;
-  int _jumlahPutarDitolak = 0;
-
-  List<Lagu> get antrianLagu => List.unmodifiable(_antrianLagu);
-  int get indexLaguSekarang => _indexLaguSekarang;
-  String get namaAntrian => _namaAntrian;
-  bool get isLaguSedangDiputar => _isLaguSedangDiputar;
-  bool get isPemutaranDiizinkan => _isPemutaranDiizinkan;
-  int get jumlahPutarDitolak => _jumlahPutarDitolak;
-  bool get isSedangMemuat => _isSedangMenyiapkanLagu || _isSedangBuffering;
-  bool get isSedangMenyiapkanLagu => _isSedangMenyiapkanLagu;
-  bool get isSedangBuffering => _isSedangBuffering && !_isSedangMenyiapkanLagu;
-  bool get isAcak => _isAcak;
-  ModeUlang get modeUlang => _modeUlang;
-  Duration get posisiSekarang => _posisiSekarang;
-  Duration get posisiTerbuffer => _posisiTerbuffer;
-  String? get pesanError => _pesanError;
-  String? get pesanInterupsi => _pesanInterupsi;
-
-  Lagu? get laguSekarang {
-    if (_antrianLagu.isEmpty) return null;
-    return _antrianLagu[_indexLaguSekarang];
-  }
-
-  Duration get durasiLaguSekarang {
-    Lagu? lagu = laguSekarang;
-    if (lagu == null) return Duration.zero;
-    return _durasiDariAudio ?? lagu.durasi;
-  }
-
-  bool get isLaguSekarangDisukai {
-    Lagu? lagu = laguSekarang;
-    if (lagu == null) return false;
-    return _kunciLaguDisukai.contains(_buatKunciLagu(lagu));
-  }
-
-  bool get _isLaguSekarangSudahDimuat {
-    Lagu? lagu = laguSekarang;
-    return lagu != null && identical(lagu, _laguYangSudahDimuat);
   }
 
   String _buatKunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
@@ -325,7 +325,6 @@ class AudioProvider extends ChangeNotifier {
   void cobaLagi() {
     if (laguSekarang == null || _isSedangMenyiapkanLagu) return;
     if (!mintaIzinPemutaran()) return;
-    _laguYangSudahDimuat = null;
     _muatLaguSekarang(isLangsungDiputar: true);
   }
 
