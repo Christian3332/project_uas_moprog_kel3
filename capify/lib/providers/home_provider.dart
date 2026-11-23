@@ -10,6 +10,7 @@ import '../models/playlist.dart';
 import '../models/racikan_untukmu.dart';
 import '../models/riwayat_putar.dart';
 import '../services/feed_service.dart';
+import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 import 'audio_provider.dart';
 
@@ -72,7 +73,6 @@ class HomeProvider extends ChangeNotifier {
   bool get isMemuatTerlaluLama => _isMemuatTerlaluLama;
   DateTime? get waktuTerakhirDiperbarui => _waktuTerakhirDiperbarui;
   bool get isSedangMenyegarkan => _isSedangMemuat && _isSudahPernahDimuat;
-  bool get isMuatPertamaKali => !_isSudahPernahDimuat && _pesanGagal == null;
   List<String> get genreFavorit => List.unmodifiable(_genreFavorit);
   bool get isSudahPilihGenre => _genreFavorit.isNotEmpty;
 
@@ -80,8 +80,6 @@ class HomeProvider extends ChangeNotifier {
     if (_riwayatTerakhirDiputar.isEmpty) return null;
     return _riwayatTerakhirDiputar.first;
   }
-
-  String kunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
 
   void _kabariPendengar() {
     if (_isSudahDibuang) return;
@@ -103,7 +101,7 @@ class HomeProvider extends ChangeNotifier {
 
     Lagu? laguYangDiputar = pemutar.laguSekarang;
     if (laguYangDiputar == null) return;
-    if (kunciLagu(laguYangDiputar) == _kunciLaguTerakhirDicatat) return;
+    if (kunciUnikLagu(laguYangDiputar) == _kunciLaguTerakhirDicatat) return;
 
     catatLaguDiputar(laguYangDiputar);
   }
@@ -153,12 +151,12 @@ class HomeProvider extends ChangeNotifier {
     StringBuffer sidikJari = StringBuffer(_asalFeed.name);
 
     for (RiwayatPutar riwayat in _riwayatTerakhirDiputar) {
-      sidikJari.write('|${kunciLagu(riwayat.lagu)}');
+      sidikJari.write('|${kunciUnikLagu(riwayat.lagu)}');
     }
     _laguPerGenre.forEach((namaGenre, isiGenre) {
       sidikJari.write('#$namaGenre');
       for (Lagu lagu in isiGenre) {
-        sidikJari.write(',${kunciLagu(lagu)}');
+        sidikJari.write(',${kunciUnikLagu(lagu)}');
       }
     });
     return sidikJari.toString();
@@ -220,13 +218,14 @@ class HomeProvider extends ChangeNotifier {
       ..sort((a, b) => a.jarakSejakDiputar.compareTo(b.jarakSejakDiputar));
 
     Set<String> laguYangSudahDicatat = _riwayatTerakhirDiputar
-        .map((riwayat) => kunciLagu(riwayat.lagu))
+        .map((riwayat) => kunciUnikLagu(riwayat.lagu))
         .toSet();
 
     List<RiwayatPutar> riwayatGabungan = [
       ..._riwayatTerakhirDiputar,
       ...riwayatServerTerbaru.where(
-        (riwayat) => !laguYangSudahDicatat.contains(kunciLagu(riwayat.lagu)),
+        (riwayat) =>
+            !laguYangSudahDicatat.contains(kunciUnikLagu(riwayat.lagu)),
       ),
     ];
 
@@ -234,14 +233,14 @@ class HomeProvider extends ChangeNotifier {
   }
 
   void catatLaguDiputar(Lagu lagu) {
-    String kunciLaguBaru = kunciLagu(lagu);
+    String kunciLaguBaru = kunciUnikLagu(lagu);
     _kunciLaguTerakhirDicatat = kunciLaguBaru;
 
     List<RiwayatPutar> riwayatBaru = [
       RiwayatPutar(lagu: lagu, jarakSejakDiputar: Duration.zero),
     ];
     for (RiwayatPutar riwayat in _riwayatTerakhirDiputar) {
-      if (kunciLagu(riwayat.lagu) != kunciLaguBaru) {
+      if (kunciUnikLagu(riwayat.lagu) != kunciLaguBaru) {
         riwayatBaru.add(riwayat);
       }
     }
@@ -291,7 +290,7 @@ class HomeProvider extends ChangeNotifier {
 
   void _susunUlangRekomendasi() {
     Set<String> laguYangPernahDiputar = _riwayatTerakhirDiputar
-        .map((riwayat) => kunciLagu(riwayat.lagu))
+        .map((riwayat) => kunciUnikLagu(riwayat.lagu))
         .toSet();
 
     _daftarRacikanUntukmu = _racikPlaylistDariKategori(laguYangPernahDiputar);
@@ -309,7 +308,7 @@ class HomeProvider extends ChangeNotifier {
       if (isiLagu.isEmpty) return;
 
       int jumlahFamiliar = isiLagu
-          .where((lagu) => laguYangPernahDiputar.contains(kunciLagu(lagu)))
+          .where((lagu) => laguYangPernahDiputar.contains(kunciUnikLagu(lagu)))
           .length;
 
       hasilRacikan.add(
@@ -372,7 +371,7 @@ class HomeProvider extends ChangeNotifier {
     for (String namaKategori in _urutanKategoriSesuaiFavorit()) {
       List<Lagu> isiLagu = _laguPerGenre[namaKategori] ?? [];
       for (Lagu lagu in isiLagu) {
-        String kunci = kunciLagu(lagu);
+        String kunci = kunciUnikLagu(lagu);
         bool isPernahDiputar = laguYangPernahDiputar.contains(kunci);
         bool isSudahMasukDaftar = laguYangSudahMasuk.contains(kunci);
 

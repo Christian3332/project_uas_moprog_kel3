@@ -1,3 +1,4 @@
+import '../utils/kunci_lagu.dart';
 import 'lagu.dart';
 import 'riwayat_putar.dart';
 import 'track.dart';
@@ -121,7 +122,7 @@ class FeedBeranda {
     laguPerGenre.forEach((namaGenre, isiGenre) {
       for (Lagu lagu in isiGenre) {
         String idLagu = 'feed-${daftarTrack.length + 1}';
-        idBerdasarkanLagu['${lagu.judul}|${lagu.penyanyi}'] = idLagu;
+        idBerdasarkanLagu[kunciUnikLagu(lagu)] = idLagu;
         daftarTrack.add({
           'id': idLagu,
           'title': lagu.judul,
@@ -136,8 +137,7 @@ class FeedBeranda {
 
     List<Map<String, dynamic>> daftarRiwayat = [];
     for (RiwayatPutar riwayat in riwayatPutar) {
-      String? idLagu =
-          idBerdasarkanLagu['${riwayat.lagu.judul}|${riwayat.lagu.penyanyi}'];
+      String? idLagu = idBerdasarkanLagu[kunciUnikLagu(riwayat.lagu)];
       if (idLagu == null) continue;
       daftarRiwayat.add({
         'track_id': idLagu,

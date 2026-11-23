@@ -6,6 +6,132 @@ import '../models/riwayat_putar.dart';
 import '../utils/warna_capify.dart';
 import 'cover_album.dart';
 
+class LingkaranMuatKecil extends StatelessWidget {
+  final double ukuran;
+  final Color warna;
+
+  const LingkaranMuatKecil({
+    super.key,
+    required this.ukuran,
+    this.warna = WarnaCapify.krem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: ukuran,
+      height: ukuran,
+      child: CircularProgressIndicator(
+        strokeWidth: ukuran < 20 ? 2 : 2.5,
+        color: warna,
+      ),
+    );
+  }
+}
+
+class SapaanBeranda extends StatelessWidget {
+  final String namaPengguna;
+
+  const SapaanBeranda({super.key, required this.namaPengguna});
+
+  String sapaanSesuaiJam() {
+    int jamSekarang = DateTime.now().hour;
+    if (jamSekarang >= 4 && jamSekarang < 11) return 'Selamat pagi';
+    if (jamSekarang >= 11 && jamSekarang < 15) return 'Selamat siang';
+    if (jamSekarang >= 15 && jamSekarang < 18) return 'Selamat sore';
+    return 'Selamat malam';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          sapaanSesuaiJam(),
+          style: const TextStyle(
+            fontSize: 13,
+            color: WarnaCapify.krem,
+            fontWeight: FontWeight.w300,
+          ),
+        ),
+        Text(
+          namaPengguna,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 20,
+            color: WarnaCapify.putih,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class TampilanBerandaGagal extends StatelessWidget {
+  final String pesanGagal;
+  final VoidCallback onCobaLagi;
+
+  const TampilanBerandaGagal({
+    super.key,
+    required this.pesanGagal,
+    required this.onCobaLagi,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, ukuranLayar) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: ukuranLayar.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.cloud_off_rounded,
+                      size: 48,
+                      color: WarnaCapify.krem,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      pesanGagal,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: WarnaCapify.krem),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: onCobaLagi,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WarnaCapify.krem,
+                        foregroundColor: WarnaCapify.coklatGelap,
+                      ),
+                      child: const Text('Coba lagi'),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'atau tarik layar ke bawah',
+                      style: TextStyle(
+                        color: WarnaCapify.krem.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class JudulBagianBeranda extends StatelessWidget {
   final String judul;
   final String? keterangan;
@@ -176,16 +302,7 @@ class SpandukDataCadangan extends StatelessWidget {
               width: 88,
               height: 40,
               child: isSedangMencoba
-                  ? const Center(
-                      child: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: WarnaCapify.krem,
-                        ),
-                      ),
-                    )
+                  ? const Center(child: LingkaranMuatKecil(ukuran: 18))
                   : TextButton(
                       onPressed: aksiCobaLagi,
                       child: const Text(
@@ -290,14 +407,7 @@ class _KerangkaBerandaMemuatState extends State<KerangkaBerandaMemuat>
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             child: Row(
               children: [
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: WarnaCapify.krem,
-                  ),
-                ),
+                const LingkaranMuatKecil(ukuran: 16),
                 const SizedBox(width: 10),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -390,13 +500,9 @@ class KartuLanjutDengerin extends StatelessWidget {
 
   Widget isiTombolPutar() {
     if (isSedangDisiapkan) {
-      return const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.5,
-          color: WarnaCapify.coklatGelap,
-        ),
+      return const LingkaranMuatKecil(
+        ukuran: 20,
+        warna: WarnaCapify.coklatGelap,
       );
     }
 
@@ -534,14 +640,7 @@ class KartuLaguKecil extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: isSedangDisiapkan
-          ? const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: WarnaCapify.krem,
-              ),
-            )
+          ? const LingkaranMuatKecil(ukuran: 28)
           : const Icon(
               Icons.graphic_eq_rounded,
               size: 40,
