@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/lagu.dart';
 import '../models/racikan_untukmu.dart';
 import '../models/riwayat_putar.dart';
+import '../utils/gaya_teks_beranda.dart';
 import '../utils/warna_capify.dart';
 import 'cover_album.dart';
 
@@ -47,22 +48,12 @@ class SapaanBeranda extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          sapaanSesuaiJam(),
-          style: const TextStyle(
-            fontSize: 13,
-            color: WarnaCapify.krem,
-            fontWeight: FontWeight.w300,
-          ),
-        ),
+        Text(sapaanSesuaiJam(), style: GayaTeksBeranda.sapaanWaktu),
         Text(
           namaPengguna,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 20,
-            color: WarnaCapify.putih,
-            fontWeight: FontWeight.bold,
-          ),
+          style: GayaTeksBeranda.namaPengguna,
         ),
       ],
     );
@@ -154,24 +145,10 @@ class JudulBagianBeranda extends StatelessWidget {
     Widget isiJudul = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          judul,
-          style: const TextStyle(
-            fontSize: 18,
-            color: WarnaCapify.putih,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(judul, style: GayaTeksBeranda.judulBagian),
         if (teksKeterangan != null) ...[
-          const SizedBox(height: 2),
-          Text(
-            teksKeterangan,
-            style: TextStyle(
-              fontSize: 12,
-              color: WarnaCapify.krem.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w300,
-            ),
-          ),
+          const SizedBox(height: 3),
+          Text(teksKeterangan, style: GayaTeksBeranda.keteranganBagian),
         ],
       ],
     );
@@ -307,10 +284,7 @@ class SpandukDataCadangan extends StatelessWidget {
                       onPressed: aksiCobaLagi,
                       child: const Text(
                         'Coba lagi',
-                        style: TextStyle(
-                          color: WarnaCapify.krem,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: GayaTeksBeranda.tombolAksiBagian,
                       ),
                     ),
             ),
@@ -415,11 +389,7 @@ class _KerangkaBerandaMemuatState extends State<KerangkaBerandaMemuat>
                     child: Text(
                       teksStatus,
                       key: ValueKey(teksStatus),
-                      style: const TextStyle(
-                        color: WarnaCapify.krem,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w300,
-                      ),
+                      style: GayaTeksBeranda.keteranganBagian,
                     ),
                   ),
                 ),
@@ -558,10 +528,8 @@ class KartuLanjutDengerin extends StatelessWidget {
                                   : 'Lanjut dengerin',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: GayaTeksBeranda.labelKecil.copyWith(
                                 color: WarnaCapify.krem,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w300,
                               ),
                             ),
                           ),
