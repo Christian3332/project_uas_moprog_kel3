@@ -30,12 +30,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   final List<String> pilihanKategori = ['Playlist', 'Album', 'Lagu Disukai'];
 
-  final aturanGridKoleksi = const SliverGridDelegateWithMaxCrossAxisExtent(
-    maxCrossAxisExtent: 200,
-    mainAxisSpacing: 20,
-    crossAxisSpacing: 16,
-    childAspectRatio: 0.72,
-  );
+  final double lebarMaksKartuGrid = 200;
+  final double jarakAntarKartuGrid = 16;
+  final double jarakTepiGrid = 20;
 
   @override
   void dispose() {
@@ -208,6 +205,58 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     audio.mulaiAntrian(playlist.daftarLagu, namaAntrian: playlist.nama);
   }
 
+  double ukurTinggiSatuBaris(BuildContext context, TextStyle gayaTeks) {
+    TextPainter pengukurTeks = TextPainter(
+      text: TextSpan(
+        text: 'Ag',
+        style: DefaultTextStyle.of(context).style.merge(gayaTeks),
+      ),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+
+    double tinggiBaris = pengukurTeks.height;
+    pengukurTeks.dispose();
+    return tinggiBaris;
+  }
+
+  Widget bangunGridKoleksi({
+    required int jumlahKartu,
+    required Widget Function(int urutan) buatKartu,
+  }) {
+    return LayoutBuilder(
+      builder: (context, batasLayar) {
+        double lebarIsi = batasLayar.maxWidth - jarakTepiGrid * 2;
+        int jumlahKolom = (lebarIsi / lebarMaksKartuGrid).ceil();
+        if (jumlahKolom < 2) jumlahKolom = 2;
+
+        double totalJarak = jarakAntarKartuGrid * (jumlahKolom - 1);
+        double lebarKartu = (lebarIsi - totalJarak) / jumlahKolom;
+
+        double tinggiTeks =
+            8 +
+            ukurTinggiSatuBaris(context, KartuGridKoleksi.gayaJudul) +
+            2 +
+            ukurTinggiSatuBaris(context, KartuGridKoleksi.gayaKeterangan) +
+            2;
+
+        return GridView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(jarakTepiGrid, 8, jarakTepiGrid, 32),
+          itemCount: jumlahKartu,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: jumlahKolom,
+            crossAxisSpacing: jarakAntarKartuGrid,
+            mainAxisSpacing: 20,
+            mainAxisExtent: lebarKartu + tinggiTeks,
+          ),
+          itemBuilder: (context, urutan) => buatKartu(urutan),
+        );
+      },
+    );
+  }
+
   Widget bangunIsiKoleksi(PlaylistProvider koleksi) {
     List<Playlist> daftarPlaylistSaya = koleksi.daftarPlaylistSaya;
     List<Album> daftarAlbumTersimpan = koleksi.daftarAlbumTersimpan;
@@ -254,12 +303,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
 
     if (kategoriTerpilih == 'Album' && daftarAlbumTersimpan.isNotEmpty) {
-      return GridView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        itemCount: daftarAlbumTersimpan.length,
-        gridDelegate: aturanGridKoleksi,
-        itemBuilder: (context, urutan) {
+      return bangunGridKoleksi(
+        jumlahKartu: daftarAlbumTersimpan.length,
+        buatKartu: (urutan) {
           Album albumIni = daftarAlbumTersimpan[urutan];
           return KartuGridKoleksi(
             urlCover: albumIni.urlCover,
@@ -273,12 +319,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
 
     if (kategoriTerpilih == 'Lagu Disukai' && daftarLaguDisukai.isNotEmpty) {
-      return GridView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        itemCount: daftarLaguDisukai.length,
-        gridDelegate: aturanGridKoleksi,
-        itemBuilder: (context, urutan) {
+      return bangunGridKoleksi(
+        jumlahKartu: daftarLaguDisukai.length,
+        buatKartu: (urutan) {
           Lagu laguIni = daftarLaguDisukai[urutan];
           return KartuGridKoleksi(
             urlCover: laguIni.urlCover,
@@ -471,6 +514,17 @@ class KartuGridKoleksi extends StatelessWidget {
     required this.onDitekan,
   });
 
+  static const TextStyle gayaJudul = TextStyle(
+    color: WarnaCapify.putih,
+    fontWeight: FontWeight.bold,
+  );
+
+  static const TextStyle gayaKeterangan = TextStyle(
+    fontSize: 12,
+    color: WarnaCapify.krem,
+    fontWeight: FontWeight.w300,
+  );
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -479,10 +533,12 @@ class KartuGridKoleksi extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: SizedBox(
-              width: double.infinity,
-              child: CoverAlbum(urlCover: urlCover, lengkungSudut: 12),
+          AspectRatio(
+            aspectRatio: 1,
+            child: CoverAlbum(
+              urlCover: urlCover,
+              lengkungSudut: 12,
+              isPakaiBayangan: false,
             ),
           ),
           const SizedBox(height: 8),
@@ -490,21 +546,14 @@ class KartuGridKoleksi extends StatelessWidget {
             judul,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: WarnaCapify.putih,
-              fontWeight: FontWeight.bold,
-            ),
+            style: gayaJudul,
           ),
           const SizedBox(height: 2),
           Text(
             keterangan,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              color: WarnaCapify.krem,
-              fontWeight: FontWeight.w300,
-            ),
+            style: gayaKeterangan,
           ),
         ],
       ),
