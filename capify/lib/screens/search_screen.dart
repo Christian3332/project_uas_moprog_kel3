@@ -10,6 +10,8 @@ import '../widgets/cover_album.dart';
 import 'detail_album_screen.dart';
 import 'player_screen.dart';
 
+const double lengkungKolomCari = 26;
+
 String buatKunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
 
 class SearchScreen extends StatefulWidget {
@@ -163,34 +165,81 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  List<BoxShadow> bayanganKolomCari(bool isSedangFokus) {
+    return [
+      BoxShadow(
+        color: WarnaCapify.hitam.withValues(alpha: isSedangFokus ? 0.45 : 0.3),
+        blurRadius: isSedangFokus ? 18 : 10,
+        offset: Offset(0, isSedangFokus ? 6 : 3),
+      ),
+    ];
+  }
+
   Widget kolomPencarian(SearchProvider pencarian) {
-    return TextField(
-      controller: kataKunciController,
-      focusNode: fokusKolomCari,
-      onChanged: pencarian.ketikKataKunci,
-      onSubmitted: kirimPencarian,
-      onTapOutside: (event) => fokusKolomCari.unfocus(),
-      textInputAction: TextInputAction.search,
-      style: const TextStyle(color: WarnaCapify.coklatGelap),
-      cursorColor: WarnaCapify.coklatGelap,
-      decoration: InputDecoration(
-        hintText: 'Mau dengar apa hari ini?',
-        hintStyle: TextStyle(
-          color: WarnaCapify.coklatGelap.withValues(alpha: 0.6),
-        ),
-        prefixIcon: const Icon(Icons.search, color: WarnaCapify.coklatGelap),
-        suffixIcon: pencarian.kataKunci.isEmpty
-            ? null
-            : IconButton(
-                icon: const Icon(Icons.close, color: WarnaCapify.coklatGelap),
-                onPressed: hapusKataKunci,
-              ),
-        filled: true,
-        fillColor: WarnaCapify.krem,
-        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+    BorderRadius sudutKolom = BorderRadius.circular(lengkungKolomCari);
+    OutlineInputBorder tepiSaatDiam = OutlineInputBorder(
+      borderRadius: sudutKolom,
+      borderSide: BorderSide.none,
+    );
+    OutlineInputBorder tepiSaatFokus = OutlineInputBorder(
+      borderRadius: sudutKolom,
+      borderSide: BorderSide(
+        color: WarnaCapify.coklatTua.withValues(alpha: 0.6),
+        width: 1.5,
+      ),
+    );
+
+    return ListenableBuilder(
+      listenable: fokusKolomCari,
+      builder: (context, kolomTeks) {
+        return AnimatedContainer(
+          key: const ValueKey('kotak-kolom-cari'),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            borderRadius: sudutKolom,
+            boxShadow: bayanganKolomCari(fokusKolomCari.hasFocus),
+          ),
+          child: kolomTeks,
+        );
+      },
+      child: TextField(
+        controller: kataKunciController,
+        focusNode: fokusKolomCari,
+        onChanged: pencarian.ketikKataKunci,
+        onSubmitted: kirimPencarian,
+        onTapOutside: (event) => fokusKolomCari.unfocus(),
+        textInputAction: TextInputAction.search,
+        style: const TextStyle(color: WarnaCapify.coklatGelap),
+        cursorColor: WarnaCapify.coklatGelap,
+        decoration: InputDecoration(
+          hintText: 'Mau dengar apa hari ini?',
+          hintStyle: TextStyle(
+            color: WarnaCapify.coklatGelap.withValues(alpha: 0.6),
+          ),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.only(left: 6),
+            child: Icon(Icons.search, color: WarnaCapify.coklatGelap),
+          ),
+          suffixIcon: pencarian.kataKunci.isEmpty
+              ? null
+              : Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      color: WarnaCapify.coklatGelap,
+                    ),
+                    tooltip: 'Hapus kata kunci',
+                    onPressed: hapusKataKunci,
+                  ),
+                ),
+          filled: true,
+          fillColor: WarnaCapify.krem,
+          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          border: tepiSaatDiam,
+          enabledBorder: tepiSaatDiam,
+          focusedBorder: tepiSaatFokus,
         ),
       ),
     );
