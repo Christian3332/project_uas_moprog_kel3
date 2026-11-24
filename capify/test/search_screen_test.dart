@@ -226,4 +226,62 @@ void main() {
       expect(audioTes.laguSekarang, isNull);
     });
   });
+
+  group('Tampilan kolom cari', () {
+    BoxDecoration bacaHiasanKolom(WidgetTester tester) {
+      AnimatedContainer kotakKolom = tester.widget(
+        find.byKey(const ValueKey('kotak-kolom-cari')),
+      );
+      return kotakKolom.decoration! as BoxDecoration;
+    }
+
+    testWidgets('Kolom cari berbentuk pil dengan bayangan lembut', (
+      tester,
+    ) async {
+      await bukaLayarCari(tester);
+
+      BoxDecoration hiasan = bacaHiasanKolom(tester);
+      expect(hiasan.borderRadius, BorderRadius.circular(lengkungKolomCari));
+      expect(hiasan.boxShadow!.single.blurRadius, 10);
+
+      TextField kolomCari = tester.widget(find.byType(TextField));
+      OutlineInputBorder tepiDiam =
+          kolomCari.decoration!.enabledBorder! as OutlineInputBorder;
+      expect(tepiDiam.borderRadius, BorderRadius.circular(lengkungKolomCari));
+      expect(tepiDiam.borderSide, BorderSide.none);
+    });
+
+    testWidgets('Bayangan menebal saat fokus lalu kembali saat dilepas', (
+      tester,
+    ) async {
+      await bukaLayarCari(tester);
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      BoxDecoration hiasanFokus = bacaHiasanKolom(tester);
+      expect(hiasanFokus.boxShadow!.single.blurRadius, 18);
+      expect(hiasanFokus.boxShadow!.single.offset, const Offset(0, 6));
+
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(bacaHiasanKolom(tester).boxShadow!.single.blurRadius, 10);
+    });
+
+    testWidgets('Kolom tetap rapi di layar sempit dengan kata kunci panjang', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await bukaLayarCari(tester);
+      await ketikLaluTunggu(
+        tester,
+        'kata kunci yang sangat panjang sekali untuk layar kecil',
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byTooltip('Hapus kata kunci'), findsOneWidget);
+    });
+  });
 }
