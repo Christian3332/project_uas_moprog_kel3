@@ -9,6 +9,7 @@ import '../models/riwayat_putar.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/home_provider.dart';
+import '../utils/gaya_teks_beranda.dart';
 import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/komponen_beranda.dart';
@@ -368,11 +369,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                     child: Text(
                       keteranganDiperbarui,
-                      style: TextStyle(
-                        color: WarnaCapify.krem.withValues(alpha: 0.6),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w300,
-                      ),
+                      style: GayaTeksBeranda.labelKecil,
                     ),
                   ),
                 ...buildBagianTerakhirDiputar(home, statusPemutar),
@@ -460,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           onPressed: bukaPengaturanGenre,
           child: Text(
             isSudahPilihGenre ? 'Atur genre' : 'Pilih genre',
-            style: const TextStyle(color: WarnaCapify.krem),
+            style: GayaTeksBeranda.tombolAksiBagian,
           ),
         ),
       ),
