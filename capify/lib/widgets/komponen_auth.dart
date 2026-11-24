@@ -11,6 +11,22 @@ void tampilkanPesan(BuildContext context, String pesan) {
     ..showSnackBar(SnackBar(content: Text(pesan)));
 }
 
+class BatasLebarAuth extends StatelessWidget {
+  final Widget child;
+
+  const BatasLebarAuth({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: child,
+      ),
+    );
+  }
+}
+
 const BoxDecoration latarGradienAuth = BoxDecoration(
   gradient: LinearGradient(
     begin: Alignment.topCenter,
@@ -291,16 +307,21 @@ class KotakCentangAuth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Checkbox(
-      value: isDicentang,
-      onChanged: onUbah,
-      activeColor: WarnaCapify.krem,
-      checkColor: WarnaCapify.coklatGelap,
-      side: BorderSide(
-        color: isAdaError ? warnaPeringatan : WarnaCapify.krem,
-        width: 1.5,
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: Checkbox(
+        value: isDicentang,
+        onChanged: onUbah,
+        activeColor: WarnaCapify.krem,
+        checkColor: WarnaCapify.coklatGelap,
+        side: BorderSide(
+          color: isAdaError ? warnaPeringatan : WarnaCapify.krem,
+          width: 1.5,
+        ),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
       ),
-      visualDensity: VisualDensity.compact,
     );
   }
 }
@@ -365,6 +386,10 @@ class BarisPindahAuth extends StatelessWidget {
         ),
         TextButton(
           onPressed: onTekan,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            minimumSize: const Size(0, 40),
+          ),
           child: Text(
             teksTombol,
             style: const TextStyle(
@@ -478,15 +503,18 @@ class TombolSosialAuth extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlinedButton.icon(
       onPressed: onTekan,
-      icon: Icon(ikonLayanan, size: 26),
+      icon: Icon(ikonLayanan, size: 24),
       label: Text(
         namaLayanan,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       style: OutlinedButton.styleFrom(
         foregroundColor: WarnaCapify.putih,
         backgroundColor: WarnaCapify.hitam.withValues(alpha: 0.25),
         side: BorderSide(color: WarnaCapify.krem.withValues(alpha: 0.5)),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         minimumSize: const Size.fromHeight(48),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
