@@ -180,6 +180,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               isAdaError: isSyaratBelumDicentang,
               onUbah: isSedangMendaftar ? null : (_) => ubahPersetujuanSyarat(),
             ),
+            const SizedBox(width: 10),
             Expanded(
               child: GestureDetector(
                 onTap: ubahPersetujuanSyarat,
@@ -208,7 +209,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         if (isSyaratBelumDicentang)
           const Padding(
-            padding: EdgeInsets.only(left: 12),
+            padding: EdgeInsets.only(left: 30, top: 4),
             child: Text(
               'Centang dulu persetujuannya ya',
               style: TextStyle(color: warnaPeringatan, fontSize: 12),
@@ -238,109 +239,116 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   horizontal: 24,
                   vertical: 16,
                 ),
-                child: Form(
-                  key: formDaftarKey,
-                  autovalidateMode: modeValidasi,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const HeaderAuth(
-                        judul: 'Buat Akun Baru',
-                        subjudul: 'Gabung Capify dan mulai bikin playlist-mu',
-                      ),
-                      const SizedBox(height: 32),
-                      AutofillGroup(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            KolomInputAuth(
-                              controller: namaController,
-                              petunjukIsian: 'Nama lengkap',
-                              ikonDepan: Icons.person_outline,
-                              jenisKeyboard: TextInputType.name,
-                              jenisAutofill: const [AutofillHints.name],
-                              cekIsian: cekNama,
-                              isBisaDiketik: !isSedangMendaftar,
-                            ),
-                            const SizedBox(height: 16),
-                            KolomInputAuth(
-                              controller: emailController,
-                              petunjukIsian: 'Email',
-                              ikonDepan: Icons.email_outlined,
-                              jenisKeyboard: TextInputType.emailAddress,
-                              jenisAutofill: const [AutofillHints.email],
-                              cekIsian: validasiEmailDaftar,
-                              isBisaDiketik: !isSedangMendaftar,
-                            ),
-                            const SizedBox(height: 16),
-                            KolomInputAuth(
-                              controller: passwordController,
-                              petunjukIsian: 'Password',
-                              ikonDepan: Icons.lock_outline,
-                              isTeksDisembunyikan: isPasswordTersembunyi,
-                              jenisAutofill: const [AutofillHints.newPassword],
-                              cekIsian: validasiPasswordDaftar,
-                              isBisaDiketik: !isSedangMendaftar,
-                              tombolBelakang: TombolLihatPassword(
-                                isTersembunyi: isPasswordTersembunyi,
-                                onTekan: () => setState(
-                                  () => isPasswordTersembunyi =
-                                      !isPasswordTersembunyi,
+                child: BatasLebarAuth(
+                  child: Form(
+                    key: formDaftarKey,
+                    autovalidateMode: modeValidasi,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const HeaderAuth(
+                          judul: 'Buat Akun Baru',
+                          subjudul: 'Gabung Capify dan mulai bikin playlist-mu',
+                        ),
+                        const SizedBox(height: 32),
+                        AutofillGroup(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              KolomInputAuth(
+                                controller: namaController,
+                                petunjukIsian: 'Nama lengkap',
+                                ikonDepan: Icons.person_outline,
+                                jenisKeyboard: TextInputType.name,
+                                jenisAutofill: const [AutofillHints.name],
+                                cekIsian: cekNama,
+                                isBisaDiketik: !isSedangMendaftar,
+                              ),
+                              const SizedBox(height: 16),
+                              KolomInputAuth(
+                                controller: emailController,
+                                petunjukIsian: 'Email',
+                                ikonDepan: Icons.email_outlined,
+                                jenisKeyboard: TextInputType.emailAddress,
+                                jenisAutofill: const [AutofillHints.email],
+                                cekIsian: validasiEmailDaftar,
+                                isBisaDiketik: !isSedangMendaftar,
+                              ),
+                              const SizedBox(height: 16),
+                              KolomInputAuth(
+                                controller: passwordController,
+                                petunjukIsian: 'Password',
+                                ikonDepan: Icons.lock_outline,
+                                isTeksDisembunyikan: isPasswordTersembunyi,
+                                jenisAutofill: const [
+                                  AutofillHints.newPassword,
+                                ],
+                                cekIsian: validasiPasswordDaftar,
+                                isBisaDiketik: !isSedangMendaftar,
+                                tombolBelakang: TombolLihatPassword(
+                                  isTersembunyi: isPasswordTersembunyi,
+                                  onTekan: () => setState(
+                                    () => isPasswordTersembunyi =
+                                        !isPasswordTersembunyi,
+                                  ),
                                 ),
                               ),
-                            ),
-                            IndikatorKekuatanPassword(
-                              levelPassword: levelPassword,
-                            ),
-                            const SizedBox(height: 16),
-                            KolomInputAuth(
-                              controller: ulangPasswordController,
-                              petunjukIsian: 'Ulangi password',
-                              ikonDepan: Icons.lock_reset_outlined,
-                              isTeksDisembunyikan: isPasswordTersembunyi,
-                              aksiKeyboard: TextInputAction.done,
-                              jenisAutofill: const [AutofillHints.newPassword],
-                              cekIsian: cekUlangPassword,
-                              saatSelesaiKetik: (_) => prosesDaftar(),
-                              isBisaDiketik: !isSedangMendaftar,
-                            ),
-                          ],
+                              IndikatorKekuatanPassword(
+                                levelPassword: levelPassword,
+                              ),
+                              const SizedBox(height: 16),
+                              KolomInputAuth(
+                                controller: ulangPasswordController,
+                                petunjukIsian: 'Ulangi password',
+                                ikonDepan: Icons.lock_reset_outlined,
+                                isTeksDisembunyikan: isPasswordTersembunyi,
+                                aksiKeyboard: TextInputAction.done,
+                                jenisAutofill: const [
+                                  AutofillHints.newPassword,
+                                ],
+                                cekIsian: cekUlangPassword,
+                                saatSelesaiKetik: (_) => prosesDaftar(),
+                                isBisaDiketik: !isSedangMendaftar,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      buatBarisPersetujuan(),
-                      const SizedBox(height: 24),
-                      if (pesanErrorUmum != null) ...[
-                        KotakPesanError(
-                          pesan: pesanErrorUmum!,
-                          onTutup: () => setState(() => pesanErrorUmum = null),
+                        const SizedBox(height: 12),
+                        buatBarisPersetujuan(),
+                        const SizedBox(height: 24),
+                        if (pesanErrorUmum != null) ...[
+                          KotakPesanError(
+                            pesan: pesanErrorUmum!,
+                            onTutup: () =>
+                                setState(() => pesanErrorUmum = null),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        TombolAuth(
+                          teksTombol: 'Daftar',
+                          isSedangLoading: isSedangMendaftar,
+                          onTekan: prosesDaftar,
+                        ),
+                        const SizedBox(height: 28),
+                        const PemisahAtau(teksTengah: 'atau daftar dengan'),
+                        const SizedBox(height: 20),
+                        BarisTombolSosial(
+                          isNonaktif: isSedangMendaftar,
+                          onPilihLayanan: (namaLayanan) => tampilkanPesan(
+                            context,
+                            'Daftar lewat $namaLayanan segera hadir',
+                          ),
                         ),
                         const SizedBox(height: 16),
-                      ],
-                      TombolAuth(
-                        teksTombol: 'Daftar',
-                        isSedangLoading: isSedangMendaftar,
-                        onTekan: prosesDaftar,
-                      ),
-                      const SizedBox(height: 28),
-                      const PemisahAtau(teksTengah: 'atau daftar dengan'),
-                      const SizedBox(height: 20),
-                      BarisTombolSosial(
-                        isNonaktif: isSedangMendaftar,
-                        onPilihLayanan: (namaLayanan) => tampilkanPesan(
-                          context,
-                          'Daftar lewat $namaLayanan segera hadir',
+                        BarisPindahAuth(
+                          teksPertanyaan: 'Sudah punya akun?',
+                          teksTombol: 'Masuk',
+                          onTekan: isSedangMendaftar
+                              ? null
+                              : () => Navigator.pop(context),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      BarisPindahAuth(
-                        teksPertanyaan: 'Sudah punya akun?',
-                        teksTombol: 'Masuk',
-                        onTekan: isSedangMendaftar
-                            ? null
-                            : () => Navigator.pop(context),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
