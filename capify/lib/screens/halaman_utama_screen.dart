@@ -23,6 +23,7 @@ class HalamanUtamaScreen extends StatefulWidget {
 
 class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
   static const int indexTabHome = 0;
+  static const EdgeInsets jarakMiniPlayer = EdgeInsets.fromLTRB(8, 8, 8, 2);
 
   int indexTabAktif = indexTabHome;
   final List<GlobalKey<NavigatorState>> kunciNavigatorTab = List.generate(
@@ -101,8 +102,8 @@ class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
           children: [
             if (lagu != null)
               Container(
-                color: WarnaCapify.coklatGelap,
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                color: WarnaCapify.hitam,
+                padding: jarakMiniPlayer,
                 child: MiniPlayer(
                   lagu: lagu,
                   isLaguSedangDiputar: audio.isLaguSedangDiputar,
