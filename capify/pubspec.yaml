@@ -1,5 +1,5 @@
 name: capify
-description: "A new Flutter project."
+description: "Capify, aplikasi pemutar musik dengan Flutter, Provider, dan Supabase."
 publish_to: 'none'
 
 version: 1.0.0+1
