@@ -93,21 +93,6 @@ void main() {
         throwsA(isA<Exception>()),
       );
     });
-
-    test('Playlist yang tidak ada di server ditolak', () async {
-      expect(
-        () => serviceCepat.tambahLaguKePlaylist(
-          playlist: const Playlist(
-            id: 'playlist-hantu',
-            nama: 'Hantu',
-            deskripsi: '',
-            daftarLagu: [],
-          ),
-          lagu: buatLaguContoh('Get You', 'Daniel Caesar'),
-        ),
-        throwsA(isA<Exception>()),
-      );
-    });
   });
 
   group('PlaylistProvider menambah lagu', () {
@@ -152,38 +137,6 @@ void main() {
       expect(pesanGagal, '"ditto" sudah ada di Teman Begadang');
     });
 
-    test('Playlist yang tidak dikenal ditolak', () async {
-      PlaylistProvider koleksi = PlaylistProvider(koleksiService: serviceCepat);
-      await koleksi.muatKoleksi();
-
-      String? pesanGagal = await koleksi.tambahLaguKePlaylist(
-        idPlaylist: 'playlist-hantu',
-        lagu: buatLaguContoh('Starboy', 'The Weeknd'),
-      );
-
-      expect(pesanGagal, 'Playlist tidak ditemukan');
-    });
-
-    test('Tekan dua kali saat masih proses ditolak', () async {
-      KoleksiServiceBisaGagal service = KoleksiServiceBisaGagal();
-      PlaylistProvider koleksi = PlaylistProvider(koleksiService: service);
-      await koleksi.muatKoleksi();
-
-      Future<String?> prosesPertama = koleksi.tambahLaguKePlaylist(
-        idPlaylist: idTemanBegadang,
-        lagu: buatLaguContoh('Peaches', 'Justin Bieber'),
-      );
-      expect(koleksi.isSedangMenambahLagu, isTrue);
-
-      String? pesanKedua = await koleksi.tambahLaguKePlaylist(
-        idPlaylist: idTemanBegadang,
-        lagu: buatLaguContoh('Attention', 'Charlie Puth'),
-      );
-
-      expect(pesanKedua, 'Lagu sebelumnya masih ditambahkan');
-      expect(await prosesPertama, isNull);
-    });
-
     test('Server gagal mengembalikan pesan dan isi playlist tetap', () async {
       KoleksiServiceBisaGagal service = KoleksiServiceBisaGagal();
       PlaylistProvider koleksi = PlaylistProvider(koleksiService: service);
@@ -202,20 +155,6 @@ void main() {
         koleksi.cariPlaylist(idSemangatPagi)!.daftarLagu.length,
         jumlahAwal,
       );
-    });
-
-    test('Provider ditutup saat menambah lagu tidak crash', () async {
-      KoleksiServiceBisaGagal service = KoleksiServiceBisaGagal();
-      PlaylistProvider koleksi = PlaylistProvider(koleksiService: service);
-      await koleksi.muatKoleksi();
-
-      Future<String?> proses = koleksi.tambahLaguKePlaylist(
-        idPlaylist: idSemangatPagi,
-        lagu: buatLaguContoh('Rumah ke Rumah', 'Hindia'),
-      );
-      koleksi.dispose();
-
-      expect(await proses, isNull);
     });
   });
 

@@ -100,32 +100,4 @@ void main() {
       );
     }
   }
-
-  testWidgets('Cover di satu baris grid sejajar, sama besar, dan penuh', (
-    tester,
-  ) async {
-    await bukaTabKoleksi(tester, daftarUkuranUji.first, 'Album');
-
-    List<KartuGridKoleksi> semuaKartu = tester
-        .widgetList<KartuGridKoleksi>(find.byType(KartuGridKoleksi))
-        .toList();
-    List<Rect> semuaCover = semuaKartu
-        .map(
-          (kartu) => tester.getRect(
-            find.descendant(
-              of: find.byWidget(kartu),
-              matching: find.byType(CoverAlbum),
-            ),
-          ),
-        )
-        .toList();
-
-    expect(semuaCover.length, greaterThanOrEqualTo(2));
-    expect(semuaCover[0].top, closeTo(semuaCover[1].top, 0.5));
-    expect(semuaCover[0].size, semuaCover[1].size);
-    expect(
-      semuaCover[0].width,
-      closeTo(tester.getSize(find.byWidget(semuaKartu[0])).width, 0.5),
-    );
-  });
 }

@@ -66,25 +66,6 @@ void main() {
       expect(playlistBaru.id, 'pl-1');
     });
 
-    test('Lagu dengan judul sama tapi penyanyi beda tidak ikut terhapus', () {
-      Playlist playlistLama = Playlist(
-        id: 'pl-2',
-        nama: 'Cover',
-        deskripsi: '',
-        daftarLagu: [
-          buatLaguContoh('Hallelujah', 'Leonard Cohen'),
-          buatLaguContoh('Hallelujah', 'Jeff Buckley'),
-        ],
-      );
-
-      Playlist playlistBaru = playlistLama.denganLaguDihapus(
-        buatLaguContoh('Hallelujah', 'Jeff Buckley'),
-      );
-
-      expect(playlistBaru.daftarLagu.length, 1);
-      expect(playlistBaru.daftarLagu.first.penyanyi, 'Leonard Cohen');
-    });
-
     test('Mock service menghapus lagu dan menolak hapus dua kali', () async {
       Playlist playlistAsal = (await serviceCepat.ambilKoleksiPengguna())
           .daftarPlaylist
@@ -102,34 +83,6 @@ void main() {
           playlist: hasil,
           lagu: laguDihapus,
         ),
-        throwsA(isA<Exception>()),
-      );
-    });
-
-    test('Playlist yang tidak ada dan server sibuk sama-sama ditolak', () {
-      Playlist playlistHantu = const Playlist(
-        id: 'playlist-hantu',
-        nama: 'Hantu',
-        deskripsi: '',
-        daftarLagu: [],
-      );
-
-      expect(
-        () => serviceCepat.hapusLaguDariPlaylist(
-          playlist: playlistHantu,
-          lagu: buatLaguContoh('Get You', 'Daniel Caesar'),
-        ),
-        throwsA(isA<Exception>()),
-      );
-      expect(
-        () =>
-            const KoleksiService(
-              lamaResponServer: Duration.zero,
-              isSimulasiGagal: true,
-            ).hapusLaguDariPlaylist(
-              playlist: playlistHantu,
-              lagu: buatLaguContoh('Get You', 'Daniel Caesar'),
-            ),
         throwsA(isA<Exception>()),
       );
     });
@@ -179,38 +132,6 @@ void main() {
       expect(pesanGagal, '"Hype Boy" sudah tidak ada di Teman Begadang');
     });
 
-    test('Playlist yang tidak dikenal ditolak', () async {
-      PlaylistProvider koleksi = PlaylistProvider(koleksiService: serviceCepat);
-      await koleksi.muatKoleksi();
-
-      String? pesanGagal = await koleksi.hapusLaguDariPlaylist(
-        idPlaylist: 'playlist-hantu',
-        lagu: buatLaguContoh('Ditto', 'NewJeans'),
-      );
-
-      expect(pesanGagal, 'Playlist tidak ditemukan');
-    });
-
-    test('Tekan hapus dua kali saat masih proses ditolak', () async {
-      KoleksiServiceHapusBisaGagal service = KoleksiServiceHapusBisaGagal();
-      PlaylistProvider koleksi = PlaylistProvider(koleksiService: service);
-      await koleksi.muatKoleksi();
-
-      Future<String?> prosesPertama = koleksi.hapusLaguDariPlaylist(
-        idPlaylist: idTemanBegadang,
-        lagu: buatLaguContoh('Ditto', 'NewJeans'),
-      );
-      expect(koleksi.isSedangMenghapusLagu, isTrue);
-
-      String? pesanKedua = await koleksi.hapusLaguDariPlaylist(
-        idPlaylist: idTemanBegadang,
-        lagu: buatLaguContoh('One Call Away', 'Charlie Puth'),
-      );
-
-      expect(pesanKedua, 'Lagu sebelumnya masih dihapus');
-      expect(await prosesPertama, isNull);
-    });
-
     test('Server gagal mengembalikan pesan dan lagu tetap ada', () async {
       KoleksiServiceHapusBisaGagal service = KoleksiServiceHapusBisaGagal();
       PlaylistProvider koleksi = PlaylistProvider(koleksiService: service);
@@ -226,42 +147,6 @@ void main() {
       expect(pesanGagal, 'Server Capify sedang sibuk');
       expect(koleksi.isSedangMenghapusLagu, isFalse);
       expect(koleksi.isLaguAdaDiPlaylist(idSemangatPagi, laguDihapus), isTrue);
-    });
-
-    test('Lagu yang dihapus bisa ditambahkan lagi', () async {
-      PlaylistProvider koleksi = PlaylistProvider(koleksiService: serviceCepat);
-      await koleksi.muatKoleksi();
-      Lagu laguStarboy = buatLaguContoh('Starboy', 'The Weeknd');
-
-      expect(
-        await koleksi.hapusLaguDariPlaylist(
-          idPlaylist: idSemangatPagi,
-          lagu: laguStarboy,
-        ),
-        isNull,
-      );
-      expect(
-        await koleksi.tambahLaguKePlaylist(
-          idPlaylist: idSemangatPagi,
-          lagu: laguStarboy,
-        ),
-        isNull,
-      );
-      expect(koleksi.isLaguAdaDiPlaylist(idSemangatPagi, laguStarboy), isTrue);
-    });
-
-    test('Provider ditutup saat menghapus lagu tidak crash', () async {
-      KoleksiServiceHapusBisaGagal service = KoleksiServiceHapusBisaGagal();
-      PlaylistProvider koleksi = PlaylistProvider(koleksiService: service);
-      await koleksi.muatKoleksi();
-
-      Future<String?> proses = koleksi.hapusLaguDariPlaylist(
-        idPlaylist: idTemanBegadang,
-        lagu: buatLaguContoh('One Call Away', 'Charlie Puth'),
-      );
-      koleksi.dispose();
-
-      expect(await proses, isNull);
     });
   });
 

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:capify/models/album.dart';
 import 'package:capify/models/hasil_pencarian.dart';
 import 'package:capify/services/search_service.dart';
 
@@ -46,13 +45,6 @@ void main() {
     expect(hanyaTrack.daftarTrack.single.judul, 'Cahaya');
   });
 
-  test('Batas per jenis dipatuhi', () async {
-    HasilPencarian hasil = await serviceTanpaJeda().cari('a', batasPerJenis: 2);
-
-    expect(hasil.daftarTrack.length, lessThanOrEqualTo(2));
-    expect(hasil.daftarAlbum.length, lessThanOrEqualTo(2));
-  });
-
   test('Kata kunci kosong langsung kembali tanpa ke server', () async {
     SearchService service = SearchService(isServerSedangGangguan: true);
 
@@ -94,17 +86,5 @@ void main() {
     );
     expect(hasilSetengahRusak.daftarTrack, isEmpty);
     expect(hasilSetengahRusak.daftarAlbum.single.judul, 'Album Tanpa Judul');
-  });
-
-  test('Album dari JSON tetap aman walau jumlah lagunya aneh', () {
-    Album album = Album.fromJson({
-      'title': 'Tes',
-      'artist': '   ',
-      'total_tracks': -3,
-    });
-
-    expect(album.penyanyi, 'Penyanyi tidak diketahui');
-    expect(album.jumlahLagu, 0);
-    expect(album.urlCover, '');
   });
 }

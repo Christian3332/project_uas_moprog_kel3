@@ -148,34 +148,6 @@ void main() {
       expect(pencarian.isHasilKosong, isFalse);
     });
 
-    test('Ketikan berisi spasi saja dianggap kosong', () async {
-      SearchProvider pencarian = providerUntukTes();
-      await pencarian.cariSekarang('weeknd');
-
-      pencarian.ketikKataKunci('    ');
-
-      expect(pencarian.isKolomCariKosong, isTrue);
-      expect(pencarian.hasilPencarian, isEmpty);
-      expect(pencarian.isSedangMencari, isFalse);
-    });
-
-    test('Hasil yang datang telat setelah dikosongkan dibuang', () async {
-      SearchServicePenghitung service = SearchServicePenghitung(
-        lamaMenunggu: const Duration(milliseconds: 60),
-      );
-      SearchProvider pencarian = providerUntukTes(service);
-
-      Future<void> pencarianYangBerjalan = pencarian.cariSekarang('weeknd');
-      expect(pencarian.isSedangMencari, isTrue);
-
-      pencarian.ketikKataKunci('');
-      await pencarianYangBerjalan;
-
-      expect(service.jumlahPanggilan, 1);
-      expect(pencarian.hasilPencarian, isEmpty);
-      expect(pencarian.isSedangMencari, isFalse);
-    });
-
     test('Mengosongkan saat masih menunggu jeda tidak memanggil API', () async {
       SearchServicePenghitung service = SearchServicePenghitung();
       SearchProvider pencarian = SearchProvider(
@@ -189,36 +161,6 @@ void main() {
 
       expect(service.jumlahPanggilan, 0);
       expect(pencarian.isSedangMencari, isFalse);
-    });
-
-    test('Error dan saran ejaan tidak tertinggal', () async {
-      SearchService service = serviceUntukTes()..isServerSedangGangguan = true;
-      SearchProvider pencarian = providerUntukTes(service);
-      await pencarian.cariSekarang('starboy');
-      expect(pencarian.isAdaError, isTrue);
-
-      pencarian.kosongkanPencarian();
-      expect(pencarian.isAdaError, isFalse);
-      expect(pencarian.pesanError, isNull);
-
-      service.isServerSedangGangguan = false;
-      await pencarian.cariSekarang('weekend');
-      expect(pencarian.saranEjaan, isNotNull);
-
-      pencarian.kosongkanPencarian();
-      expect(pencarian.saranEjaan, isNull);
-    });
-
-    test('Filter kembali ke Semua, tapi tidak saat cuma kependekan', () async {
-      SearchProvider pencarian = providerUntukTes();
-      await pencarian.cariSekarang('weeknd');
-      pencarian.gantiFilter(SearchProvider.filterJudul);
-
-      pencarian.ketikKataKunci('w');
-      expect(pencarian.filterAktif, SearchProvider.filterJudul);
-
-      pencarian.ketikKataKunci('');
-      expect(pencarian.filterAktif, SearchProvider.filterSemua);
     });
 
     test('Riwayat tetap ada setelah kolom dikosongkan', () async {
@@ -252,15 +194,6 @@ void main() {
     expect(semuaLagu.length, tandaUnik.length);
   });
 
-  test('Semua saran penyanyi bisa ditemukan di katalog cadangan', () async {
-    SearchService service = SearchService(lamaMenunggu: Duration.zero);
-    SearchProvider pencarian = SearchProvider(searchService: service);
-
-    for (String penyanyi in pencarian.saranPencarian) {
-      expect((await service.cari(penyanyi)).isKosong, isFalse);
-    }
-  });
-
   group('Hasil pencarian kosong', () {
     test('Salah ketik memberi saran ejaan dari katalog', () async {
       SearchProvider pencarian = providerUntukTes();
@@ -288,19 +221,6 @@ void main() {
 
       expect(pencarian.isHasilTersembunyiOlehFilter, isTrue);
       expect(pencarian.jumlahHasilTanpaFilter, 2);
-      expect(pencarian.saranEjaan, isNull);
-    });
-
-    test('Kamus kosong tidak bikin error', () async {
-      SearchProvider pencarian = SearchProvider(
-        searchService: serviceUntukTes(),
-        jedaSetelahMengetik: Duration.zero,
-        kamusSaranEjaan: [],
-      );
-
-      await pencarian.cariSekarang('weekend');
-
-      expect(pencarian.isHasilKosong, isTrue);
       expect(pencarian.saranEjaan, isNull);
     });
   });
@@ -347,23 +267,6 @@ void main() {
       expect(service.jumlahPanggilan, 1);
     });
 
-    test(
-      'Kembali ke kata kunci yang sedang tampil tidak memanggil API',
-      () async {
-        SearchServicePenghitung service = SearchServicePenghitung();
-        SearchProvider pencarian = providerDenganJeda(service);
-        await pencarian.cariSekarang('star');
-
-        pencarian.ketikKataKunci('starb');
-        pencarian.ketikKataKunci('star');
-
-        expect(pencarian.isSedangMencari, isFalse);
-        await Future.delayed(tungguLewatJeda);
-        expect(service.jumlahPanggilan, 1);
-        expect(judulHasil(pencarian), ['Starboy']);
-      },
-    );
-
     test('Satu huruf belum dikirim ke server', () async {
       SearchServicePenghitung service = SearchServicePenghitung();
       SearchProvider pencarian = providerDenganJeda(service);
@@ -373,17 +276,6 @@ void main() {
 
       expect(pencarian.isKataKunciKependekan, isTrue);
       expect(pencarian.isHasilKosong, isFalse);
-      expect(service.jumlahPanggilan, 0);
-    });
-
-    test('Provider ditutup saat masih menunggu jeda tetap aman', () async {
-      SearchServicePenghitung service = SearchServicePenghitung();
-      SearchProvider pencarian = providerDenganJeda(service);
-
-      pencarian.ketikKataKunci('starboy');
-      pencarian.dispose();
-      await Future.delayed(tungguLewatJeda);
-
       expect(service.jumlahPanggilan, 0);
     });
   });

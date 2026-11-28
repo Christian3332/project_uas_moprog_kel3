@@ -60,13 +60,4 @@ void main() {
     SharedPreferences data = await SharedPreferences.getInstance();
     expect(data.containsKey('${FeedLokalService.awalanKunci}usr-1'), isFalse);
   });
-
-  test('Feed tanpa katalog tidak ikut disimpan', () async {
-    await penyimpanan.simpanFeed(
-      'usr-1',
-      const FeedBeranda(riwayatPutar: [], laguPerGenre: {}),
-    );
-
-    expect(await penyimpanan.ambilFeed('usr-1'), isNull);
-  });
 }

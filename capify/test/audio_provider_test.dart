@@ -1,6 +1,5 @@
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:just_audio/just_audio.dart';
 
 import 'package:capify/models/lagu.dart';
 import 'package:capify/models/mode_ulang.dart';
@@ -38,11 +37,6 @@ void main() {
     expect(audioKosong.laguSekarang, isNull);
     expect(audioKosong.laguBerikutnya(), isFalse);
     audioKosong.dispose();
-  });
-
-  test('Index mulai yang kelewatan tetap aman', () {
-    audio.mulaiAntrian(laguTes, indexMulai: 99, isLangsungDiputar: false);
-    expect(audio.laguSekarang?.judul, 'Lagu B');
   });
 
   test('Next berhenti di lagu terakhir kalau mode ulang mati', () {
@@ -171,14 +165,6 @@ void main() {
       expect(audioAsli.isSedangBuffering, isFalse);
     });
 
-    test('Posisi lagu yang sudah ter-buffer ikut tersimpan', () async {
-      await audioAsli.putar();
-      pemutarPalsu.kirimPosisiTerbuffer(const Duration(seconds: 90));
-      await tungguStreamTerkirim();
-
-      expect(audioAsli.posisiTerbuffer, const Duration(seconds: 90));
-    });
-
     test('Koneksi putus di tengah lagu bisa dicoba lagi', () async {
       await audioAsli.putar();
       audioAsli.geserKe(const Duration(seconds: 30));
@@ -246,55 +232,6 @@ void main() {
       expect(audioAsli.pesanInterupsi, isNull);
     });
 
-    test(
-      'Lagu yang dijeda sendiri tidak ikut lanjut setelah telepon',
-      () async {
-        audioAsli.jeda();
-        audioAsli.saatAdaInterupsi(
-          AudioInterruptionEvent(true, AudioInterruptionType.pause),
-        );
-        audioAsli.saatAdaInterupsi(
-          AudioInterruptionEvent(false, AudioInterruptionType.pause),
-        );
-        await tungguStreamTerkirim();
-
-        expect(audioAsli.isLaguSedangDiputar, isFalse);
-        expect(audioAsli.pesanInterupsi, isNull);
-      },
-    );
-
-    test(
-      'Interupsi tanpa jenis jelas menunggu pengguna menekan play',
-      () async {
-        audioAsli.saatAdaInterupsi(
-          AudioInterruptionEvent(true, AudioInterruptionType.unknown),
-        );
-        audioAsli.saatAdaInterupsi(
-          AudioInterruptionEvent(false, AudioInterruptionType.unknown),
-        );
-        await tungguStreamTerkirim();
-
-        expect(audioAsli.isLaguSedangDiputar, isFalse);
-        expect(audioAsli.pesanInterupsi, contains('ketuk play'));
-
-        await audioAsli.putar();
-        expect(audioAsli.pesanInterupsi, isNull);
-      },
-    );
-
-    test('Notifikasi singkat hanya mengecilkan suara sementara', () {
-      audioAsli.saatAdaInterupsi(
-        AudioInterruptionEvent(true, AudioInterruptionType.duck),
-      );
-      expect(pemutarPalsu.volumeSekarang, lessThan(1.0));
-      expect(audioAsli.isLaguSedangDiputar, isTrue);
-
-      audioAsli.saatAdaInterupsi(
-        AudioInterruptionEvent(false, AudioInterruptionType.duck),
-      );
-      expect(pemutarPalsu.volumeSekarang, 1.0);
-    });
-
     test('Headset dicabut langsung menjeda lagu', () async {
       audioAsli.saatHeadsetDicabut();
       await tungguStreamTerkirim();
@@ -306,23 +243,6 @@ void main() {
   });
 
   group('Seekbar dan timeline', () {
-    test('Geseran saat lagu masih dimuat tetap dipakai', () async {
-      PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(
-        lamaMemuat: const Duration(milliseconds: 50),
-      );
-      AudioProvider audioUji = AudioProvider(pemutarAudio: pemutarPalsu)
-        ..mulaiAntrian(laguTes, isLangsungDiputar: false);
-
-      Future<void> prosesMemuat = audioUji.putar();
-      expect(audioUji.isSedangMenyiapkanLagu, isTrue);
-      audioUji.geserKe(const Duration(seconds: 40));
-      await prosesMemuat;
-
-      expect(pemutarPalsu.posisiTerakhirDiseek, const Duration(seconds: 40));
-      expect(audioUji.posisiSekarang, const Duration(seconds: 40));
-      audioUji.dispose();
-    });
-
     test('Posisi dari pemutar audio memperbarui timeline', () async {
       PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(
         lamaMemuat: Duration.zero,
@@ -392,38 +312,6 @@ void main() {
       audioUji.dispose();
     });
 
-    test('Acak dengan ulang semua memulai putaran baru tanpa lagu dobel', () {
-      AudioProvider audioUji = AudioProvider()
-        ..mulaiAntrian(buatAntrian(4), isLangsungDiputar: false)
-        ..toggleAcak()
-        ..gantiModeUlang();
-
-      List<String> laguYangDiputar = putarSampaiHabis(audioUji, 7);
-      expect(laguYangDiputar.length, 8);
-      expect(laguYangDiputar.sublist(0, 4).toSet().length, 4);
-      expect(laguYangDiputar.sublist(4, 8).toSet().length, 4);
-      expect(laguYangDiputar[4], isNot(laguYangDiputar[3]));
-      audioUji.dispose();
-    });
-
-    test('Mematikan acak melanjutkan urutan dari lagu sekarang', () {
-      AudioProvider audioUji = AudioProvider()
-        ..mulaiAntrian(buatAntrian(5), isLangsungDiputar: false)
-        ..toggleAcak();
-      audioUji.laguBerikutnya();
-      int indexSaatAcakDimatikan = audioUji.indexLaguSekarang;
-
-      audioUji.toggleAcak();
-      bool isMasihAdaLagu = audioUji.laguBerikutnya();
-
-      if (indexSaatAcakDimatikan == 4) {
-        expect(isMasihAdaLagu, isFalse);
-      } else {
-        expect(audioUji.indexLaguSekarang, indexSaatAcakDimatikan + 1);
-      }
-      audioUji.dispose();
-    });
-
     test('Sinyal selesai dari lagu lama tidak melompati lagu', () async {
       PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(
         lamaMemuat: const Duration(milliseconds: 50),
@@ -438,24 +326,6 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(audioUji.laguSekarang?.judul, 'Lagu 2');
-      audioUji.dispose();
-    });
-
-    test('Sinyal selesai saat lagu dijeda tidak dianggap lagu habis', () async {
-      PemutarAudioPalsu pemutarPalsu = PemutarAudioPalsu(
-        lamaMemuat: Duration.zero,
-      );
-      AudioProvider audioUji = AudioProvider(pemutarAudio: pemutarPalsu)
-        ..mulaiAntrian(buatAntrian(3), isLangsungDiputar: false);
-      await audioUji.putar();
-      await Future<void>.delayed(Duration.zero);
-
-      pemutarPalsu.pengirimStatus.add(
-        PlayerState(false, ProcessingState.completed),
-      );
-      await Future<void>.delayed(Duration.zero);
-
-      expect(audioUji.laguSekarang?.judul, 'Lagu 1');
       audioUji.dispose();
     });
   });

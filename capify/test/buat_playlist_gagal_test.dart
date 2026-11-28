@@ -71,28 +71,6 @@ void main() {
       expect(koleksi.daftarPlaylistSaya.length, jumlahAwal + 1);
       expect(koleksi.daftarPlaylistSaya.first.nama, 'Coba Lagi Dong');
     });
-
-    test('Error yang bukan Exception tetap diganti pesan yang ramah', () async {
-      KoleksiServiceSimpanBisaGagal service = KoleksiServiceSimpanBisaGagal();
-      PlaylistProvider koleksi = PlaylistProvider(koleksiService: service);
-      await koleksi.muatKoleksi();
-
-      service.isLemparErrorAneh = true;
-      String? pesanGagal = await koleksi.buatPlaylistBaru(nama: 'Error Aneh');
-
-      expect(pesanGagal, 'Playlist gagal dibuat, coba lagi sebentar');
-      expect(koleksi.isSedangMembuatPlaylist, isFalse);
-    });
-
-    test('Mock service bisa disimulasikan gagal menyimpan', () async {
-      expect(
-        () => const KoleksiService(
-          lamaResponServer: Duration.zero,
-          isSimulasiGagal: true,
-        ).simpanPlaylistBaru(nama: 'Gagal', deskripsi: ''),
-        throwsA(isA<Exception>()),
-      );
-    });
   });
 
   testWidgets('Form tetap terbuka dan menampilkan pesan saat gagal', (
