@@ -150,27 +150,6 @@ void main() {
     expect(find.byType(KartuLanjutDengerin), findsOneWidget);
   });
 
-  testWidgets('Pesan koneksi lambat muncul kalau server kelamaan', (
-    tester,
-  ) async {
-    HomeProvider homeLambat = HomeProvider(
-      feedService: const FeedService(lamaResponServer: Duration(seconds: 3)),
-      batasSabarMenunggu: const Duration(seconds: 1),
-    );
-    addTearDown(homeLambat.dispose);
-
-    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeLambat));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1100));
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.textContaining('Koneksi lagi lambat'), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 2));
-    expect(find.byType(KerangkaBerandaMemuat), findsNothing);
-    expect(find.text('Evaluasi'), findsOneWidget);
-  });
-
   testWidgets('Tombol coba lagi di spanduk menampilkan progres dan pesan', (
     tester,
   ) async {
@@ -271,12 +250,11 @@ void main() {
         .first;
   }
 
-  testWidgets('Tarik ke bawah memberi tahu beranda sudah paling baru', (
+  testWidgets('Tarik ke bawah memberi tahu beranda sudah diperbarui', (
     tester,
   ) async {
     HomeProvider homeUji = HomeProvider(
       feedService: const FeedService(lamaResponServer: Duration.zero),
-      jedaMinimalSegarkan: Duration.zero,
     );
     addTearDown(homeUji.dispose);
 
@@ -288,24 +266,7 @@ void main() {
     await tester.drag(areaGeserBeranda(), const Offset(0, 400));
     await tester.pumpAndSettle();
 
-    expect(find.text('Berandamu sudah yang paling baru'), findsOneWidget);
-  });
-
-  testWidgets('Tarik dua kali cepat tidak memuat ulang lagi', (tester) async {
-    HomeProvider homeUji = HomeProvider(
-      feedService: const FeedService(lamaResponServer: Duration.zero),
-    );
-    addTearDown(homeUji.dispose);
-
-    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeUji));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    await tester.drag(areaGeserBeranda(), const Offset(0, 400));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('baru saja diperbarui'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.text('Beranda sudah diperbarui'), findsOneWidget);
   });
 
   testWidgets('Layar gagal total juga bisa ditarik untuk mencoba lagi', (

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../data/kategori_dummy.dart';
@@ -14,28 +12,15 @@ import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 import 'audio_provider.dart';
 
-enum HasilSegarkan {
-  diperbarui,
-  tidakAdaPerubahan,
-  terlaluCepat,
-  masihOffline,
-  masihCadangan,
-  gagal,
-}
+enum HasilSegarkan { berhasil, gagal }
 
 class HomeProvider extends ChangeNotifier {
   static const int batasJumlahRiwayat = 10;
   static const int batasGenreFavorit = 5;
 
   final FeedService feedService;
-  final Duration batasSabarMenunggu;
-  final Duration jedaMinimalSegarkan;
 
-  HomeProvider({
-    this.feedService = const FeedService(),
-    this.batasSabarMenunggu = const Duration(seconds: 4),
-    this.jedaMinimalSegarkan = const Duration(seconds: 5),
-  });
+  HomeProvider({this.feedService = const FeedService()});
 
   Map<String, List<Lagu>> _laguPerGenre = {};
   List<RiwayatPutar> _riwayatTerakhirDiputar = [];
@@ -47,8 +32,6 @@ class HomeProvider extends ChangeNotifier {
   AsalFeed _asalFeed = AsalFeed.server;
   bool _isSedangOffline = false;
   DateTime? _waktuFeedDisimpan;
-  bool _isMemuatTerlaluLama = false;
-  Timer? _timerPenandaLambat;
   Future<void>? _prosesMuatYangBerjalan;
   DateTime? _waktuTerakhirDiperbarui;
   bool _isSudahDibuang = false;
@@ -70,7 +53,6 @@ class HomeProvider extends ChangeNotifier {
   bool get isMemakaiDataCadangan => _asalFeed != AsalFeed.server;
   bool get isSedangOffline => _isSedangOffline;
   DateTime? get waktuFeedDisimpan => _waktuFeedDisimpan;
-  bool get isMemuatTerlaluLama => _isMemuatTerlaluLama;
   DateTime? get waktuTerakhirDiperbarui => _waktuTerakhirDiperbarui;
   bool get isSedangMenyegarkan => _isSedangMemuat && _isSudahPernahDimuat;
   List<String> get genreFavorit => List.unmodifiable(_genreFavorit);
@@ -119,53 +101,16 @@ class HomeProvider extends ChangeNotifier {
     return prosesBaru;
   }
 
-  Future<HasilSegarkan> segarkanBeranda({
-    bool isAbaikanJeda = false,
-    DateTime? waktuSekarang,
-  }) async {
-    DateTime? waktuTerakhir = _waktuTerakhirDiperbarui;
-    bool isBaruSajaDiperbarui =
-        waktuTerakhir != null &&
-        (waktuSekarang ?? DateTime.now()).difference(waktuTerakhir) <
-            jedaMinimalSegarkan;
-    bool isBolehDilewati =
-        !isAbaikanJeda &&
-        isBaruSajaDiperbarui &&
-        !isMemakaiDataCadangan &&
-        _prosesMuatYangBerjalan == null;
-    if (isBolehDilewati) return HasilSegarkan.terlaluCepat;
-
-    String sidikJariSebelum = _sidikJariFeed();
+  Future<HasilSegarkan> segarkanBeranda() async {
     await muatIsiBeranda(isPaksaMuatUlang: true);
 
-    if (_pesanGagal != null) return HasilSegarkan.gagal;
-    if (_isSedangOffline) return HasilSegarkan.masihOffline;
-    if (isMemakaiDataCadangan) return HasilSegarkan.masihCadangan;
-    if (_sidikJariFeed() == sidikJariSebelum) {
-      return HasilSegarkan.tidakAdaPerubahan;
-    }
-    return HasilSegarkan.diperbarui;
-  }
-
-  String _sidikJariFeed() {
-    StringBuffer sidikJari = StringBuffer(_asalFeed.name);
-
-    for (RiwayatPutar riwayat in _riwayatTerakhirDiputar) {
-      sidikJari.write('|${kunciUnikLagu(riwayat.lagu)}');
-    }
-    _laguPerGenre.forEach((namaGenre, isiGenre) {
-      sidikJari.write('#$namaGenre');
-      for (Lagu lagu in isiGenre) {
-        sidikJari.write(',${kunciUnikLagu(lagu)}');
-      }
-    });
-    return sidikJari.toString();
+    bool isBerhasil = _pesanGagal == null && !isMemakaiDataCadangan;
+    return isBerhasil ? HasilSegarkan.berhasil : HasilSegarkan.gagal;
   }
 
   Future<void> _jalankanPemuatan() async {
     _isSedangMemuat = true;
     _pesanGagal = null;
-    _mulaiHitungKesabaran();
     _kabariPendengar();
 
     try {
@@ -186,25 +131,8 @@ class HomeProvider extends ChangeNotifier {
       _pesanGagal = _rapikanPesanGagal(error);
     }
 
-    _hentikanHitungKesabaran();
     _isSedangMemuat = false;
     _kabariPendengar();
-  }
-
-  void _mulaiHitungKesabaran() {
-    _timerPenandaLambat?.cancel();
-    _isMemuatTerlaluLama = false;
-    _timerPenandaLambat = Timer(batasSabarMenunggu, () {
-      if (!_isSedangMemuat) return;
-      _isMemuatTerlaluLama = true;
-      _kabariPendengar();
-    });
-  }
-
-  void _hentikanHitungKesabaran() {
-    _timerPenandaLambat?.cancel();
-    _timerPenandaLambat = null;
-    _isMemuatTerlaluLama = false;
   }
 
   String _rapikanPesanGagal(Object error) {
@@ -388,7 +316,6 @@ class HomeProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isSudahDibuang = true;
-    _timerPenandaLambat?.cancel();
     _pemutarYangDipantau?.removeListener(_cekLaguYangSedangDiputar);
     _pemutarYangDipantau = null;
     super.dispose();
