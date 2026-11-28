@@ -5,6 +5,7 @@ import '../data/lagu_per_kategori_dummy.dart';
 import '../models/kategori_musik.dart';
 import '../models/lagu.dart';
 import '../providers/audio_provider.dart';
+import '../utils/format_waktu.dart';
 import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 
@@ -38,12 +39,6 @@ class _DetailKategoriScreenState extends State<DetailKategoriScreen> {
       laguDiKategori = laguDariData == null ? [] : List.of(laguDariData);
       isLaguSedangDimuat = false;
     });
-  }
-
-  String formatDurasiLagu(Duration durasi) {
-    String menit = durasi.inMinutes.toString();
-    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
-    return '$menit:$detik';
   }
 
   String ringkasanIsiKategori() {
@@ -108,7 +103,7 @@ class _DetailKategoriScreenState extends State<DetailKategoriScreen> {
                     BarisLaguKategori(
                       nomorUrut: urutan + 1,
                       lagu: laguDiKategori[urutan],
-                      teksDurasi: formatDurasiLagu(
+                      teksDurasi: FormatWaktu.durasiLagu(
                         laguDiKategori[urutan].durasi,
                       ),
                       isSedangDiputar:

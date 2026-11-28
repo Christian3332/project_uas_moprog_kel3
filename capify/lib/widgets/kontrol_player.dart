@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/mode_ulang.dart';
+import '../utils/format_waktu.dart';
 import '../utils/warna_capify.dart';
 
 class SeekbarPlayer extends StatefulWidget {
@@ -23,12 +24,6 @@ class SeekbarPlayer extends StatefulWidget {
 
 class _SeekbarPlayerState extends State<SeekbarPlayer> {
   double? detikSaatDigeser;
-
-  String formatWaktu(Duration waktu) {
-    int menit = waktu.inMinutes;
-    int detik = waktu.inSeconds % 60;
-    return '$menit:${detik.toString().padLeft(2, '0')}';
-  }
 
   void lepasGeseran(double detikTujuan) {
     if (!mounted) return;
@@ -81,11 +76,11 @@ class _SeekbarPlayerState extends State<SeekbarPlayer> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                formatWaktu(posisiYangDitampilkan),
+                FormatWaktu.durasiLagu(posisiYangDitampilkan),
                 style: const TextStyle(color: Colors.white60, fontSize: 12),
               ),
               Text(
-                formatWaktu(widget.durasiLagu),
+                FormatWaktu.durasiLagu(widget.durasiLagu),
                 style: const TextStyle(color: Colors.white60, fontSize: 12),
               ),
             ],
