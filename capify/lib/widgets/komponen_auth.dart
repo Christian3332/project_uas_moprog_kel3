@@ -326,40 +326,6 @@ class KotakCentangAuth extends StatelessWidget {
   }
 }
 
-class BarisTombolSosial extends StatelessWidget {
-  final bool isNonaktif;
-  final ValueChanged<String> onPilihLayanan;
-
-  const BarisTombolSosial({
-    super.key,
-    required this.isNonaktif,
-    required this.onPilihLayanan,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: TombolSosialAuth(
-            ikonLayanan: Icons.g_mobiledata_rounded,
-            namaLayanan: 'Google',
-            onTekan: isNonaktif ? null : () => onPilihLayanan('Google'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: TombolSosialAuth(
-            ikonLayanan: Icons.facebook_rounded,
-            namaLayanan: 'Facebook',
-            onTekan: isNonaktif ? null : () => onPilihLayanan('Facebook'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class BarisPindahAuth extends StatelessWidget {
   final String teksPertanyaan;
   final String teksTombol;
@@ -398,35 +364,6 @@ class BarisPindahAuth extends StatelessWidget {
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-class PemisahAtau extends StatelessWidget {
-  final String teksTengah;
-
-  const PemisahAtau({super.key, required this.teksTengah});
-
-  @override
-  Widget build(BuildContext context) {
-    Color warnaGaris = WarnaCapify.krem.withValues(alpha: 0.3);
-
-    return Row(
-      children: [
-        Expanded(child: Divider(color: warnaGaris)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            teksTengah,
-            style: TextStyle(
-              color: WarnaCapify.krem.withValues(alpha: 0.7),
-              fontSize: 13,
-              fontWeight: FontWeight.w300,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: warnaGaris)),
       ],
     );
   }
@@ -482,41 +419,6 @@ class IndikatorKekuatanPassword extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class TombolSosialAuth extends StatelessWidget {
-  final IconData ikonLayanan;
-  final String namaLayanan;
-  final VoidCallback? onTekan;
-
-  const TombolSosialAuth({
-    super.key,
-    required this.ikonLayanan,
-    required this.namaLayanan,
-    required this.onTekan,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onTekan,
-      icon: Icon(ikonLayanan, size: 24),
-      label: Text(
-        namaLayanan,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: WarnaCapify.putih,
-        backgroundColor: WarnaCapify.hitam.withValues(alpha: 0.25),
-        side: BorderSide(color: WarnaCapify.krem.withValues(alpha: 0.5)),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
     );
   }

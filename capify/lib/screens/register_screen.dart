@@ -329,16 +329,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           isSedangLoading: isSedangMendaftar,
                           onTekan: prosesDaftar,
                         ),
-                        const SizedBox(height: 28),
-                        const PemisahAtau(teksTengah: 'atau daftar dengan'),
-                        const SizedBox(height: 20),
-                        BarisTombolSosial(
-                          isNonaktif: isSedangMendaftar,
-                          onPilihLayanan: (namaLayanan) => tampilkanPesan(
-                            context,
-                            'Daftar lewat $namaLayanan segera hadir',
-                          ),
-                        ),
                         const SizedBox(height: 16),
                         BarisPindahAuth(
                           teksPertanyaan: 'Sudah punya akun?',

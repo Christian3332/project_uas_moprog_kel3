@@ -330,23 +330,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: isSedangMasuk
-                                ? null
-                                : () => tampilkanPesan(
-                                    context,
-                                    'Fitur lupa password segera hadir',
-                                  ),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.only(left: 8),
-                              minimumSize: const Size(0, 40),
-                            ),
-                            child: const Text(
-                              'Lupa password?',
-                              style: TextStyle(color: WarnaCapify.krem),
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -364,16 +347,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         isSedangLoading: isSedangMasuk,
                         isNonaktif: isSedangTerkunci,
                         onTekan: prosesMasuk,
-                      ),
-                      const SizedBox(height: 28),
-                      const PemisahAtau(teksTengah: 'atau masuk dengan'),
-                      const SizedBox(height: 20),
-                      BarisTombolSosial(
-                        isNonaktif: isSedangMasuk,
-                        onPilihLayanan: (namaLayanan) => tampilkanPesan(
-                          context,
-                          'Masuk lewat $namaLayanan segera hadir',
-                        ),
                       ),
                       const SizedBox(height: 24),
                       BarisPindahAuth(
