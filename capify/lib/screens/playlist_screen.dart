@@ -6,8 +6,8 @@ import '../models/lagu.dart';
 import '../models/playlist.dart';
 import '../providers/audio_provider.dart';
 import '../providers/playlist_provider.dart';
-import '../services/koleksi_service.dart';
 import '../utils/format_waktu.dart';
+import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import '../widgets/form_buat_playlist.dart';
@@ -187,7 +187,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (namaAntrianAktif != playlist.nama) return false;
 
     return playlist.daftarLagu.any(
-      (lagu) => KoleksiService.buatKunciLagu(lagu) == kunciLaguAktif,
+      (lagu) => kunciUnikLagu(lagu) == kunciLaguAktif,
     );
   }
 
@@ -203,7 +203,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     Lagu? laguDiPemutar = audio.laguSekarang;
     String? kunciLaguAktif = laguDiPemutar == null
         ? null
-        : KoleksiService.buatKunciLagu(laguDiPemutar);
+        : kunciUnikLagu(laguDiPemutar);
 
     if (isPlaylistSedangAktif(playlist, audio.namaAntrian, kunciLaguAktif)) {
       audio.togglePutarJeda();
@@ -290,9 +290,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       );
       String? kunciLaguAktif = context.select<AudioProvider, String?>((audio) {
         Lagu? laguDiPemutar = audio.laguSekarang;
-        return laguDiPemutar == null
-            ? null
-            : KoleksiService.buatKunciLagu(laguDiPemutar);
+        return laguDiPemutar == null ? null : kunciUnikLagu(laguDiPemutar);
       });
 
       return ListView.builder(

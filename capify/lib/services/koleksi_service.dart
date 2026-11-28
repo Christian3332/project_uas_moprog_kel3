@@ -103,6 +103,4 @@ class KoleksiService {
     }
     return posisiPlaylist;
   }
-
-  static String buatKunciLagu(Lagu lagu) => Playlist.kunciLagu(lagu);
 }

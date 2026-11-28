@@ -5,6 +5,7 @@ import 'package:capify/models/playlist.dart';
 import 'package:capify/providers/playlist_provider.dart';
 import 'package:capify/services/koleksi_service.dart';
 import 'package:capify/services/supabase_koleksi_service.dart';
+import 'package:capify/utils/kunci_lagu.dart';
 
 class KoleksiServiceBisaGagal extends KoleksiService {
   bool isTambahLaguGagal = false;
@@ -62,8 +63,8 @@ void main() {
 
     test('Kunci lagu tidak peduli huruf besar kecil', () {
       expect(
-        KoleksiService.buatKunciLagu(buatLaguContoh('DITTO', 'newjeans')),
-        KoleksiService.buatKunciLagu(buatLaguContoh('Ditto', 'NewJeans')),
+        kunciUnikLagu(buatLaguContoh('DITTO', 'newjeans')),
+        kunciUnikLagu(buatLaguContoh('Ditto', 'NewJeans')),
       );
     });
 
