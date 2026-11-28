@@ -1,3 +1,4 @@
+import '../utils/kunci_lagu.dart';
 import 'lagu.dart';
 
 class Playlist {
@@ -18,13 +19,9 @@ class Playlist {
     return daftarLagu.first.urlCover;
   }
 
-  static String kunciLagu(Lagu lagu) {
-    return '${lagu.judul}|${lagu.penyanyi}'.toLowerCase();
-  }
-
   bool isPunyaLagu(Lagu laguDicari) {
-    String kunciDicari = kunciLagu(laguDicari);
-    return daftarLagu.any((lagu) => kunciLagu(lagu) == kunciDicari);
+    String kunciDicari = kunciUnikLagu(laguDicari);
+    return daftarLagu.any((lagu) => kunciUnikLagu(lagu) == kunciDicari);
   }
 
   Playlist denganLaguTambahan(Lagu laguBaru) {
@@ -32,9 +29,9 @@ class Playlist {
   }
 
   Playlist denganLaguDihapus(Lagu laguDihapus) {
-    String kunciDihapus = kunciLagu(laguDihapus);
+    String kunciDihapus = kunciUnikLagu(laguDihapus);
     return _salinDenganDaftarLagu(
-      daftarLagu.where((lagu) => kunciLagu(lagu) != kunciDihapus).toList(),
+      daftarLagu.where((lagu) => kunciUnikLagu(lagu) != kunciDihapus).toList(),
     );
   }
 

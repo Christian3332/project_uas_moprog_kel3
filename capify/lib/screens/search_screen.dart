@@ -7,14 +7,13 @@ import '../models/lagu.dart';
 import '../providers/audio_provider.dart';
 import '../providers/search_provider.dart';
 import '../utils/format_waktu.dart';
+import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import 'detail_album_screen.dart';
 import 'player_screen.dart';
 
 const double lengkungKolomCari = 26;
-
-String buatKunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -90,7 +89,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     bool isLaguYangSamaSudahAktif =
         laguDiPemutar != null &&
-        buatKunciLagu(laguDiPemutar) == buatKunciLagu(laguDipilih);
+        kunciUnikLagu(laguDiPemutar) == kunciUnikLagu(laguDipilih);
     if (isLaguYangSamaSudahAktif) {
       if (!audio.isLaguSedangDiputar && !audio.isSedangMemuat) audio.putar();
       PlayerScreen.bukaLayarPenuh(context);
@@ -139,7 +138,7 @@ class _SearchScreenState extends State<SearchScreen> {
     StatusPemutarDiPencarian statusPemutar = StatusPemutarDiPencarian(
       kunciLaguAktif: context.select<AudioProvider, String?>((audio) {
         Lagu? laguDiPemutar = audio.laguSekarang;
-        return laguDiPemutar == null ? null : buatKunciLagu(laguDiPemutar);
+        return laguDiPemutar == null ? null : kunciUnikLagu(laguDiPemutar);
       }),
       isSedangDiputar: context.select<AudioProvider, bool>(
         (audio) => audio.isLaguSedangDiputar,
@@ -507,7 +506,7 @@ class StatusPemutarDiPencarian {
   });
 
   bool isLaguIni(Lagu lagu) {
-    return kunciLaguAktif == buatKunciLagu(lagu);
+    return kunciLaguAktif == kunciUnikLagu(lagu);
   }
 }
 

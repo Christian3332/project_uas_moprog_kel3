@@ -8,6 +8,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 
 import '../models/lagu.dart';
 import '../models/mode_ulang.dart';
+import '../utils/kunci_lagu.dart';
 
 class AudioProvider extends ChangeNotifier {
   static const String urlAudioCadangan =
@@ -146,8 +147,6 @@ class AudioProvider extends ChangeNotifier {
     _isDijedaKarenaInterupsi = false;
     _pesanInterupsi = null;
   }
-
-  String _buatKunciLagu(Lagu lagu) => '${lagu.judul}|${lagu.penyanyi}';
 
   String _ambilUrlAudio(Lagu lagu) {
     String urlAudio = lagu.urlAudio.trim();
@@ -356,7 +355,7 @@ class AudioProvider extends ChangeNotifier {
     Lagu? laguSebelumnya = laguSekarang;
     bool isLaguYangSama =
         laguSebelumnya != null &&
-        _buatKunciLagu(laguSebelumnya) == _buatKunciLagu(laguYangDipilih);
+        kunciUnikLagu(laguSebelumnya) == kunciUnikLagu(laguYangDipilih);
     bool isTadiSedangDiputar = _isLaguSedangDiputar || _isSedangMenyiapkanLagu;
 
     if (isLaguYangSama && _laguYangSudahDimuat != null) {
@@ -390,7 +389,7 @@ class AudioProvider extends ChangeNotifier {
   MediaItem _buatInfoNotifikasi(Lagu lagu) {
     String urlCover = lagu.urlCover.trim();
     return MediaItem(
-      id: '${_buatKunciLagu(lagu)}|$_indexLaguSekarang',
+      id: '${kunciUnikLagu(lagu)}|$_indexLaguSekarang',
       title: lagu.judul,
       artist: lagu.penyanyi,
       album: _namaAntrian,
