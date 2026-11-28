@@ -17,14 +17,10 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   static const String jenisSemua = 'Semua';
 
-  bool isKategoriSedangDimuat = true;
-  bool isFilterSedangDiproses = false;
   bool isHanyaYangAdaLagu = false;
   String jenisDipilih = jenisSemua;
-  int urutanPermintaanFilter = 0;
 
   List<KategoriMusik> semuaKategori = [];
-  List<KategoriMusik> kategoriTampil = [];
   Map<String, String?> urlSampulPerKategori = {};
   final Set<String> sampulYangSudahDisiapkan = {};
 
@@ -39,17 +35,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return jenisDipilih != jenisSemua || isHanyaYangAdaLagu;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    muatDaftarKategori();
-  }
-
-  int jumlahLaguDi(KategoriMusik kategori) {
-    return laguPerKategoriDummy[kategori.nama]?.length ?? 0;
-  }
-
-  List<KategoriMusik> saringKategori() {
+  List<KategoriMusik> get kategoriTampil {
     return semuaKategori.where((kategori) {
       bool jenisnyaCocok =
           jenisDipilih == jenisSemua || kategori.jenis == jenisDipilih;
@@ -59,29 +45,35 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }).toList();
   }
 
-  Future<void> muatDaftarKategori() async {
-    urutanPermintaanFilter++;
-    setState(() {
-      isKategoriSedangDimuat = true;
-      isFilterSedangDiproses = false;
-    });
+  @override
+  void initState() {
+    super.initState();
+    isiDaftarKategori();
+  }
 
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    siapkanSampulLebihAwal();
+  }
 
-    setState(() {
-      semuaKategori = List.of(daftarKategoriDummy);
-      urlSampulPerKategori = {
-        for (KategoriMusik kategori in semuaKategori)
-          kategori.nama: ambilUrlSampulKategori(kategori.nama),
-      };
-      if (!daftarJenis.contains(jenisDipilih)) {
-        jenisDipilih = jenisSemua;
-      }
-      kategoriTampil = saringKategori();
-      isKategoriSedangDimuat = false;
-    });
+  int jumlahLaguDi(KategoriMusik kategori) {
+    return laguPerKategoriDummy[kategori.nama]?.length ?? 0;
+  }
 
+  void isiDaftarKategori() {
+    semuaKategori = List.of(daftarKategoriDummy);
+    urlSampulPerKategori = {
+      for (KategoriMusik kategori in semuaKategori)
+        kategori.nama: ambilUrlSampulKategori(kategori.nama),
+    };
+    if (!daftarJenis.contains(jenisDipilih)) {
+      jenisDipilih = jenisSemua;
+    }
+  }
+
+  Future<void> muatUlangKategori() async {
+    setState(isiDaftarKategori);
     siapkanSampulLebihAwal();
   }
 
@@ -102,27 +94,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
-  Future<void> terapkanFilter({
-    String? jenisBaru,
-    bool? hanyaYangAdaLaguBaru,
-  }) async {
-    if (isKategoriSedangDimuat) return;
-
-    urutanPermintaanFilter++;
-    int permintaanIniKe = urutanPermintaanFilter;
-
+  void terapkanFilter({String? jenisBaru, bool? hanyaYangAdaLaguBaru}) {
     setState(() {
       jenisDipilih = jenisBaru ?? jenisDipilih;
       isHanyaYangAdaLagu = hanyaYangAdaLaguBaru ?? isHanyaYangAdaLagu;
-      isFilterSedangDiproses = true;
-    });
-
-    await Future.delayed(const Duration(milliseconds: 350));
-    if (!mounted || permintaanIniKe != urutanPermintaanFilter) return;
-
-    setState(() {
-      kategoriTampil = saringKategori();
-      isFilterSedangDiproses = false;
     });
   }
 
@@ -261,11 +236,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Widget bangunIsiHalaman() {
-    if (isKategoriSedangDimuat || isFilterSedangDiproses) {
-      return const Center(
-        child: CircularProgressIndicator(color: WarnaCapify.krem),
-      );
-    }
+    List<KategoriMusik> daftarTampil = kategoriTampil;
 
     if (semuaKategori.isEmpty) {
       return tampilanKosong(
@@ -275,7 +246,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       );
     }
 
-    if (kategoriTampil.isEmpty) {
+    if (daftarTampil.isEmpty) {
       return tampilanKosong(
         ikon: Icons.filter_alt_off_outlined,
         pesan: pesanSaatKosong(),
@@ -288,7 +259,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return GridView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
-      itemCount: kategoriTampil.length,
+      itemCount: daftarTampil.length,
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 220,
         mainAxisSpacing: 14,
@@ -296,7 +267,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         childAspectRatio: 1.6,
       ),
       itemBuilder: (context, urutan) {
-        KategoriMusik kategoriIni = kategoriTampil[urutan];
+        KategoriMusik kategoriIni = daftarTampil[urutan];
         return KartuKategori(
           key: ValueKey(kategoriIni.nama),
           kategori: kategoriIni,
@@ -310,9 +281,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isBarisFilterTampil =
-        !isKategoriSedangDimuat && semuaKategori.isNotEmpty;
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: WarnaCapify.coklatGelap,
@@ -327,7 +295,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
         ),
         actions: [
-          if (isFilterSedangDipakai && !isKategoriSedangDimuat)
+          if (isFilterSedangDipakai)
             TextButton(
               onPressed: resetSemuaFilter,
               child: const Text(
@@ -342,7 +310,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isBarisFilterTampil) barisFilter(),
+            if (semuaKategori.isNotEmpty) barisFilter(),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
               child: Text(
@@ -358,7 +326,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               child: RefreshIndicator(
                 color: WarnaCapify.coklatGelap,
                 backgroundColor: WarnaCapify.krem,
-                onRefresh: muatDaftarKategori,
+                onRefresh: muatUlangKategori,
                 child: bangunIsiHalaman(),
               ),
             ),
