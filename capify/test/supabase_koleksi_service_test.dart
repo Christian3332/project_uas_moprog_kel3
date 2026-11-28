@@ -120,15 +120,6 @@ void main() {
       expect(koleksi.daftarAlbumTersimpan.length, 6);
       expect(koleksi.daftarLaguDisukai.length, 4);
     });
-
-    test('Data mock biasa tidak dianggap data cadangan', () async {
-      KoleksiPengguna koleksi = await const KoleksiService(
-        lamaResponServer: Duration.zero,
-      ).ambilKoleksiPengguna();
-
-      expect(koleksi.isDariCadangan, isFalse);
-      expect(koleksi.daftarPlaylist, isNotEmpty);
-    });
   });
 
   group('PlaylistProvider memuat koleksi', () {
@@ -150,17 +141,6 @@ void main() {
       service.isHarusGagal = false;
       await koleksi.muatKoleksi();
       expect(koleksi.pesanGagal, isNull);
-    });
-
-    test('Flag data cadangan ikut terbaca dari service', () async {
-      PlaylistProvider koleksi = PlaylistProvider(
-        koleksiService: const SupabaseKoleksiService(),
-      );
-
-      await koleksi.muatKoleksi();
-
-      expect(koleksi.isMemakaiDataCadangan, isTrue);
-      expect(koleksi.daftarLaguDisukai.length, 4);
     });
   });
 

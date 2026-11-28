@@ -41,6 +41,12 @@ create policy "Pengguna hanya melihat playlistnya sendiri"
   to authenticated
   using ((select auth.uid()) = user_id);
 
+drop policy if exists "Pengguna hanya membuat playlist untuk dirinya sendiri" on public.playlists;
+create policy "Pengguna hanya membuat playlist untuk dirinya sendiri"
+  on public.playlists for insert
+  to authenticated
+  with check ((select auth.uid()) = user_id);
+
 drop policy if exists "Pengguna hanya melihat isi playlistnya sendiri" on public.playlist_tracks;
 create policy "Pengguna hanya melihat isi playlistnya sendiri"
   on public.playlist_tracks for select
@@ -56,6 +62,18 @@ create policy "Pengguna hanya melihat isi playlistnya sendiri"
 drop policy if exists "Pengguna hanya melihat lagu yang dia sukai" on public.liked_tracks;
 create policy "Pengguna hanya melihat lagu yang dia sukai"
   on public.liked_tracks for select
+  to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Pengguna hanya menyukai lagu untuk dirinya sendiri" on public.liked_tracks;
+create policy "Pengguna hanya menyukai lagu untuk dirinya sendiri"
+  on public.liked_tracks for insert
+  to authenticated
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "Pengguna hanya menghapus lagu yang dia sukai" on public.liked_tracks;
+create policy "Pengguna hanya menghapus lagu yang dia sukai"
+  on public.liked_tracks for delete
   to authenticated
   using ((select auth.uid()) = user_id);
 

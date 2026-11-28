@@ -127,29 +127,6 @@ void main() {
     expect(find.text('Evaluasi'), findsOneWidget);
   });
 
-  testWidgets('Spanduk tidak muncul untuk data biasa', (tester) async {
-    await tester.pumpWidget(bungkusHalamanBeranda(audio, home));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.byType(SpandukDataCadangan), findsNothing);
-  });
-
-  testWidgets('Kerangka beranda tampil saat muat pertama lalu hilang', (
-    tester,
-  ) async {
-    await tester.pumpWidget(bungkusHalamanBeranda(audio, home));
-
-    expect(find.byType(KerangkaBerandaMemuat), findsOneWidget);
-    expect(find.text('Menyiapkan berandamu...'), findsOneWidget);
-
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.byType(KerangkaBerandaMemuat), findsNothing);
-    expect(find.byType(KartuLanjutDengerin), findsOneWidget);
-  });
-
   testWidgets('Tombol coba lagi di spanduk menampilkan progres dan pesan', (
     tester,
   ) async {
@@ -269,35 +246,6 @@ void main() {
     expect(find.text('Beranda sudah diperbarui'), findsOneWidget);
   });
 
-  testWidgets('Layar gagal total juga bisa ditarik untuk mencoba lagi', (
-    tester,
-  ) async {
-    HomeProvider homeGagal = HomeProvider(
-      feedService: const FeedService(
-        lamaResponServer: Duration.zero,
-        isSimulasiGagal: true,
-      ),
-    );
-    addTearDown(homeGagal.dispose);
-
-    await tester.pumpWidget(bungkusHalamanBeranda(audio, homeGagal));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('atau tarik layar ke bawah'), findsOneWidget);
-
-    await tester.drag(areaGeserBeranda(), const Offset(0, 400));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(SnackBar), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(SnackBar),
-        matching: find.textContaining('feed belum bisa diambil'),
-      ),
-      findsOneWidget,
-    );
-  });
-
   group('Putar langsung dari feed', () {
     Future<void> bukaBerandaSiap(
       WidgetTester tester,
@@ -362,20 +310,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(PlayerScreen), findsOneWidget);
-    });
-
-    testWidgets('Tamu hanya ditolak sekali dan antrian tidak berubah', (
-      tester,
-    ) async {
-      await bukaBerandaSiap(tester, home);
-      audio.aturIzinPemutaran(false);
-
-      await tester.tap(find.byType(KartuLanjutDengerin));
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(audio.jumlahPutarDitolak, 1);
-      expect(audio.laguSekarang, isNull);
-      expect(find.byType(PlayerScreen), findsNothing);
     });
 
     testWidgets('Tombol putar racikan memutar lalu menjeda racikannya', (

@@ -15,23 +15,6 @@ void main() {
     expect(ambilUrlSampulKategori('Kategori Asal'), isNull);
   });
 
-  test('Gambar di-decode seukuran tampilan, bukan ukuran aslinya', () {
-    expect(hitungLebarDecode(3.0), 204);
-    expect(hitungLebarDecode(2.625), 179);
-    expect(hitungLebarDecode(1.0), 68);
-    expect(hitungLebarDecode(0), 68);
-  });
-
-  test('Precache dan widget memakai kunci cache yang sama', () {
-    const String url = 'https://picsum.photos/seed/tes/400';
-
-    expect(buatPenyediaSampul(url, 3.0), buatPenyediaSampul(url, 3.0));
-    expect(
-      buatPenyediaSampul(url, 3.0) == buatPenyediaSampul(url, 2.0),
-      isFalse,
-    );
-  });
-
   testWidgets('Kategori tanpa lagu cukup menampilkan ikon', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

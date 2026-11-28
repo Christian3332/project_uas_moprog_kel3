@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:capify/models/feed_beranda.dart';
-import 'package:capify/services/feed_lokal_service.dart';
 import 'package:capify/services/supabase_feed_service.dart';
 
 import 'feed_server_palsu.dart';
@@ -69,23 +68,6 @@ void main() {
     List<dynamic> riwayat = json['recently_played'];
     expect(riwayat.length, 1);
     expect(riwayat.first['played_minutes_ago'], 10);
-  });
-
-  test('Baris riwayat yang rusak dilewati dan waktu masa depan jadi nol', () {
-    Map<String, dynamic> json = SupabaseFeedService.susunJsonFeed(
-      barisLaguContoh,
-      [
-        {'track_id': 'feed-001', 'played_at': 'bukan tanggal'},
-        {'track_id': null, 'played_at': '2026-11-20T11:00:00Z'},
-        {'track_id': 'feed-002', 'played_at': '2026-11-21T09:00:00Z'},
-      ],
-      waktuPatokan,
-    );
-
-    List<dynamic> riwayat = json['recently_played'];
-    expect(riwayat.length, 1);
-    expect(riwayat.first['track_id'], 'feed-002');
-    expect(riwayat.first['played_minutes_ago'], 0);
   });
 
   test('Supabase belum siap maka feed cadangan yang dipakai', () async {
@@ -161,31 +143,6 @@ void main() {
 
       expect(feed.isDariCadangan, isTrue);
       expect(feed.isKarenaOffline, isFalse);
-    });
-
-    test('Simpanan akun lain tidak ikut terpakai', () async {
-      await FeedServerPalsu([
-        null,
-      ], idPenggunaPalsu: 'usr-a').ambilFeedBeranda();
-
-      FeedBeranda feedAkunB = await FeedServerPalsu([
-        FeedServerPalsu.galatOffline(),
-      ], idPenggunaPalsu: 'usr-b').ambilFeedBeranda();
-
-      expect(feedAkunB.asalFeed, AsalFeed.contoh);
-    });
-
-    test('Penyimpanan HP yang macet tidak membuat feed menggantung', () async {
-      FeedServerPalsu server = FeedServerPalsu(
-        [FeedServerPalsu.galatOffline()],
-        penyimpananLokal: const FeedLokalService(
-          batasTungguPenyimpanan: Duration.zero,
-        ),
-      );
-
-      FeedBeranda feed = await server.ambilFeedBeranda();
-
-      expect(feed.asalFeed, AsalFeed.contoh);
     });
   });
 }

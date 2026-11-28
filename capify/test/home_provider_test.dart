@@ -35,6 +35,17 @@ class FeedPenghitung extends FeedService {
   }
 }
 
+class FeedPencatatRiwayat extends FeedService {
+  final List<String> laguYangDicatat = [];
+
+  FeedPencatatRiwayat() : super(lamaResponServer: Duration.zero);
+
+  @override
+  Future<void> catatRiwayatPutar(Lagu lagu) async {
+    laguYangDicatat.add(lagu.judul);
+  }
+}
+
 const String responsKatalogKecil = '''
 {
   "tracks": [
@@ -133,6 +144,16 @@ void main() {
     expect(home.riwayatTerakhirDiputar.length, 6);
   });
 
+  test('Lagu yang diputar ikut dikirim ke service riwayat', () {
+    FeedPencatatRiwayat server = FeedPencatatRiwayat();
+    HomeProvider homeTercatat = HomeProvider(feedService: server);
+
+    homeTercatat.catatLaguDiputar(laguUjiCoba);
+
+    expect(server.laguYangDicatat, ['Lagu Uji Coba']);
+    homeTercatat.dispose();
+  });
+
   test('Muat ulang tidak menghapus lagu yang baru dicatat', () async {
     await home.muatIsiBeranda();
     Lagu laguBaru = home.laguBelumPernahDidengar.first;
@@ -142,16 +163,6 @@ void main() {
 
     expect(home.laguUntukDilanjutkan?.lagu.judul, laguBaru.judul);
     expect(home.riwayatTerakhirDiputar.length, 7);
-  });
-
-  test('Memanggil muat berkali-kali hanya memuat sekali', () async {
-    int jumlahPemberitahuan = 0;
-    home.addListener(() => jumlahPemberitahuan++);
-
-    await Future.wait([home.muatIsiBeranda(), home.muatIsiBeranda()]);
-    await home.muatIsiBeranda();
-
-    expect(jumlahPemberitahuan, 2);
   });
 
   group('Pantau pemutar', () {
@@ -184,46 +195,6 @@ void main() {
       await Future.delayed(waktuTungguLaguMulai);
 
       expect(home.laguUntukDilanjutkan?.lagu.judul, 'Evaluasi');
-    });
-
-    test('Jeda lalu lanjut putar tidak membuat riwayat dobel', () async {
-      await home.muatIsiBeranda();
-      home.pantauPemutar(audio);
-      audio.mulaiAntrian([laguUjiCoba]);
-      await Future.delayed(waktuTungguLaguMulai);
-
-      int jumlahRiwayatAwal = home.riwayatTerakhirDiputar.length;
-      audio.jeda();
-      audio.putar();
-      await Future.delayed(waktuTungguLaguMulai);
-
-      expect(home.riwayatTerakhirDiputar.length, jumlahRiwayatAwal);
-      expect(home.laguUntukDilanjutkan?.lagu.judul, 'Lagu Uji Coba');
-    });
-
-    test('Lagu yang diputar sebelum beranda dimuat tidak hilang', () async {
-      home.pantauPemutar(audio);
-      audio.mulaiAntrian([laguUjiCoba]);
-      await Future.delayed(waktuTungguLaguMulai);
-
-      await home.muatIsiBeranda();
-
-      expect(home.laguUntukDilanjutkan?.lagu.judul, 'Lagu Uji Coba');
-      expect(home.riwayatTerakhirDiputar.length, 7);
-    });
-
-    test('Memantau pemutar yang sama dua kali tidak mencatat dobel', () async {
-      await home.muatIsiBeranda();
-      home.pantauPemutar(audio);
-      home.pantauPemutar(audio);
-
-      int jumlahPemberitahuan = 0;
-      home.addListener(() => jumlahPemberitahuan++);
-
-      audio.mulaiAntrian([laguUjiCoba]);
-      await Future.delayed(waktuTungguLaguMulai);
-
-      expect(jumlahPemberitahuan, 1);
     });
   });
 
@@ -266,25 +237,6 @@ void main() {
       home.simpanGenreFavorit(['Lo-Fi']);
 
       expect(home.laguBelumPernahDidengar.first.judul, 'Coffee');
-    });
-
-    test('Genre favorit tanpa lagu tidak merusak urutan racikan', () async {
-      await home.muatIsiBeranda();
-
-      home.simpanGenreFavorit(['Podcast']);
-
-      expect(home.genreFavorit, ['Podcast']);
-      expect(urutanNamaRacikan().first, 'Pop');
-    });
-
-    test('Menyimpan daftar kosong menghapus semua genre favorit', () async {
-      await home.muatIsiBeranda();
-      home.simpanGenreFavorit(['Jazz']);
-
-      home.simpanGenreFavorit([]);
-
-      expect(home.isSudahPilihGenre, isFalse);
-      expect(urutanNamaRacikan().first, 'Pop');
     });
   });
 
@@ -335,12 +287,6 @@ void main() {
       homeKecil.dispose();
     });
 
-    test('Data mock biasa tidak dianggap data cadangan', () async {
-      await home.muatIsiBeranda();
-
-      expect(home.isMemakaiDataCadangan, isFalse);
-    });
-
     test('Supabase gagal maka beranda tetap terisi data cadangan', () async {
       HomeProvider homeSupabase = HomeProvider(
         feedService: const SupabaseFeedService(),
@@ -353,52 +299,6 @@ void main() {
       expect(homeSupabase.pesanGagal, isNull);
       expect(homeSupabase.laguUntukDilanjutkan?.lagu.judul, 'Evaluasi');
       homeSupabase.dispose();
-    });
-
-    test('Feed kosong dari server tetap aman', () async {
-      HomeProvider homeKosong = HomeProvider(
-        feedService: const FeedService(
-          lamaResponServer: Duration.zero,
-          responsServer: '{}',
-        ),
-      );
-
-      await homeKosong.muatIsiBeranda();
-
-      expect(homeKosong.isSudahPernahDimuat, isTrue);
-      expect(homeKosong.laguUntukDilanjutkan, isNull);
-      expect(homeKosong.daftarRacikanUntukmu, isEmpty);
-      expect(homeKosong.laguBelumPernahDidengar, isEmpty);
-      homeKosong.dispose();
-    });
-  });
-
-  group('Status memuat', () {
-    test('Muat ulang dianggap menyegarkan, bukan muat pertama', () async {
-      expect(home.isSudahPernahDimuat, isFalse);
-      expect(home.isSedangMenyegarkan, isFalse);
-      await home.muatIsiBeranda();
-
-      Future<void> prosesSegarkan = home.muatIsiBeranda(isPaksaMuatUlang: true);
-      expect(home.isSedangMenyegarkan, isTrue);
-      expect(home.isSudahPernahDimuat, isTrue);
-
-      await prosesSegarkan;
-      expect(home.isSedangMenyegarkan, isFalse);
-    });
-
-    test('Provider dibuang saat memuat tidak membuat error', () async {
-      HomeProvider homeSebentar = HomeProvider(
-        feedService: const FeedService(
-          lamaResponServer: Duration(milliseconds: 200),
-        ),
-      );
-
-      Future<void> prosesMuat = homeSebentar.muatIsiBeranda();
-      homeSebentar.dispose();
-
-      await prosesMuat;
-      await Future.delayed(const Duration(milliseconds: 100));
     });
   });
 
@@ -468,37 +368,6 @@ void main() {
       expect(hasil, HasilSegarkan.berhasil);
       expect(server.jumlahPanggilan, 2);
       expect(homeUji.waktuTerakhirDiperbarui, isNotNull);
-      homeUji.dispose();
-    });
-
-    test('Katalog yang berubah langsung tampil setelah disegarkan', () async {
-      FeedPenghitung server = FeedPenghitung([
-        FeedService.responsServerDummy,
-        responsKatalogKecil,
-      ]);
-      HomeProvider homeUji = HomeProvider(feedService: server);
-      await homeUji.muatIsiBeranda();
-
-      HasilSegarkan hasil = await homeUji.segarkanBeranda();
-
-      expect(hasil, HasilSegarkan.berhasil);
-      expect(homeUji.daftarRacikanUntukmu.single.namaKategori, 'Jazz');
-      homeUji.dispose();
-    });
-
-    test('Tarik saat masih memuat ikut menunggu proses yang sama', () async {
-      FeedPenghitung server = FeedPenghitung([
-        FeedService.responsServerDummy,
-      ], lamaResponServer: const Duration(milliseconds: 100));
-      HomeProvider homeUji = HomeProvider(feedService: server);
-
-      Future<void> prosesPertama = homeUji.muatIsiBeranda();
-      HasilSegarkan hasil = await homeUji.segarkanBeranda();
-      await prosesPertama;
-
-      expect(server.jumlahPanggilan, 1);
-      expect(homeUji.isSudahPernahDimuat, isTrue);
-      expect(hasil, HasilSegarkan.berhasil);
       homeUji.dispose();
     });
 

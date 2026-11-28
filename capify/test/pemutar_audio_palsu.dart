@@ -25,7 +25,6 @@ class PemutarAudioPalsu implements AudioPlayer {
       StreamController<PlayerException>.broadcast();
 
   bool isSedangMemutar = false;
-  double volumeSekarang = 1.0;
   int jumlahDimuat = 0;
   String? urlTerakhirDimuat;
   Duration? posisiTerakhirDiseek;
@@ -40,10 +39,6 @@ class PemutarAudioPalsu implements AudioPlayer {
 
   void selesaiBuffering() {
     pengirimStatus.add(PlayerState(isSedangMemutar, ProcessingState.ready));
-  }
-
-  void kirimPosisiTerbuffer(Duration posisi) {
-    pengirimPosisiTerbuffer.add(posisi);
   }
 
   void putuskanKoneksiDiTengahLagu() {
@@ -104,9 +99,7 @@ class PemutarAudioPalsu implements AudioPlayer {
   }
 
   @override
-  Future<void> setVolume(double volume) async {
-    volumeSekarang = volume;
-  }
+  Future<void> setVolume(double volume) async {}
 
   @override
   Future<void> seek(Duration? position, {int? index}) async {

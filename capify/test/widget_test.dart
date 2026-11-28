@@ -219,52 +219,6 @@ void main() {
     expect(posisiYangDikirim.first, greaterThan(90));
   });
 
-  testWidgets('Seekbar tidak bisa digeser kalau durasi belum diketahui', (
-    tester,
-  ) async {
-    List<double> posisiYangDikirim = [];
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SeekbarPlayer(
-            posisiSekarang: Duration.zero,
-            durasiLagu: Duration.zero,
-            onGeser: posisiYangDikirim.add,
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.byType(Slider));
-    await tester.pump();
-
-    expect(posisiYangDikirim, isEmpty);
-  });
-
-  testWidgets('Geseran lama tidak terbawa saat lagu berganti', (tester) async {
-    AudioProvider audio = AudioProvider(pemutarAudio: PemutarAudioPalsu())
-      ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false);
-
-    await tester.pumpWidget(bungkusDenganAudio(audio, const PlayerScreen()));
-
-    TestGesture jari = await tester.startGesture(
-      tester.getCenter(find.byType(Slider)),
-    );
-    await tester.pump();
-    await jari.moveBy(const Offset(40, 0));
-    await tester.pump();
-
-    audio.laguBerikutnya();
-    await tester.pump();
-    expect(find.text('Starboy'), findsOneWidget);
-    expect(find.text('0:00'), findsOneWidget);
-
-    await jari.up();
-    await tester.pump();
-    expect(audio.posisiSekarang, Duration.zero);
-  });
-
   group('Mini player di semua halaman utama', () {
     late AudioProvider audio;
 

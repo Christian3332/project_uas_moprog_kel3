@@ -34,10 +34,9 @@ Future<void> main() async {
           ),
         ),
         ChangeNotifierProvider(
-          create: (context) =>
-              AudioProvider()
-                ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false)
-                ..siapkanSesiAudio(),
+          create: (context) => AudioProvider()
+            ..mulaiAntrian(daftarLaguDummy, isLangsungDiputar: false)
+            ..siapkanSesiAudio(),
         ),
         ChangeNotifierProvider(
           create: (context) => HomeProvider(

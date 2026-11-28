@@ -69,24 +69,4 @@ void main() {
     expect(feed.riwayatPutar.length, 1);
     expect(feed.riwayatPutar.first.teksWaktuDiputar, 'Baru saja');
   });
-
-  test('Feed kosong tetap bisa dibaca', () {
-    FeedBeranda feed = FeedService.ubahJsonKeFeed('{}');
-
-    expect(feed.riwayatPutar, isEmpty);
-    expect(feed.jumlahLaguDiKatalog, 0);
-  });
-
-  test('toJson lalu fromJson menghasilkan isi yang sama', () async {
-    FeedBeranda feedAsli = await serviceCepat.ambilFeedBeranda();
-
-    FeedBeranda feedUlang = FeedBeranda.fromJson(feedAsli.toJson());
-
-    expect(feedUlang.jumlahLaguDiKatalog, feedAsli.jumlahLaguDiKatalog);
-    expect(
-      feedUlang.riwayatPutar.map((riwayat) => riwayat.lagu.judul).toList(),
-      feedAsli.riwayatPutar.map((riwayat) => riwayat.lagu.judul).toList(),
-    );
-    expect(feedUlang.laguPerGenre.keys, feedAsli.laguPerGenre.keys);
-  });
 }

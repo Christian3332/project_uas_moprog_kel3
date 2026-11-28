@@ -37,16 +37,19 @@ class PlayerScreen extends StatelessWidget {
     }
   }
 
-  void tekanTombolSuka(BuildContext context, Lagu lagu) {
+  Future<void> tekanTombolSuka(BuildContext context, Lagu lagu) async {
     PlaylistProvider koleksi = context.read<PlaylistProvider>();
-    koleksi.toggleLaguDisukai(lagu);
+    bool isAkanDisukai = !koleksi.isLaguDisukai(lagu);
 
     tampilkanPesan(
       context,
-      koleksi.isLaguDisukai(lagu)
-          ? 'Disimpan ke Lagu Disukai'
-          : 'Dihapus dari Lagu Disukai',
+      isAkanDisukai ? 'Disimpan ke Lagu Disukai' : 'Dihapus dari Lagu Disukai',
     );
+
+    String? pesanGagal = await koleksi.toggleLaguDisukai(lagu);
+    if (pesanGagal != null && context.mounted) {
+      tampilkanPesan(context, pesanGagal);
+    }
   }
 
   Future<void> bukaPilihanPlaylist(BuildContext context, Lagu lagu) async {

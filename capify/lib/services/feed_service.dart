@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../models/feed_beranda.dart';
+import '../models/lagu.dart';
 
 class FeedService {
   final Duration lamaResponServer;
@@ -136,6 +137,8 @@ class FeedService {
 
     return ubahJsonKeFeed(responsServer);
   }
+
+  Future<void> catatRiwayatPutar(Lagu lagu) async {}
 
   static FeedBeranda ubahJsonKeFeed(String teksJson) {
     dynamic hasilDecode;
