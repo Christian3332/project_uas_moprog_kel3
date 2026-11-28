@@ -164,6 +164,47 @@ class SupabaseKoleksiService extends KoleksiService {
     return playlist.denganLaguDihapus(lagu);
   }
 
+  @override
+  Future<void> simpanLaguDisukai(Lagu lagu) async {
+    SupabaseClient klienSupabase = _ambilKlienPenggunaAktif(
+      'Masuk dulu supaya bisa menyukai lagu',
+    );
+    String idLagu = await _ambilIdLaguDiKatalog(klienSupabase, lagu);
+
+    try {
+      await klienSupabase
+          .from(namaTabelLaguDisukai)
+          .insert({'track_id': idLagu})
+          .timeout(batasWaktuTunggu);
+    } on PostgrestException catch (error) {
+      if (error.code == '23505') return;
+      throw Exception(pesanGagalLaguDisukai(error.code));
+    } on TimeoutException {
+      throw Exception('Server terlalu lama merespons, coba lagi ya');
+    }
+  }
+
+  @override
+  Future<void> hapusLaguDisukai(Lagu lagu) async {
+    SupabaseClient klienSupabase = _ambilKlienPenggunaAktif(
+      'Masuk dulu supaya bisa menghapus lagu disukai',
+    );
+    String idLagu = await _ambilIdLaguDiKatalog(klienSupabase, lagu);
+
+    try {
+      await klienSupabase
+          .from(namaTabelLaguDisukai)
+          .delete()
+          .eq('user_id', klienSupabase.auth.currentUser!.id)
+          .eq('track_id', idLagu)
+          .timeout(batasWaktuTunggu);
+    } on PostgrestException catch (error) {
+      throw Exception(pesanGagalLaguDisukai(error.code));
+    } on TimeoutException {
+      throw Exception('Server terlalu lama merespons, coba lagi ya');
+    }
+  }
+
   SupabaseClient _ambilKlienPenggunaAktif(String pesanBelumMasuk) {
     SupabaseClient klienSupabase;
     try {
@@ -207,6 +248,11 @@ class SupabaseKoleksiService extends KoleksiService {
     if (kodeError == '23514') return 'Nama playlist maksimal 40 karakter';
     if (kodeError == '42501') return 'Kamu belum punya akses membuat playlist';
     return 'Playlist gagal dibuat, coba lagi sebentar';
+  }
+
+  static String pesanGagalLaguDisukai(String? kodeError) {
+    if (kodeError == '42501') return 'Kamu belum punya akses ke Lagu Disukai';
+    return 'Lagu Disukai gagal diperbarui, coba lagi sebentar';
   }
 
   static String pesanGagalTambahLagu(String? kodeError) {

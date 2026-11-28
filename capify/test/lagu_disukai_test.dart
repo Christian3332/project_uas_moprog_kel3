@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:capify/models/lagu.dart';
 import 'package:capify/providers/playlist_provider.dart';
+import 'package:capify/services/koleksi_service.dart';
 
 void main() {
   const Lagu laguA = Lagu(
@@ -17,16 +18,32 @@ void main() {
     durasi: Duration(minutes: 2),
   );
 
-  test('Lagu yang disukai masuk ke daftar lalu bisa dibatalkan', () {
-    PlaylistProvider koleksi = PlaylistProvider();
+  test('Lagu yang disukai masuk ke daftar lalu bisa dibatalkan', () async {
+    PlaylistProvider koleksi = PlaylistProvider(
+      koleksiService: const KoleksiService(lamaResponServer: Duration.zero),
+    );
 
-    koleksi.toggleLaguDisukai(laguA);
+    expect(await koleksi.toggleLaguDisukai(laguA), isNull);
     expect(koleksi.isLaguDisukai(laguA), isTrue);
     expect(koleksi.isLaguDisukai(laguB), isFalse);
     expect(koleksi.daftarLaguDisukai.first.judul, 'Lagu A');
 
-    koleksi.toggleLaguDisukai(laguA);
+    expect(await koleksi.toggleLaguDisukai(laguA), isNull);
     expect(koleksi.isLaguDisukai(laguA), isFalse);
     expect(koleksi.daftarLaguDisukai, isEmpty);
+  });
+
+  test('Lagu batal disukai kalau server gagal menyimpan', () async {
+    PlaylistProvider koleksi = PlaylistProvider(
+      koleksiService: const KoleksiService(
+        lamaResponServer: Duration.zero,
+        isSimulasiGagal: true,
+      ),
+    );
+
+    String? pesanGagal = await koleksi.toggleLaguDisukai(laguA);
+
+    expect(pesanGagal, isNotNull);
+    expect(koleksi.isLaguDisukai(laguA), isFalse);
   });
 }

@@ -4,8 +4,10 @@ import '../data/playlist_dummy.dart';
 import '../models/koleksi_pengguna.dart';
 import '../models/lagu.dart';
 import '../models/playlist.dart';
+import '../utils/kunci_lagu.dart';
 
 final List<Playlist> _playlistDiServerPalsu = List.of(daftarPlaylistDummy);
+final List<Lagu> _laguDisukaiDiServerPalsu = List.of(daftarLaguDisukaiDummy);
 
 class KoleksiService {
   final Duration lamaResponServer;
@@ -26,7 +28,7 @@ class KoleksiService {
     return KoleksiPengguna(
       daftarPlaylist: List.of(_playlistDiServerPalsu),
       daftarAlbumTersimpan: List.of(daftarAlbumTersimpanDummy),
-      daftarLaguDisukai: List.of(daftarLaguDisukaiDummy),
+      daftarLaguDisukai: List.of(_laguDisukaiDiServerPalsu),
     );
   }
 
@@ -92,6 +94,34 @@ class KoleksiService {
     Playlist playlistTerbaru = playlistDiServer.denganLaguDihapus(lagu);
     _playlistDiServerPalsu[posisiPlaylist] = playlistTerbaru;
     return playlistTerbaru;
+  }
+
+  Future<void> simpanLaguDisukai(Lagu lagu) async {
+    await Future.delayed(lamaResponServer);
+
+    if (isSimulasiGagal) {
+      throw Exception('Server Capify sedang sibuk, lagu belum bisa disukai');
+    }
+
+    _hapusDariLaguDisukaiPalsu(lagu);
+    _laguDisukaiDiServerPalsu.insert(0, lagu);
+  }
+
+  Future<void> hapusLaguDisukai(Lagu lagu) async {
+    await Future.delayed(lamaResponServer);
+
+    if (isSimulasiGagal) {
+      throw Exception('Server Capify sedang sibuk, lagu belum bisa dihapus');
+    }
+
+    _hapusDariLaguDisukaiPalsu(lagu);
+  }
+
+  void _hapusDariLaguDisukaiPalsu(Lagu lagu) {
+    String kunciLagu = kunciUnikLagu(lagu);
+    _laguDisukaiDiServerPalsu.removeWhere(
+      (laguDisukai) => kunciUnikLagu(laguDisukai) == kunciLagu,
+    );
   }
 
   int _cariPosisiPlaylistDiServer(String idPlaylist) {

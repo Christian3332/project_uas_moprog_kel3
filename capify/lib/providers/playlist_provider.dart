@@ -151,16 +151,36 @@ class PlaylistProvider extends ChangeNotifier {
     );
   }
 
-  void toggleLaguDisukai(Lagu lagu) {
-    if (isLaguDisukai(lagu)) {
-      String kunciDihapus = kunciUnikLagu(lagu);
-      _daftarLaguDisukai = _daftarLaguDisukai
-          .where((laguDisukai) => kunciUnikLagu(laguDisukai) != kunciDihapus)
-          .toList();
-    } else {
-      _daftarLaguDisukai = [lagu, ..._daftarLaguDisukai];
-    }
+  void _aturLaguDisukai(Lagu lagu, bool isDisukai) {
+    String kunciLagu = kunciUnikLagu(lagu);
+    List<Lagu> laguLainnya = _daftarLaguDisukai
+        .where((laguDisukai) => kunciUnikLagu(laguDisukai) != kunciLagu)
+        .toList();
+
+    _daftarLaguDisukai = isDisukai ? [lagu, ...laguLainnya] : laguLainnya;
     _kabariLayar();
+  }
+
+  Future<String?> toggleLaguDisukai(Lagu lagu) async {
+    bool isAkanDisukai = !isLaguDisukai(lagu);
+    _aturLaguDisukai(lagu, isAkanDisukai);
+
+    try {
+      if (isAkanDisukai) {
+        await koleksiService.simpanLaguDisukai(lagu);
+      } else {
+        await koleksiService.hapusLaguDisukai(lagu);
+      }
+      return null;
+    } catch (error) {
+      if (_isProviderSudahDitutup) return null;
+
+      _aturLaguDisukai(lagu, !isAkanDisukai);
+      return _rapikanPesanGagal(
+        error,
+        pesanBawaan: 'Lagu Disukai gagal diperbarui, coba lagi sebentar',
+      );
+    }
   }
 
   bool _isAlbumSama(Album albumA, Album albumB) {
