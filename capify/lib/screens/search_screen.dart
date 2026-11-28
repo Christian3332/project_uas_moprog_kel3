@@ -342,7 +342,6 @@ class _SearchScreenState extends State<SearchScreen> {
       return TampilanHasilKosong(
         kataKunci: ringkasKataKunci(kataKunciSekarang),
         saranEjaan: pencarian.saranEjaan,
-        kataTunggalUntukDicoba: pencarian.kataTunggalUntukDicoba,
         isPakaiDataOffline: pencarian.isHasilDariCadangan,
         onPakaiKataLain: pakaiKataKunci,
         onHapusPencarian: hapusKataKunci,
@@ -738,7 +737,6 @@ class BarisHasilLagu extends StatelessWidget {
 class TampilanHasilKosong extends StatelessWidget {
   final String kataKunci;
   final String? saranEjaan;
-  final String? kataTunggalUntukDicoba;
   final bool isPakaiDataOffline;
   final ValueChanged<String> onPakaiKataLain;
   final VoidCallback onHapusPencarian;
@@ -747,20 +745,16 @@ class TampilanHasilKosong extends StatelessWidget {
     super.key,
     required this.kataKunci,
     required this.saranEjaan,
-    required this.kataTunggalUntukDicoba,
     required this.isPakaiDataOffline,
     required this.onPakaiKataLain,
     required this.onHapusPencarian,
   });
 
-  List<String> susunTips() {
-    return [
-      'Periksa lagi ejaannya, satu huruf saja bisa bikin beda',
-      if (kataTunggalUntukDicoba != null)
-        'Pakai kata yang lebih sedikit atau lebih umum',
-      'Coba cari pakai nama penyanyinya',
-    ];
-  }
+  static const List<String> daftarTips = [
+    'Periksa lagi ejaannya, satu huruf saja bisa bikin beda',
+    'Pakai kata yang lebih sedikit atau lebih umum',
+    'Coba cari pakai nama penyanyinya',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -823,21 +817,6 @@ class TampilanHasilKosong extends StatelessWidget {
             ),
           ),
         ],
-        if (kataTunggalUntukDicoba != null) ...[
-          const SizedBox(height: 12),
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: () => onPakaiKataLain(kataTunggalUntukDicoba!),
-              icon: const Icon(Icons.short_text_rounded),
-              label: Text('Cari "$kataTunggalUntukDicoba" saja'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: WarnaCapify.krem,
-                side: const BorderSide(color: WarnaCapify.krem),
-                shape: const StadiumBorder(),
-              ),
-            ),
-          ),
-        ],
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(14),
@@ -856,7 +835,7 @@ class TampilanHasilKosong extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              for (String tips in susunTips())
+              for (String tips in daftarTips)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(

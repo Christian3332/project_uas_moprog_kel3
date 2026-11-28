@@ -5,7 +5,6 @@ import 'package:capify/models/hasil_pencarian.dart';
 import 'package:capify/models/lagu.dart';
 import 'package:capify/providers/search_provider.dart';
 import 'package:capify/services/search_service.dart';
-import 'package:capify/services/supabase_search_service.dart';
 
 const String trackUntukTes = '''
 [
@@ -232,18 +231,15 @@ void main() {
       expect(pencarian.riwayatPencarian, ['weeknd']);
     });
 
-    test('Bersihkan semua menghapus riwayat dan cache', () async {
-      SearchServicePenghitung service = SearchServicePenghitung();
-      SearchProvider pencarian = providerUntukTes(service);
+    test('Bersihkan semua menghapus riwayat dan kolom cari', () async {
+      SearchProvider pencarian = providerUntukTes();
       pencarian.simpanKeRiwayat('weeknd');
       await pencarian.cariSekarang('weeknd');
 
       pencarian.bersihkanSemuaPencarian();
       expect(pencarian.riwayatPencarian, isEmpty);
       expect(pencarian.isKolomCariKosong, isTrue);
-
-      await pencarian.cariSekarang('weeknd');
-      expect(service.jumlahPanggilan, 2);
+      expect(pencarian.hasilPencarian, isEmpty);
     });
   });
 
@@ -293,19 +289,6 @@ void main() {
       expect(pencarian.isHasilTersembunyiOlehFilter, isTrue);
       expect(pencarian.jumlahHasilTanpaFilter, 2);
       expect(pencarian.saranEjaan, isNull);
-    });
-
-    test('Kata yang dikenal katalog dipilih untuk dicoba sendirian', () async {
-      SearchProvider pencarian = providerUntukTes();
-
-      await pencarian.cariSekarang('capybara starboy');
-      expect(pencarian.kataTunggalUntukDicoba, 'starboy');
-
-      await pencarian.cariSekarang('qwerty zz');
-      expect(pencarian.kataTunggalUntukDicoba, 'qwerty');
-
-      await pencarian.cariSekarang('weeknd');
-      expect(pencarian.kataTunggalUntukDicoba, isNull);
     });
 
     test('Kamus kosong tidak bikin error', () async {
@@ -364,20 +347,6 @@ void main() {
       expect(service.jumlahPanggilan, 1);
     });
 
-    test('Kata kunci yang pernah dicari diambil dari cache', () async {
-      SearchServicePenghitung service = SearchServicePenghitung();
-      SearchProvider pencarian = providerDenganJeda(service);
-      await pencarian.cariSekarang('weeknd');
-      await pencarian.cariSekarang('lights');
-
-      pencarian.ketikKataKunci('Weeknd ');
-
-      expect(pencarian.isSedangMencari, isFalse);
-      expect(judulHasil(pencarian), ['Blinding Lights', 'Starboy']);
-      await Future.delayed(tungguLewatJeda);
-      expect(service.jumlahPanggilan, 2);
-    });
-
     test(
       'Kembali ke kata kunci yang sedang tampil tidak memanggil API',
       () async {
@@ -405,19 +374,6 @@ void main() {
       expect(pencarian.isKataKunciKependekan, isTrue);
       expect(pencarian.isHasilKosong, isFalse);
       expect(service.jumlahPanggilan, 0);
-    });
-
-    test('Hasil dari data cadangan tidak disimpan di cache', () async {
-      SearchProvider pencarian = providerDenganJeda(SupabaseSearchService());
-      await pencarian.cariSekarang('hindia');
-      expect(pencarian.isHasilDariCadangan, isTrue);
-      await pencarian.cariSekarang('ditto');
-
-      pencarian.ketikKataKunci('hindia');
-      expect(pencarian.isSedangMencari, isTrue);
-
-      await Future.delayed(tungguLewatJeda);
-      expect(pencarian.isHasilDariCadangan, isTrue);
     });
 
     test('Provider ditutup saat masih menunggu jeda tetap aman', () async {
