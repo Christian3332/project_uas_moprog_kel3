@@ -23,6 +23,7 @@ class HalamanUtamaScreen extends StatefulWidget {
 
 class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
   static const int indexTabHome = 0;
+  static const int indexTabCari = 1;
   static const EdgeInsets jarakMiniPlayer = EdgeInsets.fromLTRB(8, 8, 8, 2);
 
   int indexTabAktif = indexTabHome;
@@ -92,9 +93,12 @@ class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
           index: indexTabAktif,
           children: [
             buatNavigatorTab(0, HomeScreen(namaPengguna: widget.namaPengguna)),
-            buatNavigatorTab(1, const SearchScreen()),
+            buatNavigatorTab(indexTabCari, const SearchScreen()),
             buatNavigatorTab(2, const ExploreScreen()),
-            buatNavigatorTab(3, const PlaylistScreen()),
+            buatNavigatorTab(
+              3,
+              PlaylistScreen(onCariLagu: () => pilihTab(indexTabCari)),
+            ),
           ],
         ),
         bottomNavigationBar: Column(
