@@ -83,6 +83,32 @@ class SupabaseKoleksiService extends KoleksiService {
   }
 
   @override
+  Future<Playlist> simpanPlaylistBaru({
+    required String nama,
+    required String deskripsi,
+  }) async {
+    SupabaseClient klienSupabase = _ambilKlienPenggunaAktif(
+      'Masuk dulu supaya bisa membuat playlist',
+    );
+
+    Map<String, dynamic> barisPlaylist;
+    try {
+      barisPlaylist = await klienSupabase
+          .from(namaTabelPlaylist)
+          .insert({'name': nama, 'description': deskripsi})
+          .select('id, name, description')
+          .single()
+          .timeout(batasWaktuTunggu);
+    } on PostgrestException catch (error) {
+      throw Exception(pesanGagalBuatPlaylist(error.code));
+    } on TimeoutException {
+      throw Exception('Server terlalu lama merespons, coba lagi ya');
+    }
+
+    return ubahBarisKePlaylist(barisPlaylist);
+  }
+
+  @override
   Future<Playlist> tambahLaguKePlaylist({
     required Playlist playlist,
     required Lagu lagu,
@@ -175,6 +201,12 @@ class SupabaseKoleksiService extends KoleksiService {
       throw Exception('Lagu "${lagu.judul}" belum ada di katalog Capify');
     }
     return idLagu;
+  }
+
+  static String pesanGagalBuatPlaylist(String? kodeError) {
+    if (kodeError == '23514') return 'Nama playlist maksimal 40 karakter';
+    if (kodeError == '42501') return 'Kamu belum punya akses membuat playlist';
+    return 'Playlist gagal dibuat, coba lagi sebentar';
   }
 
   static String pesanGagalTambahLagu(String? kodeError) {

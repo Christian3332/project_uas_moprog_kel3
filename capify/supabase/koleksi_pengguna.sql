@@ -41,6 +41,12 @@ create policy "Pengguna hanya melihat playlistnya sendiri"
   to authenticated
   using ((select auth.uid()) = user_id);
 
+drop policy if exists "Pengguna hanya membuat playlist untuk dirinya sendiri" on public.playlists;
+create policy "Pengguna hanya membuat playlist untuk dirinya sendiri"
+  on public.playlists for insert
+  to authenticated
+  with check ((select auth.uid()) = user_id);
+
 drop policy if exists "Pengguna hanya melihat isi playlistnya sendiri" on public.playlist_tracks;
 create policy "Pengguna hanya melihat isi playlistnya sendiri"
   on public.playlist_tracks for select
