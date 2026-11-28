@@ -176,6 +176,8 @@ class HomeProvider extends ChangeNotifier {
     _riwayatTerakhirDiputar = riwayatBaru.take(batasJumlahRiwayat).toList();
     _susunUlangRekomendasi();
     _kabariPendengar();
+
+    feedService.catatRiwayatPutar(lagu);
   }
 
   void simpanGenreFavorit(List<String> genrePilihan) {

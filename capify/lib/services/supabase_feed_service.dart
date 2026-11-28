@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/feed_beranda.dart';
+import '../models/lagu.dart';
 import 'feed_lokal_service.dart';
 import 'feed_service.dart';
 
@@ -118,6 +119,31 @@ class SupabaseFeedService extends FeedService {
           .timeout(batasWaktuTunggu);
     } catch (_) {
       return [];
+    }
+  }
+
+  @override
+  Future<void> catatRiwayatPutar(Lagu lagu) async {
+    try {
+      SupabaseClient klienSupabase = Supabase.instance.client;
+      if (klienSupabase.auth.currentUser == null) return;
+
+      Map<String, dynamic>? barisLagu = await klienSupabase
+          .from(namaTabelLagu)
+          .select('id')
+          .eq('title', lagu.judul)
+          .eq('artist', lagu.penyanyi)
+          .limit(1)
+          .maybeSingle()
+          .timeout(batasWaktuTunggu);
+      if (barisLagu == null) return;
+
+      await klienSupabase
+          .from(namaTabelRiwayat)
+          .insert({'track_id': barisLagu['id']})
+          .timeout(batasWaktuTunggu);
+    } catch (_) {
+      return;
     }
   }
 

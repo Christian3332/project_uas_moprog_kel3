@@ -35,6 +35,17 @@ class FeedPenghitung extends FeedService {
   }
 }
 
+class FeedPencatatRiwayat extends FeedService {
+  final List<String> laguYangDicatat = [];
+
+  FeedPencatatRiwayat() : super(lamaResponServer: Duration.zero);
+
+  @override
+  Future<void> catatRiwayatPutar(Lagu lagu) async {
+    laguYangDicatat.add(lagu.judul);
+  }
+}
+
 const String responsKatalogKecil = '''
 {
   "tracks": [
@@ -131,6 +142,16 @@ void main() {
 
     expect(home.laguUntukDilanjutkan?.lagu.judul, laguKedua.judul);
     expect(home.riwayatTerakhirDiputar.length, 6);
+  });
+
+  test('Lagu yang diputar ikut dikirim ke service riwayat', () {
+    FeedPencatatRiwayat server = FeedPencatatRiwayat();
+    HomeProvider homeTercatat = HomeProvider(feedService: server);
+
+    homeTercatat.catatLaguDiputar(laguUjiCoba);
+
+    expect(server.laguYangDicatat, ['Lagu Uji Coba']);
+    homeTercatat.dispose();
   });
 
   test('Muat ulang tidak menghapus lagu yang baru dicatat', () async {
