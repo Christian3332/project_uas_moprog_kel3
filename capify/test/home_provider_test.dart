@@ -374,45 +374,6 @@ void main() {
   });
 
   group('Status memuat', () {
-    test('Tanda koneksi lambat menyala kalau server kelamaan', () async {
-      HomeProvider homeLambat = HomeProvider(
-        feedService: const FeedService(
-          lamaResponServer: Duration(milliseconds: 300),
-        ),
-        batasSabarMenunggu: const Duration(milliseconds: 100),
-      );
-
-      Future<void> prosesMuat = homeLambat.muatIsiBeranda();
-      await Future.delayed(const Duration(milliseconds: 50));
-      expect(homeLambat.isMemuatTerlaluLama, isFalse);
-
-      await Future.delayed(const Duration(milliseconds: 100));
-      expect(homeLambat.isMemuatTerlaluLama, isTrue);
-      expect(homeLambat.isSudahPernahDimuat, isFalse);
-      expect(homeLambat.pesanGagal, isNull);
-
-      await prosesMuat;
-      expect(homeLambat.isMemuatTerlaluLama, isFalse);
-      expect(homeLambat.isSudahPernahDimuat, isTrue);
-      homeLambat.dispose();
-    });
-
-    test('Server yang cepat tidak memicu tanda lambat sama sekali', () async {
-      HomeProvider homeCepat = HomeProvider(
-        feedService: const FeedService(lamaResponServer: Duration.zero),
-        batasSabarMenunggu: const Duration(milliseconds: 100),
-      );
-      await homeCepat.muatIsiBeranda();
-
-      int jumlahPemberitahuan = 0;
-      homeCepat.addListener(() => jumlahPemberitahuan++);
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      expect(jumlahPemberitahuan, 0);
-      expect(homeCepat.isMemuatTerlaluLama, isFalse);
-      homeCepat.dispose();
-    });
-
     test('Muat ulang dianggap menyegarkan, bukan muat pertama', () async {
       expect(home.isSudahPernahDimuat, isFalse);
       expect(home.isSedangMenyegarkan, isFalse);
@@ -431,7 +392,6 @@ void main() {
         feedService: const FeedService(
           lamaResponServer: Duration(milliseconds: 200),
         ),
-        batasSabarMenunggu: const Duration(milliseconds: 50),
       );
 
       Future<void> prosesMuat = homeSebentar.muatIsiBeranda();
@@ -498,57 +458,31 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('Data server yang sama dilaporkan tidak ada perubahan', () async {
+    test('Menyegarkan mengambil ulang data dari server', () async {
       FeedPenghitung server = FeedPenghitung([FeedService.responsServerDummy]);
-      HomeProvider homeUji = HomeProvider(
-        feedService: server,
-        jedaMinimalSegarkan: Duration.zero,
-      );
+      HomeProvider homeUji = HomeProvider(feedService: server);
       await homeUji.muatIsiBeranda();
 
       HasilSegarkan hasil = await homeUji.segarkanBeranda();
 
-      expect(hasil, HasilSegarkan.tidakAdaPerubahan);
+      expect(hasil, HasilSegarkan.berhasil);
       expect(server.jumlahPanggilan, 2);
       expect(homeUji.waktuTerakhirDiperbarui, isNotNull);
       homeUji.dispose();
     });
 
-    test('Katalog yang berubah dilaporkan sebagai diperbarui', () async {
+    test('Katalog yang berubah langsung tampil setelah disegarkan', () async {
       FeedPenghitung server = FeedPenghitung([
         FeedService.responsServerDummy,
         responsKatalogKecil,
       ]);
-      HomeProvider homeUji = HomeProvider(
-        feedService: server,
-        jedaMinimalSegarkan: Duration.zero,
-      );
+      HomeProvider homeUji = HomeProvider(feedService: server);
       await homeUji.muatIsiBeranda();
 
       HasilSegarkan hasil = await homeUji.segarkanBeranda();
 
-      expect(hasil, HasilSegarkan.diperbarui);
+      expect(hasil, HasilSegarkan.berhasil);
       expect(homeUji.daftarRacikanUntukmu.single.namaKategori, 'Jazz');
-      homeUji.dispose();
-    });
-
-    test('Tarik lagi terlalu cepat tidak memanggil server', () async {
-      FeedPenghitung server = FeedPenghitung([FeedService.responsServerDummy]);
-      HomeProvider homeUji = HomeProvider(feedService: server);
-      await homeUji.muatIsiBeranda();
-
-      HasilSegarkan hasilCepat = await homeUji.segarkanBeranda();
-      expect(hasilCepat, HasilSegarkan.terlaluCepat);
-      expect(server.jumlahPanggilan, 1);
-
-      HasilSegarkan hasilNanti = await homeUji.segarkanBeranda(
-        waktuSekarang: DateTime.now().add(const Duration(seconds: 6)),
-      );
-      expect(hasilNanti, HasilSegarkan.tidakAdaPerubahan);
-      expect(server.jumlahPanggilan, 2);
-
-      await homeUji.segarkanBeranda(isAbaikanJeda: true);
-      expect(server.jumlahPanggilan, 3);
       homeUji.dispose();
     });
 
@@ -564,11 +498,11 @@ void main() {
 
       expect(server.jumlahPanggilan, 1);
       expect(homeUji.isSudahPernahDimuat, isTrue);
-      expect(hasil, HasilSegarkan.diperbarui);
+      expect(hasil, HasilSegarkan.berhasil);
       homeUji.dispose();
     });
 
-    test('Hasil menyegarkan saat offline, server error, dan gagal', () async {
+    test('Menyegarkan saat offline, server error, atau gagal', () async {
       HomeProvider homeOffline = HomeProvider(
         feedService: FeedServerPalsu([FeedServerPalsu.galatOffline()]),
       );
@@ -582,12 +516,10 @@ void main() {
         ),
       );
 
-      expect(await homeOffline.segarkanBeranda(), HasilSegarkan.masihOffline);
-      expect(
-        await homeServerError.segarkanBeranda(),
-        HasilSegarkan.masihCadangan,
-      );
+      expect(await homeOffline.segarkanBeranda(), HasilSegarkan.gagal);
+      expect(await homeServerError.segarkanBeranda(), HasilSegarkan.gagal);
       expect(await homeGagalTotal.segarkanBeranda(), HasilSegarkan.gagal);
+      expect(homeOffline.isSedangOffline, isTrue);
       expect(homeOffline.waktuTerakhirDiperbarui, isNull);
 
       homeOffline.dispose();
@@ -595,7 +527,7 @@ void main() {
       homeGagalTotal.dispose();
     });
 
-    test('Data cadangan selalu boleh disegarkan tanpa menunggu jeda', () async {
+    test('Beranda offline berhasil disegarkan setelah online', () async {
       FeedServerPalsu server = FeedServerPalsu([
         FeedServerPalsu.galatOffline(),
         null,
@@ -605,7 +537,7 @@ void main() {
 
       HasilSegarkan hasil = await homeUji.segarkanBeranda();
 
-      expect(hasil, HasilSegarkan.diperbarui);
+      expect(hasil, HasilSegarkan.berhasil);
       expect(server.jumlahPanggilanServer, 2);
       homeUji.dispose();
     });

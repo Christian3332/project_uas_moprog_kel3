@@ -86,14 +86,14 @@ void main() {
     expect(find.text('1 lagu ditemukan'), findsOneWidget);
   });
 
-  testWidgets('Kata kunci panjang tanpa hasil menawarkan cari satu kata', (
+  testWidgets('Pencarian tanpa hasil menampilkan tips dan bisa dihapus', (
     tester,
   ) async {
     await bukaLayarCari(tester);
 
     await ketikLaluTunggu(tester, 'lights capybara');
 
-    expect(find.text('Cari "lights" saja'), findsOneWidget);
+    expect(find.textContaining('Tidak ada hasil untuk'), findsOneWidget);
     expect(
       find.text('Pakai kata yang lebih sedikit atau lebih umum'),
       findsOneWidget,

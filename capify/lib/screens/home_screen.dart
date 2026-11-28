@@ -64,24 +64,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
-  String pesanDariHasilSegarkan(HasilSegarkan hasil, HomeProvider home) {
-    return switch (hasil) {
-      HasilSegarkan.diperbarui => 'Beranda sudah diperbarui',
-      HasilSegarkan.tidakAdaPerubahan => 'Berandamu sudah yang paling baru',
-      HasilSegarkan.terlaluCepat =>
-        'Beranda baru saja diperbarui, coba lagi sebentar lagi ya',
-      HasilSegarkan.masihOffline =>
-        'Masih offline, cek Wi-Fi atau data selulermu dulu ya',
-      HasilSegarkan.masihCadangan =>
-        'Server masih belum bisa dihubungi, coba lagi nanti ya',
-      HasilSegarkan.gagal =>
-        home.pesanGagal ?? 'Beranda gagal dimuat, coba lagi sebentar ya',
-    };
-  }
-
-  bool isHasilBerhasilTerhubung(HasilSegarkan hasil) {
-    return hasil == HasilSegarkan.diperbarui ||
-        hasil == HasilSegarkan.tidakAdaPerubahan;
+  String pesanGagalSegarkan(HomeProvider home) {
+    String? pesanGagal = home.pesanGagal;
+    if (pesanGagal != null) return pesanGagal;
+    if (home.isSedangOffline) {
+      return 'Masih offline, cek Wi-Fi atau data selulermu dulu ya';
+    }
+    return 'Server masih belum bisa dihubungi, coba lagi nanti ya';
   }
 
   String teksSejak(DateTime waktu) {
@@ -120,7 +109,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     setState(() => isSedangTarikSegarkan = false);
 
-    tampilkanPesan(pesanDariHasilSegarkan(hasil, home));
+    if (hasil == HasilSegarkan.berhasil) {
+      tampilkanPesan('Beranda sudah diperbarui');
+    } else {
+      tampilkanPesan(pesanGagalSegarkan(home));
+    }
   }
 
   Future<void> cobaLagiSaatAplikasiDibukaKembali() async {
@@ -131,23 +124,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         !home.isSedangMemuat;
     if (!isPerluDicobaLagi) return;
 
-    HasilSegarkan hasil = await home.segarkanBeranda(isAbaikanJeda: true);
+    HasilSegarkan hasil = await home.segarkanBeranda();
     if (!mounted) return;
 
-    if (isHasilBerhasilTerhubung(hasil)) {
+    if (hasil == HasilSegarkan.berhasil) {
       tampilkanPesan('Kamu kembali online, beranda sudah diperbarui');
     }
   }
 
   Future<void> cobaHubungkanLagi() async {
     HomeProvider home = context.read<HomeProvider>();
-    HasilSegarkan hasil = await home.segarkanBeranda(isAbaikanJeda: true);
+    HasilSegarkan hasil = await home.segarkanBeranda();
     if (!mounted) return;
 
-    if (isHasilBerhasilTerhubung(hasil)) {
+    if (hasil == HasilSegarkan.berhasil) {
       tampilkanPesan('Berhasil terhubung, beranda sudah diperbarui');
     } else {
-      tampilkanPesan(pesanDariHasilSegarkan(hasil, home));
+      tampilkanPesan(pesanGagalSegarkan(home));
     }
   }
 
@@ -318,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     if (!home.isSudahPernahDimuat) {
-      return KerangkaBerandaMemuat(isKoneksiLambat: home.isMemuatTerlaluLama);
+      return const KerangkaBerandaMemuat();
     }
 
     bool isTampilkanGarisProgres =

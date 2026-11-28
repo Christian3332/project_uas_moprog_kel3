@@ -296,9 +296,7 @@ class SpandukDataCadangan extends StatelessWidget {
 }
 
 class KerangkaBerandaMemuat extends StatefulWidget {
-  final bool isKoneksiLambat;
-
-  const KerangkaBerandaMemuat({super.key, required this.isKoneksiLambat});
+  const KerangkaBerandaMemuat({super.key});
 
   @override
   State<KerangkaBerandaMemuat> createState() => _KerangkaBerandaMemuatState();
@@ -367,10 +365,6 @@ class _KerangkaBerandaMemuatState extends State<KerangkaBerandaMemuat>
 
   @override
   Widget build(BuildContext context) {
-    String teksStatus = widget.isKoneksiLambat
-        ? 'Koneksi lagi lambat, Capy masih mencoba...'
-        : 'Menyiapkan berandamu...';
-
     return Semantics(
       label: 'Beranda sedang dimuat',
       child: ListView(
@@ -383,14 +377,10 @@ class _KerangkaBerandaMemuatState extends State<KerangkaBerandaMemuat>
               children: [
                 const LingkaranMuatKecil(ukuran: 16),
                 const SizedBox(width: 10),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: Text(
-                      teksStatus,
-                      key: ValueKey(teksStatus),
-                      style: GayaTeksBeranda.keteranganBagian,
-                    ),
+                const Expanded(
+                  child: Text(
+                    'Menyiapkan berandamu...',
+                    style: GayaTeksBeranda.keteranganBagian,
                   ),
                 ),
               ],

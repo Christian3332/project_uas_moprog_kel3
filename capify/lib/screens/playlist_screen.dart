@@ -33,10 +33,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   final List<String> pilihanKategori = ['Playlist', 'Album', 'Lagu Disukai'];
 
-  final double lebarMaksKartuGrid = 200;
-  final double jarakAntarKartuGrid = 16;
-  final double jarakTepiGrid = 20;
-
   @override
   void dispose() {
     pengendaliGulirPlaylist.dispose();
@@ -224,55 +220,21 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     );
   }
 
-  double ukurTinggiSatuBaris(BuildContext context, TextStyle gayaTeks) {
-    TextPainter pengukurTeks = TextPainter(
-      text: TextSpan(
-        text: 'Ag',
-        style: DefaultTextStyle.of(context).style.merge(gayaTeks),
-      ),
-      maxLines: 1,
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout();
-
-    double tinggiBaris = pengukurTeks.height;
-    pengukurTeks.dispose();
-    return tinggiBaris;
-  }
-
   Widget bangunGridKoleksi({
     required int jumlahKartu,
     required Widget Function(int urutan) buatKartu,
   }) {
-    return LayoutBuilder(
-      builder: (context, batasLayar) {
-        double lebarIsi = batasLayar.maxWidth - jarakTepiGrid * 2;
-        int jumlahKolom = (lebarIsi / lebarMaksKartuGrid).ceil();
-        if (jumlahKolom < 2) jumlahKolom = 2;
-
-        double totalJarak = jarakAntarKartuGrid * (jumlahKolom - 1);
-        double lebarKartu = (lebarIsi - totalJarak) / jumlahKolom;
-
-        double tinggiTeks =
-            8 +
-            ukurTinggiSatuBaris(context, KartuGridKoleksi.gayaJudul) +
-            2 +
-            ukurTinggiSatuBaris(context, KartuGridKoleksi.gayaKeterangan) +
-            2;
-
-        return GridView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(jarakTepiGrid, 8, jarakTepiGrid, 32),
-          itemCount: jumlahKartu,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: jumlahKolom,
-            crossAxisSpacing: jarakAntarKartuGrid,
-            mainAxisSpacing: 20,
-            mainAxisExtent: lebarKartu + tinggiTeks,
-          ),
-          itemBuilder: (context, urutan) => buatKartu(urutan),
-        );
-      },
+    return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      itemCount: jumlahKartu,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 20,
+        childAspectRatio: 0.75,
+      ),
+      itemBuilder: (context, urutan) => buatKartu(urutan),
     );
   }
 
@@ -529,17 +491,6 @@ class KartuGridKoleksi extends StatelessWidget {
     required this.onDitekan,
   });
 
-  static const TextStyle gayaJudul = TextStyle(
-    color: WarnaCapify.putih,
-    fontWeight: FontWeight.bold,
-  );
-
-  static const TextStyle gayaKeterangan = TextStyle(
-    fontSize: 12,
-    color: WarnaCapify.krem,
-    fontWeight: FontWeight.w300,
-  );
-
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -548,12 +499,14 @@ class KartuGridKoleksi extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AspectRatio(
-            aspectRatio: 1,
-            child: CoverAlbum(
-              urlCover: urlCover,
-              lengkungSudut: 12,
-              isPakaiBayangan: false,
+          Flexible(
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: CoverAlbum(
+                urlCover: urlCover,
+                lengkungSudut: 12,
+                isPakaiBayangan: false,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -561,14 +514,21 @@ class KartuGridKoleksi extends StatelessWidget {
             judul,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: gayaJudul,
+            style: const TextStyle(
+              color: WarnaCapify.putih,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             keterangan,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: gayaKeterangan,
+            style: const TextStyle(
+              fontSize: 12,
+              color: WarnaCapify.krem,
+              fontWeight: FontWeight.w300,
+            ),
           ),
         ],
       ),

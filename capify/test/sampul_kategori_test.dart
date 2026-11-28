@@ -75,7 +75,6 @@ void main() {
     'Grid explore memakai gambar kecil untuk kategori yang ada lagunya',
     (tester) async {
       await tester.pumpWidget(const MaterialApp(home: ExploreScreen()));
-      await tester.pump(const Duration(milliseconds: 800));
       await tester.pump();
 
       Finder gambarDiKartuPop = find.descendant(

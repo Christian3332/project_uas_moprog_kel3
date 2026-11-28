@@ -28,7 +28,6 @@ class SearchProvider extends ChangeNotifier {
   final int batasRiwayat = 5;
   final int batasHasilDariServer = 20;
   final int minimalHurufUntukCari = 2;
-  final int batasIsiCache = 20;
 
   SearchProvider({
     SearchService? searchService,
@@ -50,7 +49,6 @@ class SearchProvider extends ChangeNotifier {
   bool _isSedangMencari = false;
 
   List<String> _riwayatPencarian = [];
-  final Map<String, HasilPencarian> _cacheHasil = {};
 
   Timer? _timerTungguKetikan;
   bool _isProviderSudahDitutup = false;
@@ -92,26 +90,6 @@ class SearchProvider extends ChangeNotifier {
   }
 
   String? get saranEjaan => isHasilKosong ? _saranEjaan : null;
-
-  String? get kataTunggalUntukDicoba {
-    List<String> kataYangCukupPanjang = potonganKataKunci
-        .where((kata) => kata.length >= minimalHurufUntukCari)
-        .toList();
-    if (potonganKataKunci.length < 2 || kataYangCukupPanjang.isEmpty) {
-      return null;
-    }
-
-    List<String> kataYangDikenal = kataYangCukupPanjang.where((kata) {
-      return kamusSaranEjaan.any((frasa) => frasa.toLowerCase().contains(kata));
-    }).toList();
-    List<String> kandidat = kataYangDikenal.isEmpty
-        ? kataYangCukupPanjang
-        : kataYangDikenal;
-
-    return kandidat.reduce(
-      (kataJuara, kata) => kata.length > kataJuara.length ? kata : kataJuara,
-    );
-  }
 
   List<String> get kataSorotanJudul {
     return _filterAktif == filterPenyanyi ? [] : potonganKataKunci;
@@ -161,16 +139,6 @@ class SearchProvider extends ChangeNotifier {
     _jalankanFilter();
   }
 
-  void _simpanKeCache(String kataYangDicari, HasilPencarian hasil) {
-    if (hasil.isDariCadangan) return;
-
-    _cacheHasil.remove(kataYangDicari);
-    _cacheHasil[kataYangDicari] = hasil;
-    if (_cacheHasil.length > batasIsiCache) {
-      _cacheHasil.remove(_cacheHasil.keys.first);
-    }
-  }
-
   void _batalkanPencarianYangBerjalan() {
     _urutanPermintaan++;
     _isSedangMencari = false;
@@ -200,15 +168,6 @@ class SearchProvider extends ChangeNotifier {
 
     if (kataYangDicari == _kataKunciHasilTampil && !isAdaError) {
       _batalkanPencarianYangBerjalan();
-      _kabariLayar();
-      return null;
-    }
-
-    HasilPencarian? hasilDariCache = _cacheHasil[kataYangDicari];
-    if (hasilDariCache != null) {
-      _batalkanPencarianYangBerjalan();
-      _simpanKeCache(kataYangDicari, hasilDariCache);
-      _pasangHasil(kataYangDicari, hasilDariCache);
       _kabariLayar();
       return null;
     }
@@ -264,7 +223,6 @@ class SearchProvider extends ChangeNotifier {
         _isProviderSudahDitutup || permintaanIniKe != _urutanPermintaan;
     if (isSudahTidakDibutuhkan) return;
 
-    if (hasilBaru != null) _simpanKeCache(kataYangDicari, hasilBaru);
     _pasangHasil(kataYangDicari, hasilBaru);
     _pesanError = pesanGagal;
     _isSedangMencari = false;
@@ -312,7 +270,6 @@ class SearchProvider extends ChangeNotifier {
 
   void bersihkanSemuaPencarian() {
     _riwayatPencarian = [];
-    _cacheHasil.clear();
     _siapkanPencarian('');
   }
 

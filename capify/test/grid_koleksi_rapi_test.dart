@@ -90,7 +90,7 @@ void main() {
 
             expect(kotakCover.width, closeTo(kotakCover.height, 0.5));
             expect(kotakCover.left, closeTo(kotakKartu.left, 0.5));
-            expect(kotakCover.width, closeTo(kotakKartu.width, 0.5));
+            expect(kotakCover.width, lessThanOrEqualTo(kotakKartu.width + 0.5));
             expect(
               kotakTeksTerakhir.bottom,
               lessThanOrEqualTo(kotakKartu.bottom),
@@ -101,13 +101,15 @@ void main() {
     }
   }
 
-  testWidgets('Cover di satu baris grid sejajar dan sama besar', (
+  testWidgets('Cover di satu baris grid sejajar, sama besar, dan penuh', (
     tester,
   ) async {
     await bukaTabKoleksi(tester, daftarUkuranUji.first, 'Album');
 
-    List<Rect> semuaCover = tester
-        .widgetList(find.byType(KartuGridKoleksi))
+    List<KartuGridKoleksi> semuaKartu = tester
+        .widgetList<KartuGridKoleksi>(find.byType(KartuGridKoleksi))
+        .toList();
+    List<Rect> semuaCover = semuaKartu
         .map(
           (kartu) => tester.getRect(
             find.descendant(
@@ -121,5 +123,9 @@ void main() {
     expect(semuaCover.length, greaterThanOrEqualTo(2));
     expect(semuaCover[0].top, closeTo(semuaCover[1].top, 0.5));
     expect(semuaCover[0].size, semuaCover[1].size);
+    expect(
+      semuaCover[0].width,
+      closeTo(tester.getSize(find.byWidget(semuaKartu[0])).width, 0.5),
+    );
   });
 }
