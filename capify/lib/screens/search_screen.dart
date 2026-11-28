@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/katalog_pencarian_dummy.dart';
 import '../models/album.dart';
 import '../models/lagu.dart';
 import '../providers/audio_provider.dart';
@@ -112,10 +113,19 @@ class _SearchScreenState extends State<SearchScreen> {
   void lihatAlbumDariLagu(Lagu lagu) {
     fokusKolomCari.unfocus();
     context.read<SearchProvider>().simpanKeRiwayat(kataKunciController.text);
+
+    Album? albumLagu = cariAlbumDariLagu(lagu);
+    if (albumLagu == null) {
+      tampilkanPesanSingkat(
+        'Lagu "${lagu.judul}" belum masuk ke album mana pun',
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => DetailAlbumScreen(laguDipilih: lagu),
+        builder: (context) => DetailAlbumScreen(album: albumLagu),
       ),
     );
   }
