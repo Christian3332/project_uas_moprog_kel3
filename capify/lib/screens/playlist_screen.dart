@@ -205,6 +205,17 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     audio.mulaiAntrian(playlist.daftarLagu, namaAntrian: playlist.nama);
   }
 
+  void putarLaguDisukai(List<Lagu> daftarLaguDisukai, int urutan) {
+    AudioProvider audio = context.read<AudioProvider>();
+    if (!audio.mintaIzinPemutaran()) return;
+
+    audio.mulaiAntrian(
+      daftarLaguDisukai,
+      indexMulai: urutan,
+      namaAntrian: 'Lagu Disukai',
+    );
+  }
+
   double ukurTinggiSatuBaris(BuildContext context, TextStyle gayaTeks) {
     TextPainter pengukurTeks = TextPainter(
       text: TextSpan(
@@ -328,8 +339,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             judul: laguIni.judul,
             keterangan:
                 '${laguIni.penyanyi} • ${FormatWaktu.durasiLagu(laguIni.durasi)}',
-            onDitekan: () =>
-                tampilkanInfoSegeraHadir('Memutar lagu ${laguIni.judul}'),
+            onDitekan: () => putarLaguDisukai(daftarLaguDisukai, urutan),
           );
         },
       );
