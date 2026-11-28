@@ -319,7 +319,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         elevation: 0,
         titleSpacing: 20,
         title: const Text(
-          'Jelajahi',
+          'Jelajah',
           style: TextStyle(
             fontSize: 20,
             color: WarnaCapify.putih,

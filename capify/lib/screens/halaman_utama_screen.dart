@@ -140,7 +140,7 @@ class _HalamanUtamaScreenState extends State<HalamanUtamaScreen> {
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
           activeIcon: Icon(Icons.home_rounded),
-          label: 'Home',
+          label: 'Beranda',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.search_rounded),
