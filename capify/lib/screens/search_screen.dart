@@ -111,9 +111,6 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void lihatAlbumDariLagu(Lagu lagu) {
-    fokusKolomCari.unfocus();
-    context.read<SearchProvider>().simpanKeRiwayat(kataKunciController.text);
-
     Album? albumLagu = cariAlbumDariLagu(lagu);
     if (albumLagu == null) {
       tampilkanPesanSingkat(
@@ -122,11 +119,16 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
 
+    bukaDetailAlbum(albumLagu);
+  }
+
+  void bukaDetailAlbum(Album album) {
+    fokusKolomCari.unfocus();
+    context.read<SearchProvider>().simpanKeRiwayat(kataKunciController.text);
+
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => DetailAlbumScreen(album: albumLagu),
-      ),
+      MaterialPageRoute(builder: (context) => DetailAlbumScreen(album: album)),
     );
   }
 
@@ -380,7 +382,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 Album albumIni = albumDitemukan[index];
                 return KartuAlbumHasil(
                   album: albumIni,
-                  onDipilih: () => pakaiKataKunci(albumIni.penyanyi),
+                  onDipilih: () => bukaDetailAlbum(albumIni),
                 );
               },
             ),

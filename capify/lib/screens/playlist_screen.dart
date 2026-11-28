@@ -12,6 +12,7 @@ import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import '../widgets/form_buat_playlist.dart';
 import '../widgets/komponen_beranda.dart';
+import 'detail_album_screen.dart';
 import 'detail_playlist_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
@@ -114,6 +115,15 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => DetailPlaylistScreen(playlist: playlistDipilih),
+      ),
+    );
+  }
+
+  void bukaDetailAlbum(Album albumDipilih) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailAlbumScreen(album: albumDipilih),
       ),
     );
   }
@@ -322,8 +332,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             urlCover: albumIni.urlCover,
             judul: albumIni.judul,
             keterangan: '${albumIni.penyanyi} • ${albumIni.jumlahLagu} lagu',
-            onDitekan: () =>
-                tampilkanInfoSegeraHadir('Detail album ${albumIni.judul}'),
+            onDitekan: () => bukaDetailAlbum(albumIni),
           );
         },
       );
