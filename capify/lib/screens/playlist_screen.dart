@@ -12,6 +12,7 @@ import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import '../widgets/form_buat_playlist.dart';
 import '../widgets/komponen_beranda.dart';
+import 'detail_album_screen.dart';
 import 'detail_playlist_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
@@ -118,6 +119,15 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     );
   }
 
+  void bukaDetailAlbum(Album albumDipilih) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailAlbumScreen(album: albumDipilih),
+      ),
+    );
+  }
+
   Future<void> bukaFormBuatPlaylist() async {
     String? namaPlaylistBaru = await showModalBottomSheet<String>(
       context: context,
@@ -203,6 +213,17 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
 
     audio.mulaiAntrian(playlist.daftarLagu, namaAntrian: playlist.nama);
+  }
+
+  void putarLaguDisukai(List<Lagu> daftarLaguDisukai, int urutan) {
+    AudioProvider audio = context.read<AudioProvider>();
+    if (!audio.mintaIzinPemutaran()) return;
+
+    audio.mulaiAntrian(
+      daftarLaguDisukai,
+      indexMulai: urutan,
+      namaAntrian: 'Lagu Disukai',
+    );
   }
 
   double ukurTinggiSatuBaris(BuildContext context, TextStyle gayaTeks) {
@@ -311,8 +332,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             urlCover: albumIni.urlCover,
             judul: albumIni.judul,
             keterangan: '${albumIni.penyanyi} • ${albumIni.jumlahLagu} lagu',
-            onDitekan: () =>
-                tampilkanInfoSegeraHadir('Detail album ${albumIni.judul}'),
+            onDitekan: () => bukaDetailAlbum(albumIni),
           );
         },
       );
@@ -328,8 +348,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             judul: laguIni.judul,
             keterangan:
                 '${laguIni.penyanyi} • ${FormatWaktu.durasiLagu(laguIni.durasi)}',
-            onDitekan: () =>
-                tampilkanInfoSegeraHadir('Memutar lagu ${laguIni.judul}'),
+            onDitekan: () => putarLaguDisukai(daftarLaguDisukai, urutan),
           );
         },
       );

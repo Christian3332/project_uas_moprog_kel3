@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../models/lagu.dart';
 import '../providers/audio_provider.dart';
+import '../providers/playlist_provider.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import '../widgets/kontrol_player.dart';
+import '../widgets/lembar_pilih_playlist.dart';
 
 class PlayerScreen extends StatelessWidget {
   const PlayerScreen({super.key});
@@ -35,6 +37,46 @@ class PlayerScreen extends StatelessWidget {
     }
   }
 
+  void tekanTombolSuka(BuildContext context, Lagu lagu) {
+    PlaylistProvider koleksi = context.read<PlaylistProvider>();
+    koleksi.toggleLaguDisukai(lagu);
+
+    tampilkanPesan(
+      context,
+      koleksi.isLaguDisukai(lagu)
+          ? 'Disimpan ke Lagu Disukai'
+          : 'Dihapus dari Lagu Disukai',
+    );
+  }
+
+  Future<void> bukaPilihanPlaylist(BuildContext context, Lagu lagu) async {
+    PlaylistProvider koleksi = context.read<PlaylistProvider>();
+
+    String? idPlaylistDipilih = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: WarnaCapify.coklatGelap,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (konteksSheet) => LembarPilihPlaylist(lagu: lagu),
+    );
+    if (idPlaylistDipilih == null || !context.mounted) return;
+
+    String? pesanGagal = await koleksi.tambahLaguKePlaylist(
+      idPlaylist: idPlaylistDipilih,
+      lagu: lagu,
+    );
+    if (!context.mounted) return;
+
+    String namaPlaylist =
+        koleksi.cariPlaylist(idPlaylistDipilih)?.nama ?? 'playlist';
+    tampilkanPesan(
+      context,
+      pesanGagal ?? '"${lagu.judul}" ditambahkan ke $namaPlaylist',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     AudioProvider audio = context.watch<AudioProvider>();
@@ -50,7 +92,7 @@ class PlayerScreen extends StatelessWidget {
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: buildAppBarPlayer(context, audio.namaAntrian),
+        appBar: buildAppBarPlayer(context, audio.namaAntrian, lagu),
         body: SafeArea(
           top: false,
           child: Padding(
@@ -67,6 +109,7 @@ class PlayerScreen extends StatelessWidget {
   PreferredSizeWidget buildAppBarPlayer(
     BuildContext context,
     String namaAntrian,
+    Lagu? lagu,
   ) {
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -107,9 +150,14 @@ class PlayerScreen extends StatelessWidget {
       ),
       actions: [
         IconButton(
-          onPressed: () =>
-              tampilkanPesan(context, 'Menu lainnya belum tersedia'),
-          icon: const Icon(Icons.more_vert, color: WarnaCapify.putih),
+          tooltip: 'Tambah ke playlist',
+          onPressed: lagu == null
+              ? null
+              : () => bukaPilihanPlaylist(context, lagu),
+          icon: const Icon(
+            Icons.playlist_add_rounded,
+            color: WarnaCapify.putih,
+          ),
         ),
         const SizedBox(width: 4),
       ],
@@ -142,7 +190,7 @@ class PlayerScreen extends StatelessWidget {
   }
 
   Widget buildIsiPlayer(BuildContext context, AudioProvider audio, Lagu lagu) {
-    bool isDisukai = audio.isLaguSekarangDisukai;
+    bool isDisukai = context.watch<PlaylistProvider>().isLaguDisukai(lagu);
 
     return Column(
       children: [
@@ -191,7 +239,7 @@ class PlayerScreen extends StatelessWidget {
               ),
             ),
             IconButton(
-              onPressed: audio.toggleSukaiLaguSekarang,
+              onPressed: () => tekanTombolSuka(context, lagu),
               tooltip: isDisukai ? 'Hapus dari disukai' : 'Sukai lagu ini',
               icon: Icon(
                 isDisukai ? Icons.favorite : Icons.favorite_border,

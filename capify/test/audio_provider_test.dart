@@ -78,14 +78,6 @@ void main() {
     expect(audio.posisiSekarang, Duration.zero);
   });
 
-  test('Lagu disukai tetap tersimpan walau pindah lagu', () {
-    audio.toggleSukaiLaguSekarang();
-    audio.laguBerikutnya();
-    expect(audio.isLaguSekarangDisukai, isFalse);
-    audio.laguSebelumnya();
-    expect(audio.isLaguSekarangDisukai, isTrue);
-  });
-
   group('Pemutaran audio dengan just_audio', () {
     late PemutarAudioPalsu pemutarPalsu;
     late AudioProvider audioAsli;

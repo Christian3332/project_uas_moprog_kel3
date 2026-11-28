@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:capify/providers/audio_provider.dart';
 import 'package:capify/providers/home_provider.dart';
+import 'package:capify/providers/playlist_provider.dart';
 import 'package:capify/screens/home_screen.dart';
 import 'package:capify/screens/player_screen.dart';
 import 'package:capify/services/feed_service.dart';
@@ -19,6 +20,7 @@ Widget bungkusHalamanBeranda(AudioProvider audio, HomeProvider home) {
     providers: [
       ChangeNotifierProvider.value(value: audio),
       ChangeNotifierProvider.value(value: home),
+      ChangeNotifierProvider(create: (context) => PlaylistProvider()),
     ],
     child: const MaterialApp(home: HomeScreen()),
   );

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/lagu_per_kategori_dummy.dart';
 import '../models/kategori_musik.dart';
 import '../models/lagu.dart';
+import '../providers/audio_provider.dart';
+import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 
 class DetailKategoriScreen extends StatefulWidget {
@@ -58,14 +61,27 @@ class _DetailKategoriScreenState extends State<DetailKategoriScreen> {
     return '${laguDiKategori.length} lagu • $teksDurasi';
   }
 
-  void pilihLagu(Lagu lagu) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('Kamu memilih "${lagu.judul}"')));
+  void putarLagu(int urutan) {
+    AudioProvider audio = context.read<AudioProvider>();
+    if (!audio.mintaIzinPemutaran()) return;
+
+    audio.mulaiAntrian(
+      laguDiKategori,
+      indexMulai: urutan,
+      namaAntrian: 'Kategori ${widget.kategori.nama}',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    String? kunciLaguAktif = context.select<AudioProvider, String?>((audio) {
+      Lagu? laguDiPemutar = audio.laguSekarang;
+      return laguDiPemutar == null ? null : kunciUnikLagu(laguDiPemutar);
+    });
+    bool isAudioSedangDiputar = context.select<AudioProvider, bool>(
+      (audio) => audio.isLaguSedangDiputar,
+    );
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: widget.kategori.warnaKartu,
@@ -95,7 +111,11 @@ class _DetailKategoriScreenState extends State<DetailKategoriScreen> {
                       teksDurasi: formatDurasiLagu(
                         laguDiKategori[urutan].durasi,
                       ),
-                      onDitekan: () => pilihLagu(laguDiKategori[urutan]),
+                      isSedangDiputar:
+                          isAudioSedangDiputar &&
+                          kunciLaguAktif ==
+                              kunciUnikLagu(laguDiKategori[urutan]),
+                      onDitekan: () => putarLagu(urutan),
                     ),
               ],
             ),
@@ -197,6 +217,7 @@ class BarisLaguKategori extends StatelessWidget {
   final int nomorUrut;
   final Lagu lagu;
   final String teksDurasi;
+  final bool isSedangDiputar;
   final VoidCallback onDitekan;
 
   const BarisLaguKategori({
@@ -204,6 +225,7 @@ class BarisLaguKategori extends StatelessWidget {
     required this.nomorUrut,
     required this.lagu,
     required this.teksDurasi,
+    required this.isSedangDiputar,
     required this.onDitekan,
   });
 
@@ -217,11 +239,17 @@ class BarisLaguKategori extends StatelessWidget {
         children: [
           SizedBox(
             width: 24,
-            child: Text(
-              '$nomorUrut',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: WarnaCapify.krem),
-            ),
+            child: isSedangDiputar
+                ? const Icon(
+                    Icons.graphic_eq_rounded,
+                    size: 18,
+                    color: WarnaCapify.krem,
+                  )
+                : Text(
+                    '$nomorUrut',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: WarnaCapify.krem),
+                  ),
           ),
           const SizedBox(width: 12),
           ClipRRect(
@@ -245,8 +273,8 @@ class BarisLaguKategori extends StatelessWidget {
         lagu.judul,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: WarnaCapify.putih,
+        style: TextStyle(
+          color: isSedangDiputar ? WarnaCapify.krem : WarnaCapify.putih,
           fontWeight: FontWeight.w600,
         ),
       ),

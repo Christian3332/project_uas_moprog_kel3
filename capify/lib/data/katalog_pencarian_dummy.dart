@@ -23,6 +23,26 @@ List<Lagu> kumpulkanSemuaLaguDummy() {
   return semuaLagu;
 }
 
+List<Lagu> ambilLaguDariAlbum(Album album) {
+  String penyanyiAlbum = album.penyanyi.toLowerCase();
+  return kumpulkanSemuaLaguDummy()
+      .where((lagu) => lagu.penyanyi.toLowerCase() == penyanyiAlbum)
+      .toList();
+}
+
+Album? cariAlbumDariLagu(Lagu lagu) {
+  String penyanyiLagu = lagu.penyanyi.toLowerCase();
+  String judulLagu = lagu.judul.toLowerCase();
+  Album? albumPenyanyiSama;
+
+  for (Album album in daftarAlbumTersimpanDummy) {
+    if (album.penyanyi.toLowerCase() != penyanyiLagu) continue;
+    if (album.judul.toLowerCase() == judulLagu) return album;
+    albumPenyanyiSama ??= album;
+  }
+  return albumPenyanyiSama;
+}
+
 List<String> susunSaranPenyanyiDummy({int batasSaran = 8}) {
   return kumpulkanSemuaLaguDummy()
       .map((lagu) => lagu.penyanyi)
