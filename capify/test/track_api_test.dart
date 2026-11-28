@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:capify/models/track.dart';
-import 'package:capify/services/track_api.dart';
 
 void main() {
   test('Track dibaca lengkap dari JSON server', () {
@@ -45,31 +44,5 @@ void main() {
     expect(track.keLagu().judul, 'Starboy');
     expect(track.keLagu().durasi, const Duration(minutes: 3, seconds: 50));
     expect(track.toJson()['duration_ms'], 230000);
-  });
-
-  test('Mock API mengembalikan daftar track', () async {
-    List<Track> daftarTrack = await TrackApi.ambilDaftarTrack(
-      lamaMenunggu: Duration.zero,
-    );
-
-    expect(daftarTrack, isNotEmpty);
-    expect(daftarTrack.first.judul, 'One Call Away');
-    expect(daftarTrack.every((track) => track.id.isNotEmpty), isTrue);
-  });
-
-  test('Mock API melempar error saat simulasi gagal', () async {
-    expect(
-      TrackApi.ambilDaftarTrack(
-        isSimulasiGagal: true,
-        lamaMenunggu: Duration.zero,
-      ),
-      throwsException,
-    );
-  });
-
-  test('JSON rusak tidak bikin aplikasi crash tanpa pesan', () {
-    expect(() => TrackApi.ubahJsonKeDaftarTrack('{rusak'), throwsException);
-    expect(() => TrackApi.ubahJsonKeDaftarTrack('{"a": 1}'), throwsException);
-    expect(TrackApi.ubahJsonKeDaftarTrack('[1, "teks", {}]').length, 1);
   });
 }

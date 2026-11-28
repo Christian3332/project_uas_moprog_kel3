@@ -20,7 +20,6 @@ class FeedBeranda {
     this.waktuDisimpan,
   });
 
-  bool get isKosong => riwayatPutar.isEmpty && laguPerGenre.isEmpty;
   bool get isDariCadangan => asalFeed != AsalFeed.server;
 
   FeedBeranda tandaiAsal(
@@ -36,8 +35,6 @@ class FeedBeranda {
       waktuDisimpan: waktuDisimpan ?? this.waktuDisimpan,
     );
   }
-
-  FeedBeranda tandaiSebagaiCadangan() => tandaiAsal(AsalFeed.contoh);
 
   FeedBeranda geserWaktuRiwayat(Duration waktuYangSudahLewat) {
     if (waktuYangSudahLewat <= Duration.zero) return this;

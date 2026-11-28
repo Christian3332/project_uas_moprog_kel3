@@ -1,7 +1,3 @@
-import 'dart:convert';
-
-import '../models/track.dart';
-
 class TrackApi {
   static const String responsServerDummy = '''
 [
@@ -47,35 +43,4 @@ class TrackApi {
   }
 ]
 ''';
-
-  static Future<List<Track>> ambilDaftarTrack({
-    bool isSimulasiGagal = false,
-    Duration lamaMenunggu = const Duration(milliseconds: 800),
-  }) async {
-    await Future.delayed(lamaMenunggu);
-
-    if (isSimulasiGagal) {
-      throw Exception('Gagal terhubung ke server, coba lagi nanti');
-    }
-
-    return ubahJsonKeDaftarTrack(responsServerDummy);
-  }
-
-  static List<Track> ubahJsonKeDaftarTrack(String teksJson) {
-    dynamic hasilDecode;
-    try {
-      hasilDecode = jsonDecode(teksJson);
-    } on FormatException {
-      throw Exception('Data lagu dari server rusak');
-    }
-
-    if (hasilDecode is! List) {
-      throw Exception('Format data lagu dari server tidak dikenali');
-    }
-
-    return hasilDecode
-        .whereType<Map<String, dynamic>>()
-        .map((dataTrack) => Track.fromJson(dataTrack))
-        .toList();
-  }
 }
