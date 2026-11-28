@@ -277,14 +277,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         scrolledUnderElevation: 0,
         titleSpacing: 20,
         title: SapaanBeranda(namaPengguna: namaSapaan),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: WarnaCapify.krem),
-            onPressed: () => tampilkanPesan('Fitur notifikasi segera hadir'),
-          ),
-          const TombolAvatarProfil(),
-          const SizedBox(width: 8),
-        ],
+        actions: const [TombolAvatarProfil(), SizedBox(width: 8)],
       ),
       body: buildIsiBeranda(home),
     );

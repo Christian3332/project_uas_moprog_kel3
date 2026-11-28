@@ -272,33 +272,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
               ),
               ListTile(
                 leading: const Icon(
-                  Icons.language_rounded,
-                  color: WarnaCapify.krem,
-                ),
-                title: const Text('Bahasa'),
-                subtitle: const Text('Indonesia'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () =>
-                    tampilkanPesan(context, 'Pilihan bahasa lain segera hadir'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 28),
-          const JudulBagianPengaturan(judul: 'Akun'),
-          KartuGrupPengaturan(
-            isiGrup: [
-              ListTile(
-                leading: const Icon(
-                  Icons.lock_outline_rounded,
-                  color: WarnaCapify.krem,
-                ),
-                title: const Text('Ubah password'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () =>
-                    tampilkanPesan(context, 'Fitur ubah password segera hadir'),
-              ),
-              ListTile(
-                leading: const Icon(
                   Icons.info_outline_rounded,
                   color: WarnaCapify.krem,
                 ),
