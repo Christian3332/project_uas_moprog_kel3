@@ -5,6 +5,7 @@ import '../models/koleksi_pengguna.dart';
 import '../models/lagu.dart';
 import '../models/playlist.dart';
 import '../services/koleksi_service.dart';
+import '../utils/kunci_lagu.dart';
 
 class PlaylistProvider extends ChangeNotifier {
   final KoleksiService koleksiService;
@@ -141,6 +142,25 @@ class PlaylistProvider extends ChangeNotifier {
       if (playlist.id == idPlaylist) return playlist;
     }
     return null;
+  }
+
+  bool isLaguDisukai(Lagu lagu) {
+    String kunciDicari = kunciUnikLagu(lagu);
+    return _daftarLaguDisukai.any(
+      (laguDisukai) => kunciUnikLagu(laguDisukai) == kunciDicari,
+    );
+  }
+
+  void toggleLaguDisukai(Lagu lagu) {
+    if (isLaguDisukai(lagu)) {
+      String kunciDihapus = kunciUnikLagu(lagu);
+      _daftarLaguDisukai = _daftarLaguDisukai
+          .where((laguDisukai) => kunciUnikLagu(laguDisukai) != kunciDihapus)
+          .toList();
+    } else {
+      _daftarLaguDisukai = [lagu, ..._daftarLaguDisukai];
+    }
+    _kabariLayar();
   }
 
   bool isLaguAdaDiPlaylist(String idPlaylist, Lagu lagu) {

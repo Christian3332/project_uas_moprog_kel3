@@ -37,6 +37,18 @@ class PlayerScreen extends StatelessWidget {
     }
   }
 
+  void tekanTombolSuka(BuildContext context, Lagu lagu) {
+    PlaylistProvider koleksi = context.read<PlaylistProvider>();
+    koleksi.toggleLaguDisukai(lagu);
+
+    tampilkanPesan(
+      context,
+      koleksi.isLaguDisukai(lagu)
+          ? 'Disimpan ke Lagu Disukai'
+          : 'Dihapus dari Lagu Disukai',
+    );
+  }
+
   Future<void> bukaPilihanPlaylist(BuildContext context, Lagu lagu) async {
     PlaylistProvider koleksi = context.read<PlaylistProvider>();
 
@@ -178,7 +190,7 @@ class PlayerScreen extends StatelessWidget {
   }
 
   Widget buildIsiPlayer(BuildContext context, AudioProvider audio, Lagu lagu) {
-    bool isDisukai = audio.isLaguSekarangDisukai;
+    bool isDisukai = context.watch<PlaylistProvider>().isLaguDisukai(lagu);
 
     return Column(
       children: [
@@ -227,7 +239,7 @@ class PlayerScreen extends StatelessWidget {
               ),
             ),
             IconButton(
-              onPressed: audio.toggleSukaiLaguSekarang,
+              onPressed: () => tekanTombolSuka(context, lagu),
               tooltip: isDisukai ? 'Hapus dari disukai' : 'Sukai lagu ini',
               icon: Icon(
                 isDisukai ? Icons.favorite : Icons.favorite_border,

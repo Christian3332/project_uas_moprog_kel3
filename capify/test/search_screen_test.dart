@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:capify/providers/audio_provider.dart';
+import 'package:capify/providers/playlist_provider.dart';
 import 'package:capify/providers/search_provider.dart';
 import 'package:capify/screens/detail_album_screen.dart';
 import 'package:capify/screens/player_screen.dart';
@@ -38,6 +39,7 @@ Future<void> bukaLayarCari(WidgetTester tester) async {
       providers: [
         ChangeNotifierProvider.value(value: pencarianTes),
         ChangeNotifierProvider.value(value: audioTes),
+        ChangeNotifierProvider(create: (context) => PlaylistProvider()),
       ],
       child: const MaterialApp(home: SearchScreen()),
     ),

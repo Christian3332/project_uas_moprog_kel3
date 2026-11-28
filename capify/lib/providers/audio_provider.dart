@@ -40,7 +40,6 @@ class AudioProvider extends ChangeNotifier {
   Duration _posisiTerbuffer = Duration.zero;
   Duration? _durasiDariAudio;
   String? _pesanError;
-  final Set<String> _kunciLaguDisukai = {};
 
   Lagu? _laguYangSudahDimuat;
   int _nomorPermintaanMuat = 0;
@@ -73,12 +72,6 @@ class AudioProvider extends ChangeNotifier {
     Lagu? lagu = laguSekarang;
     if (lagu == null) return Duration.zero;
     return _durasiDariAudio ?? lagu.durasi;
-  }
-
-  bool get isLaguSekarangDisukai {
-    Lagu? lagu = laguSekarang;
-    if (lagu == null) return false;
-    return _kunciLaguDisukai.contains(_buatKunciLagu(lagu));
   }
 
   bool get _isLaguSekarangSudahDimuat {
@@ -571,19 +564,6 @@ class AudioProvider extends ChangeNotifier {
   void gantiModeUlang() {
     int indexModeBaru = (_modeUlang.index + 1) % ModeUlang.values.length;
     _modeUlang = ModeUlang.values[indexModeBaru];
-    _kabariPendengar();
-  }
-
-  void toggleSukaiLaguSekarang() {
-    Lagu? lagu = laguSekarang;
-    if (lagu == null) return;
-
-    String kunci = _buatKunciLagu(lagu);
-    if (_kunciLaguDisukai.contains(kunci)) {
-      _kunciLaguDisukai.remove(kunci);
-    } else {
-      _kunciLaguDisukai.add(kunci);
-    }
     _kabariPendengar();
   }
 
