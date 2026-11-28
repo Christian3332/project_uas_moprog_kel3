@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/lagu.dart';
 import '../models/playlist.dart';
+import '../providers/audio_provider.dart';
 import '../utils/format_waktu.dart';
+import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 
@@ -16,8 +19,6 @@ class DetailPlaylistScreen extends StatefulWidget {
 }
 
 class _DetailPlaylistScreenState extends State<DetailPlaylistScreen> {
-  int? urutanLaguDipilih;
-
   String ringkasanIsiPlaylist() {
     int jumlahLagu = widget.playlist.daftarLagu.length;
     if (jumlahLagu == 0) return 'Playlist • 0 lagu';
@@ -38,20 +39,29 @@ class _DetailPlaylistScreenState extends State<DetailPlaylistScreen> {
       ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
-  void pilihLaguDiTracklist(int urutan) {
-    setState(() {
-      if (urutanLaguDipilih == urutan) {
-        urutanLaguDipilih = null;
-      } else {
-        urutanLaguDipilih = urutan;
-      }
-    });
+  void putarLagu(int urutan) {
+    AudioProvider audio = context.read<AudioProvider>();
+    if (!audio.mintaIzinPemutaran()) return;
+
+    audio.mulaiAntrian(
+      widget.playlist.daftarLagu,
+      indexMulai: urutan,
+      namaAntrian: widget.playlist.nama,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     Playlist playlist = widget.playlist;
     bool isPlaylistKosong = playlist.daftarLagu.isEmpty;
+
+    String? kunciLaguAktif = context.select<AudioProvider, String?>((audio) {
+      Lagu? laguDiPemutar = audio.laguSekarang;
+      return laguDiPemutar == null ? null : kunciUnikLagu(laguDiPemutar);
+    });
+    bool isAudioSedangDiputar = context.select<AudioProvider, bool>(
+      (audio) => audio.isLaguSedangDiputar,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -103,11 +113,7 @@ class _DetailPlaylistScreenState extends State<DetailPlaylistScreen> {
             const SizedBox(height: 16),
             Center(
               child: FilledButton.icon(
-                onPressed: isPlaylistKosong
-                    ? null
-                    : () => tampilkanPesanSingkat(
-                        'Pemutaran playlist segera hadir',
-                      ),
+                onPressed: isPlaylistKosong ? null : () => putarLagu(0),
                 style: FilledButton.styleFrom(
                   backgroundColor: WarnaCapify.krem,
                   foregroundColor: WarnaCapify.coklatGelap,
@@ -139,8 +145,11 @@ class _DetailPlaylistScreenState extends State<DetailPlaylistScreen> {
                 BarisLaguTracklist(
                   nomorUrut: urutan + 1,
                   lagu: playlist.daftarLagu[urutan],
-                  isSedangDipilih: urutanLaguDipilih == urutan,
-                  onDitekan: () => pilihLaguDiTracklist(urutan),
+                  isSedangDiputar:
+                      isAudioSedangDiputar &&
+                      kunciLaguAktif ==
+                          kunciUnikLagu(playlist.daftarLagu[urutan]),
+                  onDitekan: () => putarLagu(urutan),
                   onTekanPilihanLain: () => tampilkanPesanSingkat(
                     'Pilihan untuk ${playlist.daftarLagu[urutan].judul} segera hadir',
                   ),
@@ -203,7 +212,7 @@ class _DetailPlaylistScreenState extends State<DetailPlaylistScreen> {
 class BarisLaguTracklist extends StatelessWidget {
   final int nomorUrut;
   final Lagu lagu;
-  final bool isSedangDipilih;
+  final bool isSedangDiputar;
   final VoidCallback onDitekan;
   final VoidCallback onTekanPilihanLain;
 
@@ -211,19 +220,19 @@ class BarisLaguTracklist extends StatelessWidget {
     super.key,
     required this.nomorUrut,
     required this.lagu,
-    required this.isSedangDipilih,
+    required this.isSedangDiputar,
     required this.onDitekan,
     required this.onTekanPilihanLain,
   });
 
   @override
   Widget build(BuildContext context) {
-    Color warnaJudul = isSedangDipilih ? WarnaCapify.krem : WarnaCapify.putih;
+    Color warnaJudul = isSedangDiputar ? WarnaCapify.krem : WarnaCapify.putih;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
-        color: isSedangDipilih
+        color: isSedangDiputar
             ? WarnaCapify.coklatTua.withValues(alpha: 0.6)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
@@ -237,7 +246,7 @@ class BarisLaguTracklist extends StatelessWidget {
                 SizedBox(
                   width: 28,
                   child: Center(
-                    child: isSedangDipilih
+                    child: isSedangDiputar
                         ? const Icon(
                             Icons.graphic_eq_rounded,
                             size: 18,
