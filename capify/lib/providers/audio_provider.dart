@@ -87,9 +87,7 @@ class AudioProvider extends ChangeNotifier {
         androidNotificationChannelName: 'Pemutaran Musik Capify',
         androidNotificationOngoing: true,
       );
-    } catch (_) {
-      debugPrint('Pemutaran background tidak didukung di perangkat ini');
-    }
+    } catch (_) {}
   }
 
   Future<void> siapkanSesiAudio() async {
@@ -102,9 +100,7 @@ class AudioProvider extends ChangeNotifier {
       _langgananSesiAudio.add(
         sesi.becomingNoisyEventStream.listen((_) => saatHeadsetDicabut()),
       );
-    } catch (_) {
-      debugPrint('Sesi audio tidak tersedia, interupsi tidak dipantau');
-    }
+    } catch (_) {}
   }
 
   void saatAdaInterupsi(AudioInterruptionEvent interupsi) {
