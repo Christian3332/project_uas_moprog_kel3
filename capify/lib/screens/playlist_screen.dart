@@ -16,7 +16,9 @@ import 'detail_album_screen.dart';
 import 'detail_playlist_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
-  const PlaylistScreen({super.key});
+  final VoidCallback? onCariLagu;
+
+  const PlaylistScreen({super.key, this.onCariLagu});
 
   @override
   State<PlaylistScreen> createState() => _PlaylistScreenState();
@@ -45,10 +47,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(pesan)));
-  }
-
-  void tampilkanInfoSegeraHadir(String namaFitur) {
-    tampilkanPesan('$namaFitur segera hadir');
   }
 
   Future<void> muatUlangKoleksi() async {
@@ -380,7 +378,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           teksTombol: isTabPlaylist ? 'Buat Playlist' : 'Cari Lagu',
           onTombolDitekan: isTabPlaylist
               ? bukaFormBuatPlaylist
-              : () => tampilkanInfoSegeraHadir('Fitur cari lagu'),
+              : () => widget.onCariLagu?.call(),
         ),
       ],
     );

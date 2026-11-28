@@ -350,7 +350,7 @@ void main() {
       );
       await bukaHalamanDetailDariHome(tester);
 
-      await tester.tap(find.text('Home'));
+      await tester.tap(find.text('Beranda'));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 

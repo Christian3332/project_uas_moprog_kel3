@@ -5,6 +5,7 @@ import '../data/katalog_pencarian_dummy.dart';
 import '../models/album.dart';
 import '../models/lagu.dart';
 import '../providers/audio_provider.dart';
+import '../providers/playlist_provider.dart';
 import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
@@ -20,7 +21,6 @@ class DetailAlbumScreen extends StatefulWidget {
 }
 
 class _DetailAlbumScreenState extends State<DetailAlbumScreen> {
-  bool isAlbumDisukai = false;
   List<Lagu> laguDiAlbum = [];
 
   @override
@@ -35,10 +35,12 @@ class _DetailAlbumScreenState extends State<DetailAlbumScreen> {
       ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
-  void gantiStatusSuka() {
-    setState(() => isAlbumDisukai = !isAlbumDisukai);
+  void gantiStatusSimpan() {
+    PlaylistProvider koleksi = context.read<PlaylistProvider>();
+    koleksi.toggleAlbumTersimpan(widget.album);
+
     tampilkanPesanSingkat(
-      isAlbumDisukai
+      koleksi.isAlbumTersimpan(widget.album)
           ? 'Album ditambahkan ke koleksi'
           : 'Album dihapus dari koleksi',
     );
@@ -59,6 +61,9 @@ class _DetailAlbumScreenState extends State<DetailAlbumScreen> {
   Widget build(BuildContext context) {
     Album album = widget.album;
     bool isBelumAdaLagu = laguDiAlbum.isEmpty;
+    bool isAlbumTersimpan = context.select<PlaylistProvider, bool>(
+      (koleksi) => koleksi.isAlbumTersimpan(album),
+    );
 
     String? kunciLaguAktif = context.select<AudioProvider, String?>((audio) {
       Lagu? laguDiPemutar = audio.laguSekarang;
@@ -121,10 +126,13 @@ class _DetailAlbumScreenState extends State<DetailAlbumScreen> {
               children: [
                 IconButton(
                   iconSize: 28,
-                  onPressed: gantiStatusSuka,
+                  tooltip: isAlbumTersimpan
+                      ? 'Hapus album dari koleksi'
+                      : 'Simpan album ke koleksi',
+                  onPressed: gantiStatusSimpan,
                   icon: Icon(
-                    isAlbumDisukai ? Icons.favorite : Icons.favorite_border,
-                    color: isAlbumDisukai
+                    isAlbumTersimpan ? Icons.favorite : Icons.favorite_border,
+                    color: isAlbumTersimpan
                         ? WarnaCapify.krem
                         : WarnaCapify.putih,
                   ),

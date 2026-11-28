@@ -13,13 +13,13 @@ const List<Lagu> daftarLaguDummy = [
     penyanyi: 'The Weeknd',
     urlCover: 'https://picsum.photos/seed/starboy/500',
     durasi: Duration(minutes: 3, seconds: 50),
-    urlAudio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+    urlAudio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3',
   ),
   Lagu(
     judul: 'Ditto',
     penyanyi: 'NewJeans',
     urlCover: 'https://picsum.photos/seed/ditto/500',
     durasi: Duration(minutes: 3, seconds: 5),
-    urlAudio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+    urlAudio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
   ),
 ];

@@ -163,6 +163,28 @@ class PlaylistProvider extends ChangeNotifier {
     _kabariLayar();
   }
 
+  bool _isAlbumSama(Album albumA, Album albumB) {
+    return albumA.judul.toLowerCase() == albumB.judul.toLowerCase() &&
+        albumA.penyanyi.toLowerCase() == albumB.penyanyi.toLowerCase();
+  }
+
+  bool isAlbumTersimpan(Album album) {
+    return _daftarAlbumTersimpan.any(
+      (albumTersimpan) => _isAlbumSama(albumTersimpan, album),
+    );
+  }
+
+  void toggleAlbumTersimpan(Album album) {
+    if (isAlbumTersimpan(album)) {
+      _daftarAlbumTersimpan = _daftarAlbumTersimpan
+          .where((albumTersimpan) => !_isAlbumSama(albumTersimpan, album))
+          .toList();
+    } else {
+      _daftarAlbumTersimpan = [album, ..._daftarAlbumTersimpan];
+    }
+    _kabariLayar();
+  }
+
   bool isLaguAdaDiPlaylist(String idPlaylist, Lagu lagu) {
     Playlist? playlist = cariPlaylist(idPlaylist);
     return playlist?.isPunyaLagu(lagu) ?? false;
