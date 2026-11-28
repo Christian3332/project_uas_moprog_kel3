@@ -127,7 +127,7 @@ void main() {
       ).ambilKoleksiPengguna();
 
       expect(koleksi.isDariCadangan, isFalse);
-      expect(koleksi.isKosong, isFalse);
+      expect(koleksi.daftarPlaylist, isNotEmpty);
     });
   });
 

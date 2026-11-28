@@ -21,7 +21,6 @@ void main() {
       'Lo-Fi',
     ]);
     expect(feed.jumlahLaguDiKatalog, 11);
-    expect(feed.isKosong, isFalse);
   });
 
   test('Simulasi gagal melempar pesan yang jelas', () async {
@@ -74,7 +73,7 @@ void main() {
   test('Feed kosong tetap bisa dibaca', () {
     FeedBeranda feed = FeedService.ubahJsonKeFeed('{}');
 
-    expect(feed.isKosong, isTrue);
+    expect(feed.riwayatPutar, isEmpty);
     expect(feed.jumlahLaguDiKatalog, 0);
   });
 

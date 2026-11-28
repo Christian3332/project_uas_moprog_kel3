@@ -55,7 +55,6 @@ class SearchProvider extends ChangeNotifier {
   Timer? _timerTungguKetikan;
   bool _isProviderSudahDitutup = false;
   int _urutanPermintaan = 0;
-  int _jumlahPanggilanApi = 0;
 
   String get kataKunci => _kataKunci;
   String get kataKunciBersih => _kataKunci.trim();
@@ -66,7 +65,6 @@ class SearchProvider extends ChangeNotifier {
   String? get pesanError => _pesanError;
   bool get isAdaError => _pesanError != null;
   bool get isHasilDariCadangan => _hasilDariServer?.isDariCadangan ?? false;
-  int get jumlahPanggilanApi => _jumlahPanggilanApi;
   int get jumlahHasilTanpaFilter => _hasilDariServer?.jumlahSemuaHasil ?? 0;
   List<Lagu> get hasilPencarian => List.unmodifiable(_laguTampil);
   List<Album> get albumDitemukan => List.unmodifiable(_albumTampil);
@@ -248,7 +246,6 @@ class SearchProvider extends ChangeNotifier {
     if (_isProviderSudahDitutup) return;
 
     int permintaanIniKe = _tandaiMulaiMencari();
-    _jumlahPanggilanApi++;
 
     HasilPencarian? hasilBaru;
     String? pesanGagal;

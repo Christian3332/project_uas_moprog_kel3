@@ -15,12 +15,6 @@ class KoleksiPengguna {
     this.isDariCadangan = false,
   });
 
-  bool get isKosong {
-    return daftarPlaylist.isEmpty &&
-        daftarAlbumTersimpan.isEmpty &&
-        daftarLaguDisukai.isEmpty;
-  }
-
   KoleksiPengguna tandaiSebagaiCadangan() {
     return KoleksiPengguna(
       daftarPlaylist: daftarPlaylist,
