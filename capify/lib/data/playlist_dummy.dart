@@ -12,18 +12,24 @@ const List<Playlist> daftarPlaylistDummy = [
         penyanyi: 'Charlie Puth',
         urlCover: 'https://picsum.photos/seed/onecallaway/500',
         durasi: Duration(minutes: 3, seconds: 14),
+        urlAudio:
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
       ),
       Lagu(
         judul: 'Evaluasi',
         penyanyi: 'Hindia',
         urlCover: 'https://picsum.photos/seed/evaluasihindia/400',
         durasi: Duration(minutes: 3, seconds: 47),
+        urlAudio:
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
       ),
       Lagu(
         judul: 'Ditto',
         penyanyi: 'NewJeans',
         urlCover: 'https://picsum.photos/seed/ditto/500',
         durasi: Duration(minutes: 3, seconds: 5),
+        urlAudio:
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
       ),
     ],
   ),
@@ -37,12 +43,16 @@ const List<Playlist> daftarPlaylistDummy = [
         penyanyi: 'The Weeknd',
         urlCover: 'https://picsum.photos/seed/starboy/500',
         durasi: Duration(minutes: 3, seconds: 50),
+        urlAudio:
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3',
       ),
       Lagu(
         judul: 'Peaches',
         penyanyi: 'Justin Bieber',
         urlCover: 'https://picsum.photos/seed/peachesbieber/400',
         durasi: Duration(minutes: 3, seconds: 18),
+        urlAudio:
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
       ),
     ],
   ),
