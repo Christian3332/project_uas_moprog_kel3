@@ -6,6 +6,7 @@ import '../models/album.dart';
 import '../models/lagu.dart';
 import '../providers/audio_provider.dart';
 import '../providers/search_provider.dart';
+import '../utils/format_waktu.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/cover_album.dart';
 import 'detail_album_screen.dart';
@@ -561,12 +562,6 @@ class BarisHasilLagu extends StatelessWidget {
     );
   }
 
-  String formatDurasi(Duration durasi) {
-    String menit = durasi.inMinutes.toString();
-    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
-    return '$menit:$detik';
-  }
-
   List<TextSpan> sorotiKataYangCocok(
     String teksAsli,
     List<String> kataDicari,
@@ -717,7 +712,7 @@ class BarisHasilLagu extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  formatDurasi(lagu.durasi),
+                  FormatWaktu.durasiLagu(lagu.durasi),
                   style: TextStyle(
                     color: WarnaCapify.krem.withValues(alpha: 0.7),
                     fontSize: 12,

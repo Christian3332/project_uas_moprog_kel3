@@ -9,6 +9,7 @@ import '../models/riwayat_putar.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/home_provider.dart';
+import '../utils/format_waktu.dart';
 import '../utils/gaya_teks_beranda.dart';
 import '../utils/kunci_lagu.dart';
 import '../utils/warna_capify.dart';
@@ -108,12 +109,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return '$awalanPesan Ini berandamu yang terakhir tersimpan.';
     }
     return '$awalanPesan Ini berandamu dari ${teksSejak(waktuDisimpan)}.';
-  }
-
-  String teksDurasi(Duration durasi) {
-    int menit = durasi.inMinutes;
-    String detik = (durasi.inSeconds % 60).toString().padLeft(2, '0');
-    return '$menit:$detik';
   }
 
   Future<void> segarkanBeranda() async {
@@ -502,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Lagu lagu = laguTemuan[index];
             return KartuLaguKecil(
               lagu: lagu,
-              keterangan: teksDurasi(lagu.durasi),
+              keterangan: FormatWaktu.durasiLagu(lagu.durasi),
               isSedangDiputar: statusPemutar.isLaguIniDiputar(lagu),
               isSedangDisiapkan: statusPemutar.isLaguIniDisiapkan(lagu),
               onTekan: () => putarLaguTemuan(index),
