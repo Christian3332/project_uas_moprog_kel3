@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data/playlist_dummy.dart';
-import '../data/riwayat_putar_dummy.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/home_provider.dart';
+import '../providers/playlist_provider.dart';
 import '../providers/search_provider.dart';
 import '../utils/pesan_error_auth.dart';
 import '../utils/warna_capify.dart';
@@ -33,13 +33,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
   bool isHematData = false;
   String kualitasStreaming = 'Normal';
   bool isSedangKeluar = false;
-
-  int get jumlahLaguDisimpan {
-    return daftarPlaylistDummy.fold<int>(
-      0,
-      (totalSementara, playlist) => totalSementara + playlist.daftarLagu.length,
-    );
-  }
 
   Future<void> bukaEditNama() async {
     AuthProvider authProvider = context.read<AuthProvider>();
@@ -355,6 +348,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
     String inisial = authProvider.penggunaAktif?.inisial ?? 'C';
     bool isSedangMenyimpan = authProvider.isSedangMenyimpanProfil;
 
+    int jumlahPlaylist = context.select<PlaylistProvider, int>(
+      (koleksi) => koleksi.daftarPlaylistSaya.length,
+    );
+    int jumlahLaguDisukai = context.select<PlaylistProvider, int>(
+      (koleksi) => koleksi.daftarLaguDisukai.length,
+    );
+    int jumlahLaguDiputar = context.select<HomeProvider, int>(
+      (beranda) => beranda.riwayatTerakhirDiputar.length,
+    );
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -434,11 +437,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
           const SizedBox(height: 20),
           Row(
             children: [
-              buildAngkaStatistik(daftarPlaylistDummy.length, 'Playlist'),
+              buildAngkaStatistik(jumlahPlaylist, 'Playlist'),
               buildGarisPemisahStatistik(),
-              buildAngkaStatistik(jumlahLaguDisimpan, 'Lagu Disimpan'),
+              buildAngkaStatistik(jumlahLaguDisukai, 'Lagu Disukai'),
               buildGarisPemisahStatistik(),
-              buildAngkaStatistik(daftarRiwayatPutarDummy.length, 'Diputar'),
+              buildAngkaStatistik(jumlahLaguDiputar, 'Diputar'),
             ],
           ),
           const SizedBox(height: 20),
