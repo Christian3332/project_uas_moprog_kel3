@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../providers/home_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../providers/search_provider.dart';
+import '../services/pengaturan_lokal_service.dart';
 import '../utils/pesan_error_auth.dart';
 import '../utils/warna_capify.dart';
 import '../widgets/komponen_auth.dart';
@@ -33,6 +34,58 @@ class _ProfilScreenState extends State<ProfilScreen> {
   bool isHematData = false;
   String kualitasStreaming = 'Normal';
   bool isSedangKeluar = false;
+
+  final PengaturanLokalService pengaturanLokal = const PengaturanLokalService();
+
+  @override
+  void initState() {
+    super.initState();
+    muatPengaturanTersimpan();
+  }
+
+  Future<void> muatPengaturanTersimpan() async {
+    bool putarOtomatis = await pengaturanLokal.ambilSaklar(
+      PengaturanLokalService.kunciPutarOtomatis,
+      nilaiAwal: true,
+    );
+    bool notifikasiAktif = await pengaturanLokal.ambilSaklar(
+      PengaturanLokalService.kunciNotifikasi,
+      nilaiAwal: true,
+    );
+    bool hematData = await pengaturanLokal.ambilSaklar(
+      PengaturanLokalService.kunciHematData,
+      nilaiAwal: false,
+    );
+    String kualitas = await pengaturanLokal.ambilKualitasStreaming(
+      nilaiAwal: 'Normal',
+    );
+    if (!mounted) return;
+
+    setState(() {
+      isPutarOtomatis = putarOtomatis;
+      isNotifikasiAktif = notifikasiAktif;
+      isHematData = hematData;
+      if (pilihanKualitasStreaming.contains(kualitas)) {
+        kualitasStreaming = kualitas;
+      }
+    });
+  }
+
+  void ubahPutarOtomatis(bool isDinyalakan) {
+    setState(() => isPutarOtomatis = isDinyalakan);
+    pengaturanLokal.simpanSaklar(
+      PengaturanLokalService.kunciPutarOtomatis,
+      isDinyalakan,
+    );
+  }
+
+  void ubahNotifikasi(bool isDinyalakan) {
+    setState(() => isNotifikasiAktif = isDinyalakan);
+    pengaturanLokal.simpanSaklar(
+      PengaturanLokalService.kunciNotifikasi,
+      isDinyalakan,
+    );
+  }
 
   Future<void> bukaEditNama() async {
     AuthProvider authProvider = context.read<AuthProvider>();
@@ -74,8 +127,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
       isHematData = isDinyalakan;
       if (isKualitasHarusTurun) kualitasStreaming = 'Rendah';
     });
+    pengaturanLokal.simpanSaklar(
+      PengaturanLokalService.kunciHematData,
+      isDinyalakan,
+    );
 
     if (isKualitasHarusTurun) {
+      pengaturanLokal.simpanKualitasStreaming('Rendah');
       tampilkanPesan(
         context,
         'Kualitas streaming diturunkan ke Rendah biar hemat kuota',
@@ -117,6 +175,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
     if (!mounted || kualitasDipilih == null) return;
     setState(() => kualitasStreaming = kualitasDipilih);
+    pengaturanLokal.simpanKualitasStreaming(kualitasDipilih);
   }
 
   Widget buildPilihanKualitas(BuildContext konteksSheet, String kualitas) {
@@ -234,9 +293,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 judul: 'Putar otomatis',
                 keterangan: 'Lanjut putar lagu serupa saat antrian habis',
                 nilai: isPutarOtomatis,
-                onUbah: (nilaiBaru) {
-                  setState(() => isPutarOtomatis = nilaiBaru);
-                },
+                onUbah: ubahPutarOtomatis,
               ),
               ListTile(
                 leading: const Icon(
@@ -259,9 +316,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 judul: 'Notifikasi',
                 keterangan: 'Kabar rilisan baru dari penyanyi favoritmu',
                 nilai: isNotifikasiAktif,
-                onUbah: (nilaiBaru) {
-                  setState(() => isNotifikasiAktif = nilaiBaru);
-                },
+                onUbah: ubahNotifikasi,
               ),
               buildSaklarPengaturan(
                 ikon: Icons.data_saver_on_rounded,
